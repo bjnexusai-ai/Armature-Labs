@@ -255,3 +255,115 @@ already works around it, same as Session 2's own tests do).
 ---
 
 
+
+## Session 3.5 — COMPLETE (repo reorg: backend/ subfolder)
+
+**What changed:** All backend code moved from repo root into a new backend/
+subfolder, ahead of frontend work starting in a future session, to avoid any
+path collisions once a frontend/ folder is added alongside it.
+
+- Moved via git mv (history preserved, shows as renames not delete+add):
+  migrations/, seed/, src/, tests/, jest.config.js, .env.example,
+  .node-pg-migraterc.json, package.json, package-lock.json.
+- node_modules was NOT moved (gitignored) - reinstalled fresh inside
+  backend/ via npm install.
+- Local .env (gitignored, not tracked) manually relocated from repo root
+  into backend/.env - required for DATABASE_URL / JWT_ACCESS_SECRET /
+  JWT_REFRESH_SECRET to load correctly, since dotenv resolves relative to
+  cwd and scripts now run from inside backend/.
+- Verified clean after the move: npm run migrate:up and npm test both
+  run successfully from backend/, all 54/54 tests still passing - confirms
+  no path-relative code broke as a result of the reorg.
+- Also fixed in this session: removed a dead setupFilesAfterEach: undefined
+  key from jest.config.js (not a real Jest option, was silently doing
+  nothing; the correct key, setupFilesAfterEnv, was already present and
+  correctly wired to tests/setup.js).
+- BUILD_LOG.md and README.md remain at repo root (project-level docs);
+  everything backend-specific now lives under backend/.
+
+Root structure is now:
+
+Armature-Labs/
+  BUILD_LOG.md
+  README.md
+  .gitignore
+  backend/
+    migrations/
+    seed/
+    src/
+    tests/
+    jest.config.js
+    .env.example
+    .node-pg-migraterc.json
+    package.json
+    package-lock.json
+
+How to pick this up in a fresh session (UPDATED - note the cd backend
+step, this differs from Sessions 1-3's instructions above):
+1. git clone this repo
+2. cd backend - package.json and all backend code now live here, NOT repo root
+3. npm install
+4. Local Postgres: createdb dentallab_dev, copy .env.example to .env
+   (inside backend/)
+5. npm run migrate:up then npm run seed
+6. npm test - should show 54/54 passing before you write a single new line
+7. Read this file's "Not yet built" section (see Session 3 above), pick up
+   at Session 4
+8. Commit + push before ending the session, no exceptions - update this log
+   first
+
+## Session 3.5 — COMPLETE (repo reorg: backend/ subfolder)
+
+**What changed:** All backend code moved from repo root into a new backend/
+subfolder, ahead of frontend work starting in a future session, to avoid any
+path collisions once a frontend/ folder is added alongside it.
+
+- Moved via git mv (history preserved, shows as renames not delete+add):
+  migrations/, seed/, src/, tests/, jest.config.js, .env.example,
+  .node-pg-migraterc.json, package.json, package-lock.json.
+- node_modules was NOT moved (gitignored) - reinstalled fresh inside
+  backend/ via npm install.
+- Local .env (gitignored, not tracked) manually relocated from repo root
+  into backend/.env - required for DATABASE_URL / JWT_ACCESS_SECRET /
+  JWT_REFRESH_SECRET to load correctly, since dotenv resolves relative to
+  cwd and scripts now run from inside backend/.
+- Verified clean after the move: npm run migrate:up and npm test both
+  run successfully from backend/, all 54/54 tests still passing - confirms
+  no path-relative code broke as a result of the reorg.
+- Also fixed in this session: removed a dead setupFilesAfterEach: undefined
+  key from jest.config.js (not a real Jest option, was silently doing
+  nothing; the correct key, setupFilesAfterEnv, was already present and
+  correctly wired to tests/setup.js).
+- BUILD_LOG.md and README.md remain at repo root (project-level docs);
+  everything backend-specific now lives under backend/.
+
+Root structure is now:
+
+Armature-Labs/
+  BUILD_LOG.md
+  README.md
+  .gitignore
+  backend/
+    migrations/
+    seed/
+    src/
+    tests/
+    jest.config.js
+    .env.example
+    .node-pg-migraterc.json
+    package.json
+    package-lock.json
+
+How to pick this up in a fresh session (UPDATED - note the cd backend
+step, this differs from Sessions 1-3's instructions above):
+1. git clone this repo
+2. cd backend - package.json and all backend code now live here, NOT repo root
+3. npm install
+4. Local Postgres: createdb dentallab_dev, copy .env.example to .env
+   (inside backend/)
+5. npm run migrate:up then npm run seed
+6. npm test - should show 54/54 passing before you write a single new line
+7. Read this file's "Not yet built" section (see Session 3 above), pick up
+   at Session 4
+8. Commit + push before ending the session, no exceptions - update this log
+   first
