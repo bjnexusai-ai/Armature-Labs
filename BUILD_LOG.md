@@ -447,3 +447,116 @@ How to pick this up in a fresh session:
 5. npm test — should show 69/69 passing
 6. Next up: real Stripe/ACH (Session 8 scope) or frontend work
 7. Commit + push before ending the session if git access is available
+
+## Session 5 — Messaging/Notes, Progress Photos, Shipments, Warranty Claims
+
+**Baseline confirmed before writing anything:** cloned the repo, `npm install`,
+`npm run migrate:up` + `npm run seed`, `npm test` — **69/69 passing** on
+Session 4's code, exactly as this session's build prompt required.
+
+**What was built:**
+
+- 4 new migrations (all tested up AND down — rolled back one at a time,
+  reapplied clean, 69/69 re-confirmed passing on top of the new schema
+  before any controller code was written):
+  - `0019_case_notes.js` — `case_notes`, with a `note_visibility` enum
+    (`internal`/`portal`) rather than a boolean, matching how `media_stage`
+    and other client-facing enums already read in this schema.
+  - `0020_progress_photos.js` — `progress_photos`, a separate table from
+    `case_files`/`approvals`, no FK between them.
+  - `0021_shipments.js` — `shipments`, one-to-many per case (a case can
+    have more than one shipment, e.g. a reshipment after a warranty claim).
+  - `0022_warranty_claims.js` — `warranty_claims`.
+- `notes.controller.js` / case-scoped `notes` endpoints — two-way messaging.
+- `progressPhotos.controller.js` / case-scoped `progress-photos` endpoints —
+  lab-staff only.
+- `fulfillment.controller.js` — shipments (case-scoped create/list +
+  non-case-scoped `PATCH /api/fulfillment/shipments/:id/status`) and
+  warranty claims (case-scoped create/list + non-case-scoped
+  `PATCH /api/fulfillment/warranty-claims/:id/resolve`).
+- Routes: case-scoped endpoints (`notes`, `progress-photos`, `shipments`,
+  `warranty-claims`) extend `cases.routes.js`, same pattern as Session 4's
+  QC/rework/final-approval. A new `fulfillment.routes.js` holds the two
+  not-case-scoped staff actions, mounted in `app.js` at `/api/fulfillment`.
+- 31 new integration tests across `tests/notes.integration.test.js`,
+  `tests/progressPhotos.integration.test.js`,
+  `tests/shipments.integration.test.js`, and
+  `tests/warrantyClaims.integration.test.js`. Full suite: **100/100
+  passing** (69 prior + 31 new).
+
+**Decision — `approvals.media_id` / `progress_photos` (the open question
+flagged at the end of Session 3):** NOT repointed. `approvals.media_id`
+keeps referencing `case_files`, unchanged. `case_files.media_stage` already
+covers the `design`/`bisque` approval-gate categories end-to-end (tested in
+Sessions 2–3), and repointing a working FK for no functional gain would
+risk an unnecessary data migration and touch `approvals.controller.js`
+outside this session's scope. `progress_photos` is a separate, simpler
+table for ad-hoc production shots that were never part of the approval
+gate — no FK relationship between the two tables. See the migration file's
+own comment for the full reasoning.
+
+**Decision — messaging is two-way, not staff-only:** Master Blueprint §4.10
+and the §5 notification table both show "Client Notes (visible to
+office)" and *two* triggers — "New Client Note (from office) -> Assigned
+Staff" and "New Client Note (from lab) -> Dental Office" — so both internal
+staff and a `dentist_client` with tenant access to the case can create a
+note, not staff alone. A `dentist_client`'s note is always forced to
+`visibility='portal'` server-side (there's no such thing as a
+client-authored internal note); a staff note defaults to `internal` per the
+migration's own documented default, and only becomes portal-visible by
+explicit choice. `GET` filters a `dentist_client` down to `visibility='portal'`
+rows only, regardless of tenant access to the case.
+
+**Decision — `progress_photos` access is lab-staff only, not portal-visible:**
+unlike notes, there's no notification-table entry or blueprint line putting
+progress shots in front of the dental office, and the client's three
+existing portal permission flags don't cover this. Treated as an internal
+production-tracking aid pending an explicit client answer — flagged below
+as something to revisit if the client says otherwise.
+
+**Decision — shipment status updates don't drive `cases.current_status`:**
+per this session's guardrail (`utils/caseStatus.js` /
+`services/caseStatusTransition.js` out of scope), a shipment reaching
+`Shipped`/`Delivered` does NOT push the case's own status forward — staff
+still do that separately via the existing `PATCH /api/cases/:id/status`.
+What the shipment-status endpoint DOES do is fire the notification-table
+entries ("Case Shipped Out" / "Case Delivered" -> Dental Office) directly,
+since that's a more accurate trigger point for a shipment-specific
+notification than the case-status endpoint would be.
+
+**Decision — warranty claim notifications (not in the original spec's
+notification table — a Session 5 addition):** claim filed -> notify the
+case's `assigned_staff_id` (skipped if unassigned); claim resolved
+(`Approved`/`Denied`/`Resolved`) -> notify the filer. `Under Review` is not
+treated as resolved — `resolved_at`/`resolved_by` stay null until the claim
+reaches one of the three terminal-ish statuses, matching the migration's own
+column comment ("Null while open/under review").
+
+**Not yet built (deferred to later sessions per the confirmed 9-session
+plan):**
+
+- Frontend for notes/progress-photos/shipments/warranty-claims
+  (backend-only session)
+- Whether a dentist_client should be able to view `progress_photos` — no
+  client answer yet, defaulted to lab-staff-only (see decision above)
+- Session 6 (Phase 3 inventory): `materials`, `vendors`, `purchase_orders`,
+  `stock_transactions` with lot tracking, plus `practice_contracts`/notes
+
+**Not committed:** delivered as a zip, not committed/pushed — this sandbox
+has no GitHub write credentials configured (confirmed via a dry-run push
+attempt, not assumed). A fresh clone of `bjnexusai-ai/Armature-Labs` will
+still show HEAD at the Session 4 commit and needs this session's files
+applied manually before `npm test` shows 100/100.
+
+How to pick this up in a fresh session:
+1. Apply this session's files (the 4 new migrations, `notes.controller.js`,
+   `progressPhotos.controller.js`, `fulfillment.controller.js`,
+   `fulfillment.routes.js`, the `cases.routes.js`/`app.js` edits, and the
+   4 new test files) on top of the Session 4 commit, OR start from the zip
+2. cd backend, npm install
+3. Local Postgres: createdb dentallab_dev, copy .env.example to .env
+4. npm run migrate:up then npm run seed
+5. npm test — should show 100/100 passing
+6. Next up: Session 6 (Phase 3 inventory) per the scope above
+7. Commit + push before ending the session if git access is available
+
