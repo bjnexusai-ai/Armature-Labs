@@ -9,6 +9,7 @@ const morgan = require('morgan');
 const authRoutes = require('./routes/auth.routes');
 const usersRoutes = require('./routes/users.routes');
 const practicesRoutes = require('./routes/practices.routes');
+const casesRoutes = require('./routes/cases.routes');
 const referenceRoutes = require('./routes/reference.routes');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 
@@ -26,6 +27,7 @@ app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/practices', practicesRoutes);
+app.use('/api/cases', casesRoutes);
 app.use('/api/reference', referenceRoutes);
 
 app.use(notFoundHandler);
