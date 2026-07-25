@@ -560,3 +560,35 @@ How to pick this up in a fresh session:
 6. Next up: Session 6 (Phase 3 inventory) per the scope above
 7. Commit + push before ending the session if git access is available
 
+
+## Session 5.5 — Patients entity + invoice client fields
+
+**Why this session exists:** Client's Project Scope doc (§8) defines `PATIENT`
+as its own entity, but Session 5 flattened patient data onto `cases` directly.
+Session 4's `invoices` table also missed three fields the scope doc names on
+`INVOICE`: `due_date`, `tax_amount`, `paid_date`. This session closes both gaps
+at the schema level.
+
+**What it adds:**
+- `0023_patients.js` — new `patients` table (`first_name`, `last_name`,
+  `date_of_birth`, `email`, `phone`) + nullable `cases.patient_id` FK
+  (`ON DELETE SET NULL`), indexed.
+- `0024_invoice_client_fields.js` — adds `due_date`, `tax_amount`, `paid_date`
+  to `invoices`.
+
+Both migrations are additive-only — no existing table or column was altered.
+Verified: `npm run migrate:up` + `npm test` → 100/100 passing, same as
+pre-5.5 baseline.
+
+**What's still open (not built in this session):**
+- No `patients.controller.js` or routes — the table exists but isn't exposed
+  via the API yet.
+- `cases.patient_id` is nullable and **not backfilled**. Existing cases still
+  carry patient info only in `patient_name` (or equivalent legacy field);
+  there is no migration/script yet to create `patients` rows from that data
+  and populate `patient_id` on existing cases.
+- No cutover plan yet for switching case creation/edit flows from the flat
+  `patient_name` field to referencing `patients` records.
+
+This session is schema groundwork only — the patient entity is not yet
+usable end-to-end.
