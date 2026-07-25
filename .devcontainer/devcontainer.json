@@ -1,0 +1,15 @@
+{
+  "name": "Armature Labs Backend",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
+  "features": {
+    "ghcr.io/devcontainers/features/postgresql:1": {}
+  },
+  "postCreateCommand": "npm install",
+  "postStartCommand": "sudo service postgresql start && sudo su - postgres -c \"psql -c \\\"ALTER USER postgres PASSWORD 'devpass';\\\"\" 2>/dev/null; sudo su - postgres -c \"createdb dentallab_dev\" 2>/dev/null; true",
+  "forwardPorts": [4000, 5432],
+  "portsAttributes": {
+    "4000": { "label": "API server" },
+    "5432": { "label": "PostgreSQL" }
+  },
+  "remoteUser": "codespace"
+}
