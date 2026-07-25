@@ -1,13 +1,9 @@
 const { z } = require('zod');
 const { query, withTransaction } = require('../config/db');
 const { assertPracticeAccess, practiceScopeClause } = require('../middleware/tenantIsolation');
-const {
-  ALL_STATUSES,
-  EXCEPTION_STATUSES,
-  STATUS_TO_STAGE_NAME,
-  isException,
-  evaluateTransition,
-} = require('../utils/caseStatus');
+const { ALL_STATUSES, STATUS_TO_STAGE_NAME } = require('../utils/caseStatus');
+const { applyCaseStatusTransition } = require('../services/caseStatusTransition');
+const notifications = require('../services/notifications');
 
 const CASE_SELECT_FIELDS = `
   c.id, c.case_number, c.practice_id, c.dentist_id, c.case_type_id,
@@ -330,131 +326,110 @@ async function updateCaseStatus(req, res) {
   const caseId = req.params.id;
   const input = updateStatusSchema.parse(req.body);
 
+  // Thin wrapper (§2b extraction) — note allowApprovalRevert is never passed
+  // here, so the 'approval_reverted' backward moves stay unreachable via this
+  // endpoint even though evaluateTransition knows about them.
+  const result = await withTransaction((client) => applyCaseStatusTransition(client, {
+    caseId,
+    newStatus: input.newStatus,
+    changedByUserId: req.user.id,
+    remarks: input.remarks,
+    stageId: input.stageId,
+  }));
+
+  return res.json({ case: result });
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// POST /api/cases/:id/media  (§2c — new upload path; none existed to extend)
+// ─────────────────────────────────────────────────────────────────────────
+
+// Metadata-only: the file itself is assumed already placed in object storage
+// by the caller (e.g. a pre-signed upload from the frontend). No multer/S3
+// wiring is built this session — that infrastructure isn't part of Session
+// 3's scope per the build prompt, and this endpoint only needs a pointer
+// (file_url) plus enough metadata to satisfy the approvals gate. Documented
+// as a decision in BUILD_LOG.md.
+const uploadCaseMediaSchema = z
+  .object({
+    fileName: z.string().min(1).max(255),
+    fileType: z.enum(['STL', '3Shape', 'Exocad', 'Image', 'Video', 'PDF', 'Other']),
+    // Only design/bisque this session — those are the two stages that create
+    // an approval gate. Other case_files media_stage values (pickup_form,
+    // pre_treatment, final) aren't wired to this endpoint's approval-trigger
+    // behavior and are out of scope here.
+    mediaStage: z.enum(['design', 'bisque']),
+    fileUrl: z.string().min(1).max(500),
+  })
+  .strict();
+
+const STAGE_TO_PENDING_STATUS = {
+  design: 'Pending Design Approval',
+  bisque: 'Pending Bisque Approval',
+};
+
+async function uploadCaseMedia(req, res) {
+  const caseId = req.params.id;
+  const input = uploadCaseMediaSchema.parse(req.body);
+
   const result = await withTransaction(async (client) => {
-    const caseRow = await client.query(
-      'SELECT id, current_status, prior_status FROM cases WHERE id = $1 FOR UPDATE',
-      [caseId]
-    );
-    const caseRecord = caseRow.rows[0];
-    if (!caseRecord) {
+    const caseRow = await client.query('SELECT id, practice_id FROM cases WHERE id = $1', [caseId]);
+    if (!caseRow.rows[0]) {
       const err = new Error('Case not found.');
       err.status = 404;
       throw err;
     }
 
-    const evaluation = evaluateTransition({
-      currentStatus: caseRecord.current_status,
-      priorStatus: caseRecord.prior_status,
-      newStatus: input.newStatus,
+    // 1. Insert the case_files row.
+    const fileRow = await client.query(
+      `INSERT INTO case_files (case_id, uploaded_by, file_name, file_type, media_stage, file_url)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id, case_id, uploaded_by, file_name, file_type, media_stage, file_url, version_number, uploaded_at`,
+      [caseId, req.user.id, input.fileName, input.fileType, input.mediaStage, input.fileUrl]
+    );
+    const file = fileRow.rows[0];
+
+    // 2. Insert the pending approvals row.
+    const approvalRow = await client.query(
+      `INSERT INTO approvals (case_id, media_id, stage, status)
+       VALUES ($1, $2, $3, 'pending')
+       RETURNING id, case_id, media_id, stage, status, approved_by, comments, responded_at, created_at`,
+      [caseId, file.id, input.mediaStage]
+    );
+    const approval = approvalRow.rows[0];
+
+    // 3. Move the case into the matching pending-approval status. This is a
+    // normal forward transition through the existing state machine — if the
+    // case isn't currently sitting at the right predecessor status
+    // (In Design / Processing), this correctly 409s rather than silently
+    // skipping the state machine's own rules.
+    const updatedCase = await applyCaseStatusTransition(client, {
+      caseId,
+      newStatus: STAGE_TO_PENDING_STATUS[input.mediaStage],
+      changedByUserId: req.user.id,
+      remarks: `${input.mediaStage} media uploaded — awaiting client approval.`,
     });
 
-    if (!evaluation.valid) {
-      const err = new Error(evaluation.message);
-      err.status = evaluation.status;
-      throw err;
-    }
-
-    // Endpoint spec requires remarks whenever ENTERING or CLEARING Hold/Delayed
-    // (the stricter of the two build-prompt readings — the Endpoints section
-    // explicitly says "required if entering/clearing", so we hold both to it).
-    const touchesException = evaluation.kind === 'enter_exception' || evaluation.kind === 'clear_exception';
-    if (touchesException && !input.remarks) {
-      const err = new Error('remarks is required when entering or clearing Case on Hold / Delayed.');
-      err.status = 400;
-      throw err;
-    }
-
-    // 1. Update cases.current_status (and prior_status).
-    let newPriorStatus = caseRecord.prior_status;
-    if (evaluation.kind === 'enter_exception') {
-      newPriorStatus = caseRecord.current_status;
-    } else if (evaluation.kind === 'clear_exception') {
-      newPriorStatus = null;
-    }
-
-    const updatedCase = await client.query(
-      `UPDATE cases SET current_status = $1, prior_status = $2 WHERE id = $3
-       RETURNING ${CASE_SELECT_FIELDS.replace(/c\./g, '')}`,
-      [input.newStatus, newPriorStatus, caseId]
-    );
-
-    // 2. case_status_audit — every transition, no exceptions.
-    await client.query(
-      `INSERT INTO case_status_audit (case_id, changed_by, old_status, new_status, remarks)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [caseId, req.user.id, caseRecord.current_status, input.newStatus, input.remarks || null]
-    );
-
-    // 3. case_stage_history.
-    //
-    // DECISION (no client spec for exception-state stage mapping, documented
-    // per the build prompt's own instruction):
-    // - Entering 'Case on Hold': stage_history_status has no 'Hold' value and
-    //   Hold is administrative, not stage-level — leave case_stage_history
-    //   untouched.
-    // - Entering 'Delayed': stage_history_status DOES have a 'Delayed' value
-    //   — mark the case's current open stage row 'Delayed' in place (no new
-    //   row, no completed_at; the stage itself hasn't changed, it's paused).
-    // - Clearing Hold: nothing to revert (nothing was touched on entry).
-    // - Clearing Delayed: revert that same row from 'Delayed' back to
-    //   'In Progress'.
-    // - Normal forward transitions (including into Delivered): complete the
-    //   previous open row and insert a row for the new stage — UNLESS the new
-    //   stage is the same stage as the one just completed (Shipped Out ->
-    //   Delivered both map to 'Shipping'), in which case we complete that one
-    //   row rather than inserting a duplicate.
-    const openRow = await client.query(
-      `SELECT id, stage_id FROM case_stage_history
-       WHERE case_id = $1 AND status IN ('In Progress', 'Delayed')
-       ORDER BY started_at DESC LIMIT 1`,
-      [caseId]
-    );
-    const open = openRow.rows[0] || null;
-
-    if (input.newStatus === 'Case on Hold' || (evaluation.kind === 'clear_exception' && caseRecord.current_status === 'Case on Hold')) {
-      // no-op on case_stage_history, per decision above
-    } else if (input.newStatus === 'Delayed') {
-      if (open) {
-        await client.query(`UPDATE case_stage_history SET status = 'Delayed' WHERE id = $1`, [open.id]);
-      }
-    } else if (evaluation.kind === 'clear_exception' && caseRecord.current_status === 'Delayed') {
-      if (open) {
-        await client.query(`UPDATE case_stage_history SET status = 'In Progress' WHERE id = $1`, [open.id]);
-      }
-    } else {
-      // Only genuine forward transitions reach this branch (Hold/Delayed
-      // entry and clearing are both handled above), so input.newStatus is
-      // always a LINEAR_STATUSES value with a defined default stage mapping.
-      const targetStageId = input.stageId
-        || (await client.query('SELECT id FROM workflow_stages WHERE name = $1', [
-          STATUS_TO_STAGE_NAME[input.newStatus],
-        ])).rows[0]?.id;
-
-      if (open && open.stage_id === targetStageId) {
-        await client.query(
-          `UPDATE case_stage_history SET status = 'Completed', completed_at = now() WHERE id = $1`,
-          [open.id]
-        );
-      } else {
-        if (open) {
-          await client.query(
-            `UPDATE case_stage_history SET status = 'Completed', completed_at = now() WHERE id = $1`,
-            [open.id]
-          );
-        }
-        if (targetStageId) {
-          await client.query(
-            `INSERT INTO case_stage_history (case_id, stage_id, status) VALUES ($1, $2, 'In Progress')`,
-            [caseId, targetStageId]
-          );
-        }
-      }
-    }
-
-    return updatedCase.rows[0];
+    return { file, approval, case: updatedCase, practiceId: caseRow.rows[0].practice_id };
   });
 
-  return res.json({ case: result });
+  // 4. Notify: new design/bisque approval request -> dental office (every
+  // portal user on that practice with can_approve_photos = true).
+  const recipients = await query(
+    `SELECT u.id FROM users u
+     JOIN practice_users pu ON pu.user_id = u.id
+     WHERE pu.practice_id = $1 AND u.can_approve_photos = true`,
+    [result.practiceId]
+  );
+  if (recipients.rows.length) {
+    await notifications.notify({
+      event: 'approval_requested',
+      recipientUserIds: recipients.rows.map((r) => r.id),
+      payload: { caseId: result.case.id, approvalId: result.approval.id, stage: input.mediaStage },
+    });
+  }
+
+  return res.status(201).json({ file: result.file, approval: result.approval, case: result.case });
 }
 
 module.exports = {
@@ -463,4 +438,5 @@ module.exports = {
   getCase,
   updateCase,
   updateCaseStatus,
+  uploadCaseMedia,
 };

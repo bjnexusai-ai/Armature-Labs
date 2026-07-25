@@ -6,6 +6,7 @@ const {
   getCase,
   updateCase,
   updateCaseStatus,
+  uploadCaseMedia,
 } = require('../controllers/cases.controller');
 
 const router = express.Router();
@@ -20,5 +21,6 @@ router.patch('/:id', requireInternal, updateCase);
 // and stays that way even after Session 3 (the approvals flow calls this
 // transition logic internally, not via this endpoint).
 router.patch('/:id/status', requireInternal, updateCaseStatus);
+router.post('/:id/media', requireInternal, uploadCaseMedia);
 
 module.exports = router;

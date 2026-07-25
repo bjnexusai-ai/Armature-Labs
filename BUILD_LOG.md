@@ -159,4 +159,99 @@ whenever `users.controller.js` is next touched) apply the same coercion there.
 
 ---
 
+## Session 3 — COMPLETE (approvals table + Approve/Request Changes + notification triggers)
+
+**What's built and verified working (54/54 automated tests passing, `npm test` —
+40 from Sessions 1-2 + 14 new):**
+
+- `migrations/0014_approvals.js` — the client's exact §8 field spec. Up AND
+  down tested (dropped and re-applied clean, not just assumed).
+- `src/services/caseStatusTransition.js` — Session 2's `updateCaseStatus`
+  transaction body extracted verbatim into `applyCaseStatusTransition(client,
+  {...})`. `cases.controller.js`'s `updateCaseStatus` is now a thin wrapper.
+  Ran `cases.integration.test.js` immediately after the extraction, before
+  writing any approvals code — all 22 of its tests passed unchanged, confirming
+  no behavior change.
+- `src/utils/caseStatus.js` — new `'approval_reverted'` transition kind, added
+  as a second parameter to `evaluateTransition(input, { allowApprovalRevert })`.
+  Legal ONLY `Pending Design Approval -> In Design` and `Pending Bisque
+  Approval -> Processing`, and ONLY when the caller explicitly passes
+  `allowApprovalRevert: true`. `updateCaseStatus`'s thin wrapper never passes
+  this flag, so `PATCH /api/cases/:id/status` can never reach it directly —
+  verified by an explicit test (upload design media twice with a request-changes
+  round trip in between, then attempt the same backward move via the raw
+  status endpoint: 409).
+- `POST /api/cases/:id/media` (new — no prior upload endpoint existed to
+  extend, confirmed by checking `cases.controller.js` and grepping for
+  `case_files` first). Internal staff only. Accepts `mediaStage: 'design' |
+  'bisque'` only this session (other `case_files.media_stage` values aren't
+  wired to the approval-trigger behavior and are out of scope here). On
+  success, in one transaction: inserts `case_files`, inserts a pending
+  `approvals` row, calls `applyCaseStatusTransition` to move the case into
+  `Pending Design Approval` / `Pending Bisque Approval` (a normal forward
+  transition — if the case isn't at the right predecessor status this
+  correctly 409s), then fires the `approval_requested` notification to every
+  portal user on that practice with `can_approve_photos = true`.
+- `POST /api/approvals/:id/approve` and `POST /api/approvals/:id/request-changes`
+  — both share `loadAndAuthorizeApproval` (row-locks the `approvals` row,
+  checks `can_approve_photos`, tenant access via `assertPracticeAccess`, and
+  pending status) in `approvals.controller.js`. Approve advances the case
+  forward (`Processing` / `Finalizing`); request-changes requires `comments`
+  and reverts the case (`In Design` / `Processing`) via the new
+  `allowApprovalRevert: true` path. Each fires its own notification
+  (`approval_given` / `changes_requested`) to the case's `assigned_staff_id`.
+- `src/services/notifications.js` — `notify({ event, recipientUserIds,
+  payload })`, logic real, send stubbed (console.log only, no
+  `notification_log` table — kept minimal since tests assert via
+  `jest.spyOn`, not by querying a log table; revisit if a later session needs
+  a queryable notification history).
+
+**Decision recorded per §2a's explicit instruction:** `approvals.media_id`
+references `case_files`, not `progress_photos` — `progress_photos` doesn't
+exist until Session 5, and `case_files.media_stage` already covers
+`design`/`bisque` today. If Session 5's `progress_photos` turns out to be the
+intended long-term target for approval-stage media, that's a Session 5
+migration decision (e.g. a nullable `progress_photo_id` alongside, or a data
+migration) — not decided here.
+
+**Additional decision (not explicitly specified, made and documented per the
+same instruction):** `POST /api/cases/:id/media` is metadata-only — it
+assumes the binary file is already placed in object storage by the caller
+(e.g. a pre-signed frontend upload) and just records the pointer (`fileUrl`)
+plus enough metadata to satisfy the approvals gate. No multer/S3 wiring was
+built this session; that infrastructure isn't part of Session 3's scope per
+the build prompt's own stack section, which lists S3 but doesn't mandate
+wiring it here. Flagged for whoever eventually builds real object-storage
+upload handling.
+
+**Bug found (pre-existing, Session 1/2, NOT fixed — still out of scope,
+carried forward from Session 2's note):** `users.controller.js`'s
+`createUserSchema` still uses plain `z.number()` for `practiceId` instead of
+`z.coerce.number()`. Not touched this session since Session 3 had no reason
+to modify `users.controller.js` beyond calling it from tests (where the
+existing test convention of wrapping IDs in `Number(...)` before sending
+already works around it, same as Session 2's own tests do).
+
+**Not yet built (future sessions, per the 9-session plan):**
+- Session 4: Phase 2 billing (fee_schedules, invoices, payments) + QC checklists/rework.
+- Session 5: messaging/notes, `progress_photos`, shipments, warranty_claims —
+  and the `approvals.media_id` question above should be revisited here.
+- Session 6: Phase 3 inventory (materials, vendors, purchase_orders, stock_transactions
+  with lot tracking) + practice_contracts/notes.
+- Session 7: saved_reports (as views over existing data, not new storage), equipment,
+  technician_shifts, equipment_bookings.
+- Session 8: Stripe both directions (dental office→lab, lab→manufacturer) — flagged in
+  the gap audit as scope beyond the original $8K baseline, build after everything else.
+- Session 9: full integration pass across every endpoint, security hardening review.
+
+**How to pick this up in a fresh session:**
+1. `git clone` this repo, `npm install` (repo root — no `backend` subfolder exists)
+2. Local Postgres: `createdb dentallab_dev`, copy `.env.example` to `.env`
+3. `npm run migrate:up` then `npm run seed`
+4. `npm test` — should show 54/54 passing before you write a single new line
+5. Read this file's "Not yet built" section, pick up at Session 4
+6. Commit + push before ending the session, no exceptions — update this log first
+
+---
+
 

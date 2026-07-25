@@ -69,14 +69,27 @@ function nextLinearStatus(status) {
 }
 
 /**
+ * Session 3 addition: the ONLY legal backward moves in the entire state
+ * machine, and only when explicitly unlocked via `allowApprovalRevert`.
+ * This is what `POST /api/approvals/:id/request-changes` uses to send a case
+ * back to production after the office declines a design/bisque photo — it is
+ * NOT a general state-machine capability and is never reachable through
+ * `PATCH /api/cases/:id/status` (that endpoint never passes the flag).
+ */
+const APPROVAL_REVERT_MAP = {
+  'Pending Design Approval': 'In Design',
+  'Pending Bisque Approval': 'Processing',
+};
+
+/**
  * Decides whether a requested transition is legal and what kind it is.
  * Does not touch the DB — the controller is responsible for loading
  * currentStatus/priorStatus first and persisting the result after.
  *
- * @returns {{ valid: true, kind: 'forward'|'enter_exception'|'clear_exception' }
+ * @returns {{ valid: true, kind: 'forward'|'enter_exception'|'clear_exception'|'approval_reverted' }
  *          | { valid: false, status: number, message: string }}
  */
-function evaluateTransition({ currentStatus, priorStatus, newStatus }) {
+function evaluateTransition({ currentStatus, priorStatus, newStatus }, { allowApprovalRevert = false } = {}) {
   if (currentStatus === TERMINAL_STATUS) {
     return {
       valid: false,
@@ -112,6 +125,10 @@ function evaluateTransition({ currentStatus, priorStatus, newStatus }) {
     return { valid: true, kind: 'enter_exception' };
   }
 
+  if (allowApprovalRevert && APPROVAL_REVERT_MAP[currentStatus] === newStatus) {
+    return { valid: true, kind: 'approval_reverted' };
+  }
+
   const expectedNext = nextLinearStatus(currentStatus);
   if (newStatus === expectedNext) {
     return { valid: true, kind: 'forward' };
@@ -132,6 +149,7 @@ module.exports = {
   TERMINAL_STATUS,
   ALL_STATUSES,
   STATUS_TO_STAGE_NAME,
+  APPROVAL_REVERT_MAP,
   isLinear,
   isException,
   nextLinearStatus,

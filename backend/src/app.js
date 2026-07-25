@@ -10,6 +10,7 @@ const authRoutes = require('./routes/auth.routes');
 const usersRoutes = require('./routes/users.routes');
 const practicesRoutes = require('./routes/practices.routes');
 const casesRoutes = require('./routes/cases.routes');
+const approvalsRoutes = require('./routes/approvals.routes');
 const referenceRoutes = require('./routes/reference.routes');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 
@@ -28,6 +29,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/practices', practicesRoutes);
 app.use('/api/cases', casesRoutes);
+app.use('/api/approvals', approvalsRoutes);
 app.use('/api/reference', referenceRoutes);
 
 app.use(notFoundHandler);
