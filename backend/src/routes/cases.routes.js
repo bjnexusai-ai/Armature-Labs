@@ -8,6 +8,14 @@ const {
   updateCaseStatus,
   uploadCaseMedia,
 } = require('../controllers/cases.controller');
+const {
+  recordQcResult,
+  listQcResults,
+  createCaseRework,
+  listCaseRework,
+  createFinalApproval,
+  getFinalApproval,
+} = require('../controllers/qc.controller');
 
 const router = express.Router();
 
@@ -22,5 +30,14 @@ router.patch('/:id', requireInternal, updateCase);
 // transition logic internally, not via this endpoint).
 router.patch('/:id/status', requireInternal, updateCaseStatus);
 router.post('/:id/media', requireInternal, uploadCaseMedia);
+
+// Session 4 — QC results, rework, and final approval are all lab-staff only,
+// no portal access.
+router.post('/:id/qc-results', requireInternal, recordQcResult);
+router.get('/:id/qc-results', requireInternal, listQcResults);
+router.post('/:id/rework', requireInternal, createCaseRework);
+router.get('/:id/rework', requireInternal, listCaseRework);
+router.post('/:id/final-approval', requireInternal, createFinalApproval);
+router.get('/:id/final-approval', requireInternal, getFinalApproval);
 
 module.exports = router;

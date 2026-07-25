@@ -367,3 +367,83 @@ step, this differs from Sessions 1-3's instructions above):
    at Session 4
 8. Commit + push before ending the session, no exceptions - update this log
    first
+
+## Session 4 — Billing + QC/Rework/Final Approval
+
+**What was built:**
+
+- 4 new migrations (all tested up AND down before use — rolled back one at a
+  time, reapplied clean, then confirmed 54/54 still passing on top of the
+  new schema before writing any application code):
+  - `0015_fee_schedules.js` — fee_schedules, fee_schedule_items,
+    practice_fee_schedules (one active schedule per practice)
+  - `0016_invoices_and_payments.js` — invoices, invoice_line_items, payments.
+    invoice_number auto-generates as INV-YYYY-NNNN via trigger, same pattern
+    as cases.case_number.
+  - `0017_qc_checklists.js` — qc_checklists (optionally case_type-scoped
+    templates), qc_checklist_items, case_qc_results (per-item results stored
+    as JSONB on one atomic run record — no cross-run item-level reporting
+    requirement yet that would justify a child table)
+  - `0018_case_rework_and_final_approvals.js` — case_rework,
+    case_final_approvals (unique per case_id — one final approval per case)
+- `billing.controller.js` — fee schedules; invoices (server-computed
+  subtotal, transaction-safe creation); payments (row-locked read via
+  `FOR UPDATE` so concurrent payments can't race on amount_paid,
+  partial-payment-safe, auto-marks Paid once amount_paid meets subtotal,
+  blocks payments against a Void invoice)
+- `qc.controller.js` — checklist templates; QC results (overall_status
+  derived server-side from itemResults, not trusted from the client); rework
+  open/resolve; final approval (requires a QC result with
+  overall_status='Pass', enforced at both the app layer and via DB unique
+  constraint for the one-per-case rule)
+- Routes: `billing.routes.js`, `qc.routes.js`, plus case-scoped QC
+  results/rework/final-approval extensions to `cases.routes.js` and a
+  `PUT /:id/fee-schedule` extension to `practices.routes.js`. Both new
+  routers mounted in `app.js` at `/api/billing` and `/api/qc`.
+- 15 new integration tests across `tests/billing.integration.test.js` and
+  `tests/qc.integration.test.js`. Full suite: **69/69 passing** (54 prior +
+  15 new).
+
+**Decision (documented per this project's standing convention — record
+ambiguous points here rather than silently picking one):** `case_rework`
+does NOT drive `cases.current_status` through the existing state-transition
+service (`services/caseStatusTransition.js` / `utils/caseStatus.js`). That
+machine only permits forward moves plus two named exceptions (Hold/Delayed)
+and a narrow approval-revert map — a generic "send back for rework" isn't a
+legal transition there, and extending that shared, already-tested Session
+2/3 logic was out of this session's scope. Rework is tracked as its own
+independent audit trail (`case_rework` table, resolved_at/resolved_by) and
+never writes to `cases.current_status`. Verified by test: opening a rework
+record leaves `cases.current_status` unchanged.
+
+**Fee-schedule read-access composition:** `requireBillingAccess` (internal
+Owner/Office Manager only) and `requirePortalPermission('can_view_invoices')`
+(portal) don't compose directly for the "internal must be billing-role OR
+portal must have the flag" rule invoice reads need, so
+`billing.routes.js` adds a small `requireInvoiceReadAccess` wrapper that
+branches on `req.user.role` and delegates to the correct existing middleware
+rather than bending either one out of shape.
+
+**Not yet built (deferred to later sessions per the confirmed scope):**
+
+- Real Stripe/ACH payment processing (Session 8) — this session's payments
+  are manual mark-paid only, `method` is free text, no processor integration
+- Frontend for billing/QC (backend-only session)
+
+**Not committed:** this session's changes were delivered as a zip archive
+directly, not committed or pushed to the repo — a fresh clone of
+`bjnexusai-ai/Armature-Labs` will still show HEAD at the Session 3.5
+reorg commit and will need this session's files applied manually before
+`npm test` shows 69/69.
+
+How to pick this up in a fresh session:
+1. Apply this session's files (fee_schedules/invoices/qc/rework migrations,
+   billing.controller.js, qc.controller.js, billing.routes.js, qc.routes.js,
+   the cases.routes.js/practices.routes.js/app.js edits, and the two new
+   test files) on top of the Session 3.5 commit, OR start from the zip
+2. cd backend, npm install
+3. Local Postgres: createdb dentallab_dev, copy .env.example to .env
+4. npm run migrate:up then npm run seed
+5. npm test — should show 69/69 passing
+6. Next up: real Stripe/ACH (Session 8 scope) or frontend work
+7. Commit + push before ending the session if git access is available

@@ -12,6 +12,8 @@ const practicesRoutes = require('./routes/practices.routes');
 const casesRoutes = require('./routes/cases.routes');
 const approvalsRoutes = require('./routes/approvals.routes');
 const referenceRoutes = require('./routes/reference.routes');
+const billingRoutes = require('./routes/billing.routes');
+const qcRoutes = require('./routes/qc.routes');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 
 const app = express();
@@ -31,6 +33,8 @@ app.use('/api/practices', practicesRoutes);
 app.use('/api/cases', casesRoutes);
 app.use('/api/approvals', approvalsRoutes);
 app.use('/api/reference', referenceRoutes);
+app.use('/api/billing', billingRoutes);
+app.use('/api/qc', qcRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
