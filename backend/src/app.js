@@ -14,6 +14,7 @@ const approvalsRoutes = require('./routes/approvals.routes');
 const referenceRoutes = require('./routes/reference.routes');
 const billingRoutes = require('./routes/billing.routes');
 const qcRoutes = require('./routes/qc.routes');
+const fulfillmentRoutes = require('./routes/fulfillment.routes');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 
 const app = express();
@@ -35,6 +36,7 @@ app.use('/api/approvals', approvalsRoutes);
 app.use('/api/reference', referenceRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/qc', qcRoutes);
+app.use('/api/fulfillment', fulfillmentRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
