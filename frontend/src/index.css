@@ -1,0 +1,281 @@
+@import "tailwindcss";
+
+/*
+  Design tokens ported verbatim from the existing demo (index.html / decisions
+  log): porcelain white background, clinical teal -> green mesh gradient,
+  warm coral accent. Established brand system, reused not reinvented.
+*/
+@theme {
+  --color-sidebar-dark: #1C8A93;
+  --color-sidebar-dark-2: #16A37A;
+  --color-nav-active: #22A99B;
+  --color-nav-active-2: #188C7E;
+  --color-page-bg-top: #EAF7F5;
+  --color-page-bg-bot: #FCFCFB;
+  --color-card-bg: #FFFFFF;
+  --color-ink: #0F2A2C;
+  --color-ink-soft: #5B7472;
+  --color-border: #DCEAE8;
+  --color-btn-green: #19868B;
+  --color-btn-green-hover: #146E72;
+  --color-badge-tan: #3D949B;
+  --color-badge-tan-bg: #E3F3F2;
+  --color-badge-teal: #1C8A93;
+  --color-badge-teal-bg: #DCF2EF;
+  --color-badge-green: #16A37A;
+  --color-badge-green-bg: #DCF2E4;
+  --color-badge-coral: #C87156;
+  --color-badge-coral-bg: #F3DDD5;
+  --color-badge-amber: #E29141;
+  --color-badge-amber-bg: #FBE7D2;
+  --color-hero-teal: #0D6B72;
+  --color-hero-teal-2: #16A37A;
+
+  --font-display: 'Plus Jakarta Sans', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+
+:root {
+  --mesh-gradient: linear-gradient(135deg, #4FA8BE 0%, #1C8A93 28%, #17967F 55%, #16A37A 80%, #10A566 100%);
+  --sidebar-scrim: linear-gradient(180deg, rgba(6,20,20,0.42), rgba(6,20,20,0.60));
+
+  /*
+    Layered shadows (polish pass, item 5): small tight contact shadow +
+    a larger soft ambient one, instead of a single flat blur. Applied
+    globally via .surface-card and swapped into the topbar/notif-dropdown
+    below. Not stacked with any other hover effect (item 3) — hover only
+    ever deepens the shadow + a 2px lift, nothing else moves.
+  */
+  --shadow-sm: 0 1px 2px rgba(15,42,44,0.05), 0 6px 18px rgba(20,60,70,0.06);
+  --shadow-md: 0 2px 4px rgba(15,42,44,0.05), 0 10px 24px rgba(20,60,70,0.08), 0 22px 44px -16px rgba(20,60,70,0.12);
+  --shadow-lg: 0 4px 10px rgba(15,42,44,0.06), 0 16px 36px rgba(20,60,70,0.10), 0 30px 60px -20px rgba(20,60,70,0.16);
+}
+
+/* ===== Reusable card surface (shadow + restrained hover, item 3 & 5) ===== */
+.surface-card {
+  background: var(--color-card-bg);
+  border: 1px solid rgba(18,140,150,0.08);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 220ms ease, transform 220ms ease;
+}
+.surface-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  color: var(--color-ink);
+  background: var(--color-page-bg-bot);
+}
+
+.mesh-gradient { background: var(--mesh-gradient); }
+.sidebar-scrim { background: var(--sidebar-scrim); }
+
+:focus-visible {
+  outline: 2px solid var(--color-nav-active);
+  outline-offset: 2px;
+}
+
+/* ===== Login brand panel (ported from index.html) ===== */
+.login-brand::before {
+  content: ""; position: absolute; right: -120px; top: -120px; width: 340px; height: 340px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(127,196,209,0.30), transparent 70%);
+}
+.login-brand::after {
+  content: ""; position: absolute; left: -90px; bottom: -140px; width: 300px; height: 300px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(20,167,111,0.35), transparent 70%);
+}
+.brand-mesh-pattern {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: 0.07;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cg fill='none' stroke='%23FFFFFF' stroke-width='1'%3E%3Ccircle cx='60' cy='60' r='38'/%3E%3Ccircle cx='60' cy='60' r='2'/%3E%3Cpath d='M60 22v-10M60 98v10M22 60h-10M98 60h10'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 120px 120px;
+}
+
+.hero-tooth-wrap {
+  position: relative; z-index: 2; width: 200px; height: 200px; border-radius: 36px;
+  background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.22);
+  box-shadow: 0 8px 32px rgba(6,30,26,0.18), inset 0 1px 0 rgba(255,255,255,0.25);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+  animation: heroFloat 8s ease-in-out infinite;
+}
+.hero-tooth-glow {
+  position: absolute; width: 200px; height: 200px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.30), transparent 70%); filter: blur(10px);
+}
+.hero-mesh-ring {
+  position: absolute; width: 228px; height: 228px; border-radius: 50%;
+  border: 1px dashed rgba(255,255,255,0.38); animation: heroSpin 18s linear infinite;
+}
+.hero-mesh-ring.two { width: 180px; height: 180px; opacity: 0.6; animation-direction: reverse; }
+.hero-ambient-glow {
+  position: absolute; z-index: 0; width: 420px; height: 420px; left: 50%; top: 50%;
+  transform: translate(-50%,-50%); border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(255,255,255,0.16) 0%, rgba(180,235,220,0.08) 38%, transparent 70%);
+  animation: ambientBreathe 11s ease-in-out infinite;
+}
+@keyframes heroFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes heroSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes ambientBreathe { 0%,100% { opacity:0.14; transform: translate(-50%,-50%) scale(1); } 50% { opacity:0.22; transform: translate(-50%,-50%) scale(1.06); } }
+@keyframes brandFadeUp { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }
+.brand-mark { animation: brandFadeUp 600ms ease both; }
+.brand-hero { animation: brandFadeUp 700ms ease 150ms both; }
+.brand-glass { animation: brandFadeUp 650ms ease 350ms both; }
+
+/* ===== Login card ===== */
+@keyframes cardIn { from { opacity:0; transform: translateY(14px) scale(0.985); } to { opacity:1; transform: translateY(0) scale(1); } }
+.login-card { animation: cardIn 480ms cubic-bezier(.2,.8,.3,1) both; }
+@keyframes iconSwap { 0% { opacity:0; transform: scale(0.7); } 100% { opacity:1; transform: scale(1); } }
+.icon-swap { animation: iconSwap 220ms ease; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.btn-spinner {
+  width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: #fff; animation: spin 700ms linear infinite; flex-shrink: 0;
+}
+
+/* ===== Topbar glass ===== */
+.topbar-glass {
+  background: rgba(255,255,255,0.72); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255,255,255,0.8); box-shadow: var(--shadow-sm);
+}
+
+/* ===== Metric card corner blob ===== */
+.metric-card { position: relative; overflow: hidden; }
+.metric-card::before {
+  content: ""; position: absolute; right: -40px; top: -40px; width: 100px; height: 100px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(24,143,163,0.08), transparent 72%); pointer-events: none;
+}
+
+/* ===== Sidebar active-indicator slide (item 8) ===== */
+.nav-link { position: relative; }
+.nav-link::before {
+  content: ""; position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px;
+  background: #fff; border-radius: 0 4px 4px 0; opacity: 0; transform: scaleY(0.4) translateX(-2px);
+  transform-origin: center; transition: transform 240ms cubic-bezier(.34,1.56,.64,1), opacity 180ms ease;
+}
+.nav-link.active::before { opacity: 1; transform: scaleY(1) translateX(0); }
+
+/* ===== Status pill + breathing "live" dot (item 4) ===== */
+.status-pill {
+  font-size: 11.5px; font-weight: 600; padding: 4px 10px; border-radius: 20px;
+  white-space: nowrap; display: inline-flex; align-items: center; gap: 6px;
+}
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.status-dot.live { animation: dotBreathe 2.2s ease-in-out infinite; }
+@keyframes dotBreathe {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.75); }
+}
+
+/* ===== Empty state (extends the pattern from the demo's .table-empty-state, item 2) ===== */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 56px 20px; color: var(--color-ink-soft);
+}
+.empty-state svg { width: 38px; height: 38px; color: #B9CDCB; margin-bottom: 12px; }
+.empty-state h4 {
+  font-family: var(--font-display); color: var(--color-ink); font-size: 14.5px;
+  font-weight: 700; margin: 0 0 4px;
+}
+.empty-state p { font-size: 12.5px; margin: 0 0 14px; }
+.empty-state button {
+  border: 1px solid var(--color-border); background: #fff; border-radius: 9px;
+  padding: 8px 14px; font-size: 12.5px; font-weight: 600; cursor: pointer;
+  color: var(--color-ink); transition: background 150ms ease;
+}
+.empty-state button:hover { background: var(--color-page-bg-top); }
+
+/* ===== Skeleton loading (item 1) — swap in for spinners on list/data views;
+   the login button's spinner stays as-is since that's a submit-in-flight
+   state, not a data-loading one. ===== */
+.skeleton {
+  position: relative; overflow: hidden; background: #EAF1F0; border-radius: 8px;
+}
+.skeleton::after {
+  content: ""; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
+  animation: skeletonShimmer 1.6s ease-in-out infinite;
+}
+@keyframes skeletonShimmer { 100% { transform: translateX(100%); } }
+
+/* ===== Thin custom scrollbar (item 7) ===== */
+* { scrollbar-width: thin; scrollbar-color: var(--color-border) transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 8px; }
+*::-webkit-scrollbar-thumb:hover { background: #B9CDCB; }
+
+/* ===== Typography hierarchy (item 6) — opt-in utility, not a global element
+   override, so it never fights the explicit Tailwind classes already set
+   per-heading throughout the app. ===== */
+.eyebrow {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--color-ink-soft);
+}
+
+/* ===== Workflow pipeline tracker ===== */
+.wf-dot {
+  width: 44px; height: 44px; border-radius: 50%; margin: 0 auto; background: #EDF7F9;
+  border: 2px solid #D8ECEF; display: flex; align-items: center; justify-content: center;
+}
+.wf-step.completed .wf-dot { background: linear-gradient(135deg,#18A0B0,#1DB37E); border: none; }
+.wf-step.active .wf-dot { background: linear-gradient(135deg,#1C8A93,#16A37A); border: none; animation: wfPulse 2s infinite; }
+.wf-connector { flex: 1; height: 2px; background: #E5F0F2; margin-top: 22px; min-width: 20px; }
+@keyframes wfPulse {
+  0% { box-shadow: 0 0 0 0 rgba(28,138,147,0.35); }
+  70% { box-shadow: 0 0 0 12px rgba(28,138,147,0); }
+  100% { box-shadow: 0 0 0 0 rgba(28,138,147,0); }
+}
+
+/* ===== Toasts ===== */
+.toast {
+  background: #0F2A2C; color: #EAF7F5; padding: 12px 16px; border-radius: 11px; font-size: 13px; font-weight: 600;
+  box-shadow: 0 14px 34px rgba(10,30,30,0.3); display: flex; align-items: center; gap: 9px;
+  opacity: 0; transform: translateY(10px); transition: opacity 200ms ease, transform 200ms ease;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast .tick {
+  width: 18px; height: 18px; border-radius: 50%; background: var(--color-nav-active-2);
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px;
+}
+
+/* ===== Modal ===== */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(10,26,26,0.44); backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center; z-index: 100;
+  opacity: 0; visibility: hidden; transition: opacity 180ms ease, visibility 180ms;
+}
+.modal-overlay.open { opacity: 1; visibility: visible; }
+.modal-box {
+  transform: translateY(14px) scale(0.98); transition: transform 200ms cubic-bezier(.2,.9,.3,1.2);
+}
+.modal-overlay.open .modal-box { transform: translateY(0) scale(1); }
+
+/* ===== Notif dropdown ===== */
+.notif-dropdown {
+  opacity: 0; visibility: hidden; transform: translateY(-6px);
+  transition: opacity 160ms ease, transform 160ms ease, visibility 160ms;
+}
+.notif-dropdown.open { opacity: 1; visibility: visible; transform: translateY(0); }
+
+/* ===== Generic entrance ===== */
+@keyframes fadeUp { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
+.fade-in { animation: fadeUp 420ms ease both; }
+.fade-in.d1 { animation-delay: 60ms; }
+.fade-in.d2 { animation-delay: 120ms; }
+.fade-in.d3 { animation-delay: 180ms; }
+.fade-in.d4 { animation-delay: 240ms; }
+
+@media (max-width: 900px) { .brand-hero { display: none; } }
+@media (max-width: 560px) { .login-brand { display: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

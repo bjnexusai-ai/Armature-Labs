@@ -1,0 +1,222 @@
+import { useState, type FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth, ApiError } from '../context/AuthContext';
+
+export function LoginPage() {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+
+    if (!email.trim() || !password.trim()) {
+      setError('Enter both your email and password to sign in.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await login(email.trim(), password);
+      navigate('/dashboard', { replace: true });
+    } catch (err) {
+      // 401 -> generic "Invalid email or password." (backend-verbatim, doesn't
+      // reveal which field was wrong). 403 -> account-inactive message.
+      // Shown as-is so backend copy changes don't need a frontend deploy.
+      if (err instanceof ApiError) setError(err.message);
+      else setError('Something went wrong. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="min-h-screen flex flex-wrap">
+      {/* ===== Brand panel (hidden below 560px, matches demo) ===== */}
+      <div
+        className="login-brand relative overflow-hidden flex flex-col justify-between text-[#EAF2EC]"
+        style={{
+          flex: '1 1 420px',
+          maxWidth: '46%',
+          padding: 'clamp(32px,5vw,52px) clamp(28px,4vw,56px)',
+          backgroundImage:
+            'linear-gradient(135deg, rgba(38,110,128,0.62) 0%, rgba(17,120,101,0.72) 45%, rgba(11,130,80,0.82) 100%), linear-gradient(160deg, #0D6B72, #0C6249)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          textShadow: '0 1px 3px rgba(4,20,18,0.30)',
+        }}
+      >
+        <div className="brand-mesh-pattern" />
+
+        <div className="brand-mark relative z-[1] mt-1.5 font-display font-extrabold text-[30px] tracking-[-0.015em]">
+          Armature Labs
+          <small className="block font-body font-medium text-[9.5px] tracking-[0.18em] text-[#F3FAF6] mt-1.5 opacity-80">
+            ADMIN PORTAL
+          </small>
+        </div>
+
+        <div className="brand-hero relative z-[1] flex-1 flex items-center justify-center min-h-[180px]">
+          <div className="brand-illustration relative z-[1]">
+            <div className="hero-ambient-glow" />
+            <div className="hero-tooth-glow" />
+            <div className="hero-mesh-ring" />
+            <div className="hero-mesh-ring two" />
+            <div className="hero-tooth-wrap">
+              <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="#EAF7F5" strokeWidth="1.4">
+                <path d="M12 2C8 2 5 4.2 5 7.6c0 2.4.9 3.2 1.3 6.4.3 2.6.8 6 2.3 6 1.3 0 1.2-3.4 1.7-5.2.3-1 .8-1.4 1.7-1.4s1.4.4 1.7 1.4c.5 1.8.4 5.2 1.7 5.2 1.5 0 2-3.4 2.3-6C18.1 10.8 19 10 19 7.6 19 4.2 16 2 12 2Z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div className="brand-glass relative z-[1] rounded-[20px] p-[22px_24px]" style={{ background: 'rgba(15,34,30,0.30)', backdropFilter: 'blur(18px) saturate(90%)', border: '1px solid rgba(234,242,236,0.16)', boxShadow: '0 8px 28px rgba(6,30,26,0.10)' }}>
+          <p className="font-display text-[20px] font-bold leading-snug m-0 mb-2 text-white">
+            Real-time visibility into every case.
+          </p>
+          <span className="text-[12.5px] text-[#E1EDE6] leading-relaxed block">
+            From intake to delivery — design approvals, bisque approvals, and
+            shipping, all in one place.
+          </span>
+          <div className="flex gap-7 mt-4 pt-4" style={{ borderTop: '1px solid rgba(234,242,236,0.12)' }}>
+            <div>
+              <b className="block font-display text-[19px] font-extrabold text-[#5FE8CE]">10</b>
+              <span className="text-[11px] text-[#DCEAE3]">status stages</span>
+            </div>
+            <div>
+              <b className="block font-display text-[22px] font-extrabold text-[#7DF2DC]">2</b>
+              <span className="text-[11px] text-[#DCEAE3]">approval gates</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Form panel ===== */}
+      <div
+        className="relative flex items-center justify-center overflow-hidden"
+        style={{
+          flex: '1 1 320px',
+          padding: '32px 24px',
+          background:
+            'radial-gradient(560px 460px at 90% 4%, rgba(28,138,147,0.10), transparent 68%), radial-gradient(480px 400px at 4% 96%, rgba(16,163,122,0.08), transparent 68%), radial-gradient(900px 700px at 50% 50%, rgba(255,255,255,0.5), transparent 60%), var(--color-page-bg-bot)',
+        }}
+      >
+        <div className="login-card w-full max-w-[352px] relative z-[1] -mt-6">
+          <div className="bg-card-bg rounded-[24px] px-8 pt-9 pb-[30px]" style={{ border: '1px solid rgba(18,140,150,0.10)', boxShadow: '0 1px 0 rgba(255,255,255,0.9) inset, 0 24px 60px -18px rgba(15,42,44,0.22), 0 4px 14px rgba(15,42,44,0.06)' }}>
+            <div className="font-display font-extrabold text-[27px] tracking-[-0.015em] mb-3">
+              Sign in
+            </div>
+            <p className="text-[13.5px] text-ink-soft mb-10 leading-relaxed">
+              Welcome back — enter your credentials to access the portal.
+            </p>
+
+            <form onSubmit={handleSubmit} noValidate>
+              <div
+                role="alert"
+                className="flex items-start gap-2.5 rounded-xl px-3.5 py-2.5 text-[12.5px] font-medium leading-snug transition-all overflow-hidden"
+                style={{
+                  background: '#FBEEEA',
+                  border: '1px solid #EED0C4',
+                  color: '#9C4326',
+                  marginBottom: error ? 18 : 0,
+                  maxHeight: error ? 100 : 0,
+                  opacity: error ? 1 : 0,
+                }}
+              >
+                {error && (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C0503A" strokeWidth="2" style={{ marginTop: 1, flexShrink: 0 }}>
+                      <circle cx="12" cy="12" r="10" />
+                      <path d="M12 8v5M12 16h.01" />
+                    </svg>
+                    <span>{error}</span>
+                  </>
+                )}
+              </div>
+
+              <div className="mb-[18px]">
+                <label htmlFor="email" className="text-[12.5px] font-semibold mb-[11px] block">
+                  Email
+                </label>
+                <div className="relative flex items-center">
+                  <svg className="absolute left-4 w-[19px] h-[19px] text-ink-soft pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                    <rect x="3" y="5" width="18" height="14" rx="2" />
+                    <path d="m3 7 9 6 9-6" />
+                  </svg>
+                  <input
+                    id="email"
+                    type="email"
+                    autoComplete="username"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="owner@dentallab.test"
+                    className="w-full h-[54px] rounded-2xl pl-12 pr-4 text-sm bg-white transition-colors"
+                    style={{ border: '1.5px solid var(--color-border)' }}
+                  />
+                </div>
+              </div>
+
+              <div className="mb-[18px]">
+                <label htmlFor="password" className="text-[12.5px] font-semibold mb-[11px] block">
+                  Password
+                </label>
+                <div className="relative flex items-center">
+                  <svg className="absolute left-4 w-[19px] h-[19px] text-ink-soft pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                    <rect x="4" y="10" width="16" height="10" rx="2" />
+                    <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+                  </svg>
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full h-[54px] rounded-2xl pl-12 pr-11 text-sm bg-white transition-colors"
+                    style={{ border: '1.5px solid var(--color-border)' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((s) => !s)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    className="absolute right-1.5 w-[38px] h-[38px] rounded-[10px] flex items-center justify-center text-ink-soft hover:bg-page-bg-top transition-colors"
+                  >
+                    <svg key={String(showPassword)} className="icon-swap w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                      {showPassword ? (
+                        <>
+                          <path d="M3 3l18 18" />
+                          <path d="M10.6 5.6C11 5.5 11.5 5.5 12 5.5c6 0 9.5 6.5 9.5 6.5a15.6 15.6 0 0 1-3.2 4" />
+                          <path d="M6.6 6.9C4 8.6 2.5 12 2.5 12S6 18.5 12 18.5c1.4 0 2.7-.35 3.8-.9" />
+                          <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+                        </>
+                      ) : (
+                        <>
+                          <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </>
+                      )}
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full h-[52px] rounded-2xl text-white font-bold text-[14.5px] mt-1.5 flex items-center justify-center gap-2.5 transition-all disabled:opacity-80 disabled:cursor-not-allowed"
+                style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)', boxShadow: '0 8px 18px -9px rgba(23,140,143,0.42)' }}
+              >
+                {submitting && <span className="btn-spinner" />}
+                {submitting ? 'Signing in…' : 'Sign in'}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
