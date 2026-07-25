@@ -1,6 +1,6 @@
-# Dental Lab CRM — Backend
+# Armature Labs — Backend
 
-Production backend for the Dental Lab Management & Case Tracking Platform.
+Production backend for Armature Labs — Dental Lab Management & Case Tracking Platform.
 Node.js/Express + PostgreSQL. See `BUILD_LOG.md` for what's built, what's next,
 and session-by-session history — read that first.
 

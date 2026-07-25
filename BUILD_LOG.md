@@ -1,4 +1,4 @@
-# BUILD LOG — Dental Lab CRM Backend
+# BUILD LOG — Armature Labs Backend
 
 Read this first at the start of every session. It's the single source of truth
 for what's done, what's next, and any decisions made along the way. Update it

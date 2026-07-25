@@ -1,7 +1,7 @@
 {
-  "name": "dental-lab-crm-backend",
+  "name": "armature-labs-backend",
   "version": "1.0.0",
-  "description": "Production backend for Dental Lab CRM + Customer Portal (Phase 1: Core Operations)",
+  "description": "Production backend for Armature Labs — Dental Lab Management & Case Tracking Platform (Phase 1: Core Operations)",
   "main": "index.js",
   "scripts": {
     "test": "jest --runInBand",
