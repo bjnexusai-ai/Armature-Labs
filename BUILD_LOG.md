@@ -570,9 +570,10 @@ Session 4's `invoices` table also missed three fields the scope doc names on
 at the schema level.
 
 **What it adds:**
-- `0023_patients.js` — new `patients` table (`first_name`, `last_name`,
-  `date_of_birth`, `email`, `phone`) + nullable `cases.patient_id` FK
-  (`ON DELETE SET NULL`), indexed.
+- `0023_patients.js` — new `patients` table (`practice_id` tenant FK
+  referencing `practices` `ON DELETE RESTRICT`, `first_name`, `last_name`,
+  `created_at`) + nullable `cases.patient_id` FK (`ON DELETE SET NULL`),
+  both indexed.
 - `0024_invoice_client_fields.js` — adds `due_date`, `tax_amount`, `paid_date`
   to `invoices`.
 
