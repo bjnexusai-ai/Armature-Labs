@@ -200,3 +200,46 @@ Verified: baseline (118/118) reconfirmed on a fresh clone before starting;
 all 4 new migrations tested up and down; full suite after = **144/144
 passing, 13/13 suites**. No known open items — this session is fully
 closed, not partial (see §7's rule on marking partial sessions honestly).
+
+---
+
+## 10. Sandbox Constraints (when Claude/an AI assistant is doing the building)
+
+Read this before starting a session if you're an AI assistant working from
+a sandboxed environment without direct repo write access or a runnable
+Postgres — both are common enough (no persistent push credentials, no apt
+mirror that resolves) that it's worth stating the resulting workflow once
+here instead of re-discovering it, and re-explaining it to the human, every
+single session.
+
+**No push credentials.** Assume the sandbox can `git clone` (read) but not
+`git push` (write). Build the session normally — code, `tsc -b`/build,
+commit locally — then package the result as a `git format-patch --stdout`
+patch (preferred: small, git-native, preserves commit messages) plus a zip
+of just the changed/added files (fallback, for manual copy-in). Hand both
+to the human with the exact `git checkout <branch> && git pull && git am
+<patch>` sequence. **Every new patch for the same session supersedes the
+previous one for that session** — if visual fixes, review feedback, or bug
+fixes land in a follow-up commit, repackage and reship both files with all
+commits included; don't make the human track which of several old patches
+is current. Say explicitly, every time: "this replaces the earlier
+patch/zip, discard those."
+
+**No runnable Postgres.** If `apt-get install postgresql` 404s or otherwise
+fails in the sandbox, that's an environment problem, not something to work
+around by skipping verification silently. What's still fully doable without
+a database: `tsc -b` / `npm run build`, grepping every new component's
+import outside its own file (the Session 2 checklist item), and a direct
+line-by-line visual audit against the reference demo (colors, fonts, exact
+pixel values — all doable by reading files, no running app needed). What's
+**not** doable: starting the backend, hitting real endpoints, or an actual
+browser click-through. Say so plainly in the log entry (see the honesty
+precedent in `FRONTEND_LOG.md`'s Session 3 entry) rather than implying
+full verification happened. The click-through step in §6 rule 3 always
+falls to the human, after they've applied the patch and pushed — that's a
+permanent division of labor here, not a one-off gap to chase closed.
+
+**Division of labor, stated plainly:** the sandboxed assistant builds,
+typechecks, greps for wiring, and visually audits against the reference.
+The human applies the patch, runs the backend, clicks through the real UI,
+and pushes. Neither side should expect the other to cover its half.
