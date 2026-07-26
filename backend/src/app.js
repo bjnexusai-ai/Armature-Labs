@@ -9,6 +9,7 @@ const morgan = require('morgan');
 const authRoutes = require('./routes/auth.routes');
 const usersRoutes = require('./routes/users.routes');
 const practicesRoutes = require('./routes/practices.routes');
+const patientsRoutes = require('./routes/patients.routes');
 const casesRoutes = require('./routes/cases.routes');
 const approvalsRoutes = require('./routes/approvals.routes');
 const referenceRoutes = require('./routes/reference.routes');
@@ -31,6 +32,7 @@ app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/practices', practicesRoutes);
+app.use('/api/patients', patientsRoutes);
 app.use('/api/cases', casesRoutes);
 app.use('/api/approvals', approvalsRoutes);
 app.use('/api/reference', referenceRoutes);
