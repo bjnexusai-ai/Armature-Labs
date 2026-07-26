@@ -48,7 +48,7 @@ someone real time re-verifying something that's already fine.
 | 4 | ✅ COMPLETE (69/69 tests) | ⬜ NOT STARTED | **✅ YES — ready now** |
 | 5 | ✅ COMPLETE (100/100 tests) | ⬜ NOT STARTED | **✅ YES — ready now** |
 | 5.5 | ✅ COMPLETE (118/118 tests, commit `0efddfa`) | ⬜ NOT STARTED | **✅ YES — ready now** |
-| 6 | ⬜ NOT STARTED | ⬜ NOT STARTED | ❌ blocked on backend |
+| 6 | ✅ COMPLETE (144/144 tests — see §9) | ⬜ NOT STARTED | **✅ YES — ready now** |
 | 7 | ⬜ NOT STARTED | ⬜ NOT STARTED | ❌ blocked on backend |
 | 8 | ⬜ NOT STARTED | ⬜ NOT STARTED | ❌ blocked on backend |
 | 9 | ⬜ NOT STARTED | ⬜ NOT STARTED | ❌ blocked on backend |
@@ -162,11 +162,9 @@ push. One addition specific to parallel-build coordination:
 
 ## 8. Immediate Recommended Next Actions
 
-**Backend:** Session 5.5's remaining controller/backfill work is closed
-(commit `0efddfa`, §4). Proceed to Session 6 (Phase 3 inventory —
-materials, vendors, purchase_orders, stock_transactions with lot
-tracking, practice_contracts/notes) per `BUILD_LOG.md`'s own "not yet
-built" section.
+**Backend:** Session 6 (Phase 3 inventory/procurement/practice-CRM) is
+now complete — see §9 below and `BUILD_LOG.md`'s Session 6 entry. Next up
+per the 9-session plan: Session 7.
 
 **Frontend:** Session 3 (Approvals UI) is next in sequence and has
 zero blockers — Backend Session 3 is complete, tested (part of the
@@ -178,8 +176,27 @@ media upload as `POST /api/cases/:id/media`, not a separate approvals
 upload route — confirm this against the source, not this summary, per
 §5 rule 2).
 
-Frontend Sessions 4 and 5 are also unblocked and can follow immediately
-after — the backend for all three is already done. This is the real
-parallel-work opportunity: three frontend sessions' worth of already-
-finished backend to build against, no need to wait on the backend side
-at all for that stretch.
+Frontend Sessions 4, 5, and 6 are also unblocked and can follow
+immediately after — the backend for all four is already done. This is
+the real parallel-work opportunity: four frontend sessions' worth of
+already-finished backend to build against, no need to wait on the
+backend side at all for that stretch.
+
+---
+
+## 9. Session 6 summary (Phase 3 Inventory & Procurement + Practice CRM)
+
+Backend-only. Added `material_categories`, `materials`, `vendors`,
+`purchase_orders`, `purchase_order_items`, `material_stock_transactions`,
+`practice_contracts`, `practice_notes` (8 of Phase 3's 13 tables —
+`saved_reports`/`equipment`/`technician_shifts` deferred). New routes:
+`/api/inventory/*`, `/api/procurement/*`, and `/api/practices/:id/contracts`
++ `/notes`. Full detail, including the role-gating decisions made without a
+client answer on file, is in `BUILD_LOG.md`'s Session 6 entry — read that
+before building frontend against any of this, same as §5 requires for
+every prior session.
+
+Verified: baseline (118/118) reconfirmed on a fresh clone before starting;
+all 4 new migrations tested up and down; full suite after = **144/144
+passing, 13/13 suites**. No known open items — this session is fully
+closed, not partial (see §7's rule on marking partial sessions honestly).

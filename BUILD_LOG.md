@@ -606,3 +606,86 @@ mounted at `/api/patients` in `app.js`. `0025_backfill_case_patient_id.js`
 backfills `cases.patient_id` from the legacy flat field. Full suite:
 118/118 passing, 10/10 suites. Session 5.5 is fully closed — no open
 items remain.
+
+---
+
+## Session 6 — Phase 3 Inventory & Procurement + Practice CRM
+
+**Scope (per Master Blueprint §11 Phase 3, confirmed against
+PARALLEL_BUILD_PROTOCOL.md §8):** the 8-table subset — `material_categories`,
+`materials`, `vendors`, `purchase_orders`, `purchase_order_items`,
+`material_stock_transactions`, `practice_contracts`, `practice_notes`.
+`saved_reports`, `equipment`/`equipment_maintenance_logs`, and
+`technician_shifts`/`equipment_bookings` are the remaining Phase 3 tables and
+are NOT part of this session — deferred to a later session.
+
+**Migrations (`0026`–`0029`), each verified up AND down before building on
+top of it, per this project's own convention:**
+- `0026_material_categories_and_materials.js` — `materials.current_stock` is
+  a maintained running balance (same pattern as `invoices.amount_paid`), not
+  derived by summing transactions on read.
+- `0027_vendors_and_purchase_orders.js` — `po_number` auto-generates as
+  `PO-YYYY-NNNN` via trigger, same mechanism as `invoice_number`.
+  `purchase_order_items.quantity_received` is likewise a maintained balance.
+- `0028_material_stock_transactions.js` — `lot_number` is `NOT NULL` on
+  every row, enforced at the schema level, per the Blueprint's explicit
+  regulatory-traceability requirement ("which patient's case used which
+  batch"). `quantity` is signed; sign convention is enforced by the
+  controller, not the schema (see below).
+- `0029_practice_contracts_and_notes.js` — both internal-only, no
+  dentist_client access at all (unlike `case_notes`, no visibility split).
+
+**Controllers/routes:**
+- `inventory.controller.js` / `inventory.routes.js` — categories, materials,
+  and the two operator-facing stock-transaction endpoints (`consume`,
+  `adjust`). Exposes `recordStockTransaction()`, the shared, row-locked
+  (`FOR UPDATE`) core that both this controller and procurement's receiving
+  flow funnel through, so `materials.current_stock` can never drift from
+  its transaction history no matter which endpoint wrote it.
+- `procurement.controller.js` / `procurement.routes.js` — vendors, purchase
+  orders, and receiving. PO status (`Partially Received` / `Received`) is
+  always derived from actual `purchase_order_items.quantity_received`
+  totals after each receive, never trusted from caller input.
+- `accounts.controller.js`, wired into `practices.routes.js` (nested under
+  `/api/practices/:id/contracts` and `/notes`, alongside the existing
+  fee-schedule assignment route) — practice contracts (history, not a
+  single mutable row — "current" = most recent by `created_at`) and
+  practice notes.
+- New `requireManagerRole` middleware (`auth.js`) — Owner/Office Manager
+  gate for procurement writes and contracts/notes, kept separate from
+  `requireBillingAccess` despite the identical role set, since it gates an
+  unrelated resource.
+
+**Role-gating decisions (no client answer on file for any of these — best
+judgment, flagged for confirmation):**
+- Inventory *reads* (categories, materials, transaction history): any
+  internal staff. No dentist_client access anywhere in Phase 3 — enforced
+  via `router.use(requireInternal)` at the top of both new route files.
+- Logging Consumption: any internal staff (a technician's day-to-day job).
+- Everything else Phase 3 — category/material creation, Adjustment,
+  vendors, purchase orders (including receiving), practice
+  contracts/notes: Owner/Office Manager only.
+
+**Stock-transaction sign convention (controller-enforced, not
+schema-enforced):** operator supplies a positive "how much"; the
+controller decides the stored sign — Receiving/Adjustment(+) store
+positive, Consumption/Return store negative. Adjustment is the one
+exception where the caller supplies the signed value directly, since a
+manual correction can legitimately go either direction.
+
+**Verification:** confirmed baseline (118/118, 10/10 suites) on a fresh
+clone before starting, per §5's rule. All 4 migrations tested up and down.
+`node -e "require('./src/app')"` sanity-checked before writing tests.
+Full suite after this session: **144/144 passing, 13/13 suites** (26 new
+tests across `inventory`, `procurement`, `accounts`).
+
+**Not yet built (deferred):**
+- `saved_reports`, `equipment`/`equipment_maintenance_logs`,
+  `technician_shifts`/`equipment_bookings` — remaining Phase 3 tables.
+- Vendor/purchase-order update and delete endpoints — only
+  create/list/get/status-transition/receive exist this session.
+- No frontend for any of this (backend-only session, consistent with
+  Sessions 4/5/5.5).
+- Whether receiving should be openable to technicians (physical stock
+  arrival) rather than Owner/Office Manager only — no client answer yet,
+  defaulted to manager-only alongside the rest of procurement.

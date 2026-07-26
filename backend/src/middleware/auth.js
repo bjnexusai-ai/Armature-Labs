@@ -105,6 +105,26 @@ function requireBillingAccess(req, res, next) {
 }
 
 /**
+ * Session 6 (Phase 3 inventory/CRM) — restricts vendor/purchase-order
+ * writes and practice_contracts/practice_notes to Owner + Office Manager,
+ * same two roles as requireBillingAccess but named for its own domain
+ * rather than reusing billing's middleware for an unrelated resource.
+ * Inventory *reads* (materials, categories, stock-transaction history) and
+ * Consumption-type stock transactions are NOT gated by this — any internal
+ * staff member (including technicians logging what they used on a case)
+ * can do those; see inventory.routes.js.
+ */
+function requireManagerRole(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Not authenticated.' });
+  }
+  if (!['owner', 'office_manager'].includes(req.user.role)) {
+    return res.status(403).json({ error: 'This action is restricted to Owner and Office Manager.' });
+  }
+  return next();
+}
+
+/**
  * Gates a portal (dentist_client) action behind one of the three client-specified
  * per-user boolean flags: can_approve_photos, can_view_invoices, can_edit_patient_info.
  */
@@ -133,5 +153,6 @@ module.exports = {
   requireRole,
   requireInternal,
   requireBillingAccess,
+  requireManagerRole,
   requirePortalPermission,
 };
