@@ -302,7 +302,51 @@ body {
   flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px;
 }
 
-/* ===== Modal ===== */
+/* ===== Form input (ported verbatim from the reference's .form-row
+   input,.form-row select). This class has been used since Session 2
+   (NewCaseModal.tsx, CaseQueuePage.tsx's search/status filter) and by the
+   new Session 3 ApprovalActionModal, but was never actually defined here —
+   every one of those inputs has been rendering as an unstyled browser
+   default (no border, no radius, no focus ring) instead of matching the
+   reference pixel-for-pixel. Fixed here rather than left silently wrong. */
+.form-input {
+  width: 100%; height: 38px; border: 1px solid var(--color-border); border-radius: 8px;
+  padding: 0 12px; font-family: var(--font-body); font-size: 13px; background: #fff;
+  color: var(--color-ink);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+.form-input::placeholder { color: #8FA6A3; }
+.form-input:hover { border-color: #C3D8D5; }
+.form-input:focus {
+  outline: none; border-color: var(--color-hero-teal-2);
+  box-shadow: 0 0 0 3px rgba(18,111,126,0.12);
+}
+.form-input:disabled { cursor: not-allowed; opacity: 0.6; }
+
+/* ===== Primary button (ported from the reference's .btn-primary). Used by
+   DashboardPage's "Preview a toast" button, which already carries an inline
+   gradient fallback so it wasn't visibly broken — defined here anyway so
+   the class does what its name says instead of silently doing nothing. */
+.btn-primary {
+  background: linear-gradient(135deg,#1C8A93,#16A37A); color: #fff; border: none;
+  cursor: pointer; transition: transform 160ms ease, background 160ms ease;
+}
+.btn-primary:hover { background: linear-gradient(135deg,#146E72,#128F63); }
+
+/* ===== Range toggle / segmented control (ported verbatim from the
+   reference's .range-toggle/.range-btn — the reference's own precedent for
+   "switch between filtered views," e.g. the dashboard's 7d/30d/90d chart
+   range switcher. Reused by ApprovalsPage's status filter instead of
+   inventing new tab/pill styling for the same interaction pattern.) ===== */
+.range-toggle { display: flex; gap: 4px; background: var(--color-page-bg-top); padding: 3px; border-radius: 9px; }
+.range-btn {
+  border: none; background: transparent; font-size: 11.5px; font-weight: 600;
+  padding: 5px 10px; border-radius: 7px; cursor: pointer; color: var(--color-ink-soft);
+  transition: background 140ms ease, color 140ms ease, box-shadow 140ms ease;
+}
+.range-btn.active { background: #fff; color: var(--color-ink); box-shadow: 0 2px 8px rgba(20,60,70,0.10); }
+
+/* ===== Modal (ported verbatim from the reference's .modal-box) ===== */
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(10,26,26,0.44); backdrop-filter: blur(3px);
   display: flex; align-items: center; justify-content: center; z-index: 100;

@@ -246,7 +246,37 @@ proceed" checklist. Backend Session 3's list endpoint gap (flagged in
   regardless of route — would have looked broken landing on `/approvals`;
   now derived from `navConfig`'s matching item.
 
-**Verified:**
+**Visual audit against the reference demo (index.html), done on request:**
+
+Compared every color token, font stack, and pixel value used against the
+reference demo directly, not from memory. Found and fixed two real
+pre-existing gaps (not introduced this session, but caught while checking):
+
+- `.form-input` — used since Session 2 (`NewCaseModal.tsx`,
+  `CaseQueuePage.tsx`'s search/status filter) and by this session's
+  `ApprovalActionModal.tsx`, but **never defined anywhere in `index.css`**.
+  Every one of those inputs has been rendering as an unstyled browser
+  default (no border, no radius, no focus ring) instead of matching the
+  reference's `.form-row input,.form-row select` pixel-for-pixel. Added,
+  ported verbatim from the reference.
+- `.btn-primary` — used by `DashboardPage.tsx`'s "Preview a toast" button,
+  also never defined. Not visibly broken (that button carries an inline
+  gradient fallback), but the class itself did nothing. Added.
+
+Also replaced this session's own first-draft status-filter tabs (an
+invented pill/gradient style with no reference precedent) with the
+reference's actual `.range-toggle`/`.range-btn` segmented control — its own
+established pattern for "switch between filtered views" (the dashboard's
+chart-range switcher) — and added that class pair to `index.css` too, since
+it wasn't defined yet either (nothing had used it until now). Also switched
+the action modal's case-number subtitle to `IBM Plex Mono`, matching the
+reference's own `.modal-head p` rule for case-ID text exactly (this modal's
+subtitle literally is a case ID, the same use case the reference rule
+exists for).
+
+`tsc -b` / `npm run build` reconfirmed clean after all of the above.
+
+
 
 - `tsc -b` and `npm run build` — both clean, zero errors.
 - Grepped every new component's import outside its own file (`ApprovalsPage`,

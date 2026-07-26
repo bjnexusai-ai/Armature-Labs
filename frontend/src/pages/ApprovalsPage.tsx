@@ -68,7 +68,7 @@ export function ApprovalsPage() {
       </div>
 
       <div className="surface-card rounded-[18px] p-5">
-        <div className="flex gap-2 flex-wrap mb-4">
+        <div className="range-toggle inline-flex mb-4">
           {TABS.map((tab) => (
             <button
               key={tab.key}
@@ -76,16 +76,7 @@ export function ApprovalsPage() {
                 setStatusFilter(tab.key);
                 setPage(1);
               }}
-              className={`px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold border transition-colors ${
-                statusFilter === tab.key
-                  ? 'text-white border-transparent'
-                  : 'border-border text-ink-soft hover:bg-page-bg-top'
-              }`}
-              style={
-                statusFilter === tab.key
-                  ? { background: 'linear-gradient(135deg,#1C8A93,#16A37A)' }
-                  : undefined
-              }
+              className={`range-btn ${statusFilter === tab.key ? 'active' : ''}`}
             >
               {tab.label}
             </button>

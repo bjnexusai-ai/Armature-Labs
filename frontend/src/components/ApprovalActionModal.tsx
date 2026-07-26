@@ -73,7 +73,7 @@ export function ApprovalActionModal({ approval, action, onClose, onDone }: Appro
               <h3 className="font-display text-[17px] font-bold text-ink m-0">
                 {isRequestChanges ? 'Request changes' : 'Approve'}
               </h3>
-              <p className="text-xs text-ink-soft mt-0.5">
+              <p className="text-xs text-ink-soft mt-0.5 font-mono">
                 {approval.case_number} · {approval.stage === 'design' ? 'Design' : 'Bisque'} stage
               </p>
             </div>
