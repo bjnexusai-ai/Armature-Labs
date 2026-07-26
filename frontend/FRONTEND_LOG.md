@@ -309,6 +309,171 @@ standard):**
    warranty) are both unblocked — their backend sessions are complete,
    tested, and pushed on this branch, same as Session 3's was.
 
+## Session 4 — COMPLETE (Invoices/QC UI), pending browser click-through
+
+Built against backend's real billing/QC endpoints — confirmed directly
+against `backend/src/controllers/billing.controller.js`,
+`backend/src/routes/billing.routes.js`,
+`backend/src/controllers/qc.controller.js`, and
+`backend/src/routes/qc.routes.js` before writing any fetch call, per the
+Master Frontend Plan's "how to proceed" checklist.
+
+**Scope note confirmed against source, not the resume prompt's summary:**
+`qc.controller.js` exports `recordQcResult`, `createCaseRework`,
+`listCaseRework`, `createFinalApproval`, and `getFinalApproval` in addition
+to the three functions this session covers — but only
+`createChecklist`/`listChecklists`/`resolveCaseRework` are actually mounted
+on `qc.routes.js`. The rest are wired under `cases.routes.js` instead and
+are out of scope here; not built against on a guess.
+
+**Confirmed before coding:**
+- Invoice row fields are snake_case under camelCase wrapper keys
+  (`invoice`/`invoices`), same convention as `CaseRecord`/`ApprovalRecord`.
+  No `dueDate`/`taxAmount`/`paidDate` fields exist on the invoice response
+  yet — `PARALLEL_BUILD_PROTOCOL.md` §4's Session 5.5 blocker (schema
+  migrated, controller not updated) is still open, confirmed directly
+  against `billing.controller.js`'s `getInvoice`/`listInvoices` SELECTs,
+  not assumed from the migration file alone. None of this session's UI
+  reads or expects those three fields.
+- `POST /invoices/:id/payments` is manual mark-paid only (amount, method,
+  referenceNote) — no Stripe fields exist on this endpoint yet (that's
+  backend Session 8). No "Pay Now" processor click handler was built.
+- `requireBillingAccess` = Owner/Office Manager only for invoice
+  create/payment actions; portal (`dentist_client`) read access is gated
+  server-side on `can_view_invoices` via `requirePortalPermission`, not
+  `requireBillingAccess` — both paths flow through the same
+  `listInvoices`/`getInvoice` controllers, which branch internally on
+  `req.user.role`.
+- Entire QC router is `requireInternal` — no portal access at all, gated
+  the nav item accordingly (not just role-hidden button, since a
+  `dentist_client` hitting `/api/qc/*` gets a flat 403 regardless).
+- `PATCH /api/qc/rework/:id/resolve` is not case-scoped — it operates
+  directly on a rework record's own id. There's no list-rework endpoint
+  mounted on `qc.routes.js` this session, so the UI resolves by a known id
+  rather than offering a picker (documented gap, not a guessed workaround).
+
+**Built:**
+- `lib/caseTypes.ts` — `InvoiceStatus`, `InvoiceLineItem`, `Payment`,
+  `InvoiceListRow`, `InvoiceDetail`, `ListInvoicesResponse`,
+  `GetInvoiceResponse`, `CreateInvoiceLineItemInput`, `CreateInvoicePayload`,
+  `CreateInvoiceResponse`, `RecordPaymentPayload`, `RecordPaymentResponse`;
+  `QcChecklistItem`, `QcChecklist`, `ListChecklistsResponse`,
+  `CreateChecklistPayload`, `CreateChecklistResponse`, `ReworkRecord`,
+  `ResolveReworkPayload`, `ResolveReworkResponse`.
+- `lib/api.ts` — `listInvoices`, `getInvoice`, `createInvoice`,
+  `recordPayment`, `listChecklists`, `createChecklist`, `resolveRework`.
+- `lib/statusColors.ts` — `INVOICE_STATUS_COLORS`, reusing existing tokens
+  (tan/mustard/amber/green) rather than inventing new ones, same convention
+  as the case-status and approval-status palettes. Void reuses the neutral
+  tan token rather than red — voiding isn't an error state the way
+  Delayed/rejected are.
+- `components/InvoiceStatusPill.tsx` — small sibling to
+  `StatusPill`/`ApprovalStatusPill`.
+- `components/NewInvoiceModal.tsx` — practice select + dynamic line-item
+  rows (description/qty/unit price, add/remove), live subtotal, mirrors
+  `NewCaseModal`'s form pattern. No case-picker for a line item's optional
+  `caseId` this session (not in scope) — a line item just isn't tied to a
+  case unless added some other way later.
+- `components/RecordPaymentModal.tsx` — amount (pre-filled to balance
+  due)/method/reference-note form, calls `recordPayment`. Explicitly not a
+  payment-processor UI — this records a payment someone already collected
+  offline.
+- `components/NewChecklistModal.tsx` — name/optional case-type/dynamic
+  ordered item list (order = array position = `sort_order` server-side).
+- `pages/InvoicesPage.tsx` — role-aware list (the backend branches
+  internal-vs-portal, not this page); "New invoice" button hidden for
+  everyone but Owner/Office Manager (UI convenience only — creation is
+  `requireBillingAccess`-gated server-side regardless).
+- `pages/InvoiceDetailPage.tsx` — subtotal/paid/balance summary cards, line
+  items table (with a link to the case if `case_id` is set), payment
+  timeline, "Mark as paid" action gated to Owner/Office Manager and hidden
+  once an invoice is already `Paid` or `Void`.
+- `pages/QcPage.tsx` — checklist creation/listing (ordered items rendered
+  as a numbered list) + a rework-resolution mini-form (rework id +
+  optional resolution notes) calling `resolveRework` directly, since no
+  list-rework endpoint exists on this router to build a picker against.
+- `App.tsx` — routed `/invoices`, `/invoices/:id`, `/qc` to the real pages
+  in this same commit (the exact Session 2 mistake — pages existing
+  without routes — avoided here).
+- `lib/navConfig.ts` — flipped `invoices`' `live: true`; added a new `qc`
+  nav item (didn't exist before), gated to every internal role
+  (`owner`/`office_manager`/`assistant_technician`/`designer`), excluding
+  `dentist_client` to match `requireInternal` server-side.
+- `layouts/AppShell.tsx` — added a `qc` nav icon (drawn in the same
+  stroke-icon style as Approvals/Messages, no reference-demo precedent for
+  this screen either).
+
+**Verified:**
+- `tsc -b` and `npm run build` — both clean, zero errors.
+- Grepped every new component's import outside its own file
+  (`InvoicesPage`, `InvoiceDetailPage`, `QcPage`, `NewInvoiceModal`,
+  `RecordPaymentModal`, `NewChecklistModal`, `InvoiceStatusPill` — all
+  confirmed imported and used somewhere other than their own file) — the
+  exact Session 2 checklist item.
+- Confirmed `navConfig.ts`'s `invoices` and `qc` entries both have
+  `live: true` so neither renders as a "Coming soon" stub in the sidebar.
+
+**Visual audit against the reference demo (index.html), done on request:**
+
+The reference has no actual Invoices or QC screen to compare against —
+Invoices is nav-stubbed `data-view="soon"` in the demo, and QC doesn't
+exist there at all — same situation Session 3 was in for Approvals. Audit
+was therefore: confirm every class/token used here was already ported and
+verified (not invent new ones), and check pixel values against already-
+verified precedent screens (CaseQueuePage/ApprovalsPage) rather than the
+demo directly for anything the demo itself doesn't have.
+
+- `.form-input`, `.btn-primary`, `.range-toggle`/`.range-btn`,
+  `.modal-overlay`/`.modal-box`, `.status-pill`, `.empty-state`,
+  `.skeleton` — all reused verbatim, none reinvented. All `--color-pill-*`
+  / `--color-badge-*` tokens used by `INVOICE_STATUS_COLORS` are existing
+  ported tokens, confirmed against `reference/index.html`'s `:root` block
+  directly, not assumed.
+- Table header cells (`text-[11px] uppercase tracking-wider text-ink-soft
+  pb-2.5 border-b border-border`) match `ApprovalsPage.tsx`/
+  `CaseQueuePage.tsx` exactly — both of those already diverged from the
+  reference's actual `.case-table` class in favor of inline Tailwind
+  (pre-existing Session 2/3 pattern, not something this session
+  introduced or re-litigated).
+- **One real gap found and fixed:** the invoice detail summary cards
+  (Subtotal/Amount paid/Balance due) were first built as an ad hoc
+  `rounded-[16px]` card with no icon block — didn't match the established
+  `MetricCard` visual pattern (icon-in-colored-box, `rounded-[18px]`,
+  `fade-in`) used everywhere else a metric-style number is shown
+  (`DashboardPage.tsx`). Restyled to match that pattern's exact class
+  names. `MetricCard` itself wasn't reused directly — its `useCountUp`
+  hook `Math.round`s to whole numbers and the component has no currency
+  formatting, so reusing it as-is would have silently dropped cents off
+  every dollar figure. Documented decision, not a guess.
+
+`tsc -b` / `npm run build` reconfirmed clean after this fix.
+
+**Not verified (be honest about this, same as Session 3's own standard):**
+- Built from a sandboxed environment with read-only repo access (no push
+  credentials) and no runnable Postgres — `apt-get update` here 403s on
+  `deb.nodesource.com` and there's no path to a working local Postgres
+  instance, so the backend could not actually be started. §6 rule 3 of
+  `PARALLEL_BUILD_PROTOCOL.md` ("actually click through it in a running
+  browser") has **not** been satisfied yet, same gap Session 3 logged.
+  Delivered as a patch (`git format-patch`) + zip per §10's sandbox
+  workflow rather than pushed directly.
+
+**How to pick this up:**
+1. Apply the patch (`git am <patch>`), confirm `npm run build` still
+   clean in the real Codespace.
+2. Do the click-through this log can't do here: `npm run dev` both sides
+   (or the Docker Compose flow per the Dev Environment Runbook), log in as
+   `owner@dentallab.test` (billing access) — confirm Invoices renders with
+   "New invoice" visible, create an invoice, open its detail view, record
+   a payment, confirm status/balance update. Log in as
+   `dentist@brightsmile.test` (portal, `can_view_invoices: true`) —
+   confirm Invoices renders read-only (no "New invoice" button, no
+   "Mark as paid"), scoped to their own practice's invoices, and confirm
+   Quality Control is fully absent from their nav (not just disabled).
+3. Once confirmed, Session 4 is fully closed and Session 5
+   (Messages/photos/shipments/warranty) is next — its backend is already
+   complete and tested.
+
 ## Codespaces/Docker dev-environment notes (added post Session 5.5)
 
 **Vite proxy + Codespaces gotchas found while verifying login end-to-end:**

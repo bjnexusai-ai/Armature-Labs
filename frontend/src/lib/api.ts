@@ -77,14 +77,25 @@ import type {
   ApprovePayload,
   CreateCasePayload,
   CreateCaseResponse,
+  CreateChecklistPayload,
+  CreateChecklistResponse,
+  CreateInvoicePayload,
+  CreateInvoiceResponse,
   GetCaseResponse,
+  GetInvoiceResponse,
   ListApprovalsQuery,
   ListApprovalsResponse,
   ListCasesQuery,
   ListCasesResponse,
   ListCaseTypesResponse,
+  ListChecklistsResponse,
+  ListInvoicesResponse,
   ListPracticesResponse,
+  RecordPaymentPayload,
+  RecordPaymentResponse,
   RequestChangesPayload,
+  ResolveReworkPayload,
+  ResolveReworkResponse,
 } from './caseTypes';
 
 interface GetPracticeResponse {
@@ -156,6 +167,73 @@ export function requestChangesApproval(
 ): Promise<ApprovalActionResponse> {
   return apiFetch<ApprovalActionResponse>(`/api/approvals/${id}/request-changes`, {
     method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Billing / Invoices (Frontend Session 4) — confirmed directly against
+// backend/src/controllers/billing.controller.js and billing.routes.js
+// before writing these. listInvoices/getInvoice branch server-side on
+// req.user.role (internal vs dentist_client) — the frontend just calls the
+// one endpoint either way and renders whatever comes back.
+// ─────────────────────────────────────────────────────────────────────────
+
+export function listInvoices(query: { practiceId?: number } = {}): Promise<ListInvoicesResponse> {
+  const params = new URLSearchParams();
+  if (query.practiceId != null) params.set('practiceId', String(query.practiceId));
+  const qs = params.toString();
+  return apiFetch<ListInvoicesResponse>(`/api/billing/invoices${qs ? `?${qs}` : ''}`);
+}
+
+export function getInvoice(id: string | number): Promise<GetInvoiceResponse> {
+  return apiFetch<GetInvoiceResponse>(`/api/billing/invoices/${id}`);
+}
+
+export function createInvoice(payload: CreateInvoicePayload): Promise<CreateInvoiceResponse> {
+  return apiFetch<CreateInvoiceResponse>('/api/billing/invoices', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+// Manual mark-paid only this session — real Stripe/ACH is backend Session 8,
+// per billing.controller.js's own comment. Don't build a "Pay Now" click
+// handler; this records a payment someone already collected offline.
+export function recordPayment(
+  invoiceId: string | number,
+  payload: RecordPaymentPayload
+): Promise<RecordPaymentResponse> {
+  return apiFetch<RecordPaymentResponse>(`/api/billing/invoices/${invoiceId}/payments`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// QC (Frontend Session 4) — confirmed directly against
+// backend/src/controllers/qc.controller.js and qc.routes.js. Only the three
+// routes actually mounted there — checklists create/list, rework
+// resolve-by-id. Entire router is requireInternal (no portal access at all).
+// ─────────────────────────────────────────────────────────────────────────
+
+export function listChecklists(): Promise<ListChecklistsResponse> {
+  return apiFetch<ListChecklistsResponse>('/api/qc/checklists');
+}
+
+export function createChecklist(payload: CreateChecklistPayload): Promise<CreateChecklistResponse> {
+  return apiFetch<CreateChecklistResponse>('/api/qc/checklists', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function resolveRework(
+  id: number,
+  payload: ResolveReworkPayload = {}
+): Promise<ResolveReworkResponse> {
+  return apiFetch<ResolveReworkResponse>(`/api/qc/rework/${id}/resolve`, {
+    method: 'PATCH',
     body: JSON.stringify(payload),
   });
 }

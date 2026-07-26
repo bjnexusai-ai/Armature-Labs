@@ -55,3 +55,19 @@ export const APPROVAL_STATUS_COLORS: Record<
   approved: { bg: 'var(--color-pill-green-bg)', text: 'var(--color-pill-green-text)' },
   rejected: { bg: 'var(--color-pill-red-bg)', text: 'var(--color-pill-red-text)' },
 };
+
+// Invoice status pill (Frontend Session 4) — reuses the same tokens rather
+// than inventing new ones: Draft/Sent are neutral/awaiting-action (tan and
+// mustard), Partially Paid reuses the amber "in progress" tone, Paid reuses
+// the green "done" tone, Void reuses a muted neutral (not red — voiding an
+// invoice isn't an error state the way Delayed/rejected are).
+export const INVOICE_STATUS_COLORS: Record<
+  'Draft' | 'Sent' | 'Partially Paid' | 'Paid' | 'Void',
+  { bg: string; text: string }
+> = {
+  Draft: { bg: 'var(--color-badge-tan-bg)', text: 'var(--color-badge-tan)' },
+  Sent: { bg: 'var(--color-pill-mustard-bg)', text: 'var(--color-pill-mustard-text)' },
+  'Partially Paid': { bg: 'var(--color-badge-amber-bg)', text: 'var(--color-badge-amber)' },
+  Paid: { bg: 'var(--color-pill-green-bg)', text: 'var(--color-pill-green-text)' },
+  Void: { bg: 'var(--color-badge-tan-bg)', text: 'var(--color-badge-tan)' },
+};

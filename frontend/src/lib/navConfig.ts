@@ -17,7 +17,8 @@ export type NavIconKey =
   | 'equipment'
   | 'invoices'
   | 'reports'
-  | 'messages';
+  | 'messages'
+  | 'qc';
 
 export interface NavItem {
   key: string;
@@ -76,6 +77,18 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ['owner', 'office_manager', 'assistant_technician', 'designer'],
     session: 7,
   },
+  {
+    key: 'qc',
+    label: 'Quality Control',
+    path: '/qc',
+    section: 'Operations',
+    icon: 'qc',
+    // Entire QC router is requireInternal server-side (qc.routes.js) — no
+    // portal/dentist_client access at all, unlike Invoices below.
+    roles: ['owner', 'office_manager', 'assistant_technician', 'designer'],
+    session: 4,
+    live: true,
+  },
   { key: 'messages', label: 'Messages', path: '/messages', section: 'Operations', icon: 'messages', session: 5 },
   {
     key: 'invoices',
@@ -85,6 +98,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: 'invoices',
     roles: ['owner', 'office_manager', 'dentist_client'],
     session: 4,
+    live: true,
   },
   {
     key: 'reports',

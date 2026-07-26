@@ -57,6 +57,12 @@ const NAV_ICON_PATHS: Record<NavIconKey, ReactNode> = {
   messages: (
     <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7A2.5 2.5 0 0 1 17.5 16H10l-4.5 4V16H6.5A2.5 2.5 0 0 1 4 13.5v-7Z" />
   ),
+  qc: (
+    <>
+      <rect x="4.5" y="3.5" width="15" height="17" rx="2" />
+      <path d="M8.5 8.5h7M8.5 12l1.5 1.5L13 10" />
+    </>
+  ),
 };
 
 function NavIcon({ icon }: { icon: NavIconKey }) {

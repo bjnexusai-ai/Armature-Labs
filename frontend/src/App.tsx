@@ -8,6 +8,9 @@ import { DashboardPage } from './pages/DashboardPage';
 import { CaseQueuePage } from './pages/CaseQueuePage';
 import { CaseDetailPage } from './pages/CaseDetailPage';
 import { ApprovalsPage } from './pages/ApprovalsPage';
+import { InvoicesPage } from './pages/InvoicesPage';
+import { InvoiceDetailPage } from './pages/InvoiceDetailPage';
+import { QcPage } from './pages/QcPage';
 import { ComingSoon } from './pages/stubs/ComingSoon';
 import { NAV_ITEMS } from './lib/navConfig';
 
@@ -66,6 +69,40 @@ export default function App() {
             <ProtectedRoute>
               <AppShell>
                 <ApprovalsPage />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Session 4 — invoice list/detail (manual mark-paid only, no
+            Stripe yet) and QC checklist UI, confirmed live against
+            billing.controller.js / qc.controller.js. */}
+        <Route
+          path="/invoices"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <InvoicesPage />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/invoices/:id"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <InvoiceDetailPage />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/qc"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <QcPage />
               </AppShell>
             </ProtectedRoute>
           }

@@ -216,3 +216,164 @@ export interface RequestChangesPayload {
 export interface ApprovePayload {
   comments?: string;
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Billing / Invoices (Frontend Session 4) — confirmed directly against
+// backend/src/controllers/billing.controller.js and billing.routes.js.
+// Row fields are snake_case (selected straight off `invoices` /
+// `invoice_line_items` / `payments` with no aliasing), under camelCase
+// wrapper keys (`invoice`, `invoices`, `payment`), same convention as
+// CaseRecord/ApprovalRecord. No `dueDate`/`taxAmount`/`paidDate` fields yet
+// — that's Session 5.5's still-open controller work per
+// PARALLEL_BUILD_PROTOCOL.md §4. Don't add them on a guess.
+// ─────────────────────────────────────────────────────────────────────────
+
+export type InvoiceStatus = 'Draft' | 'Sent' | 'Partially Paid' | 'Paid' | 'Void';
+
+export interface InvoiceLineItem {
+  id: number;
+  case_id: number | null;
+  description: string;
+  quantity: number;
+  unit_price: string; // numeric(10,2) comes back as a string from pg
+  line_total: string;
+}
+
+export interface Payment {
+  id: number;
+  amount: string;
+  method: string;
+  reference_note: string | null;
+  created_at: string;
+}
+
+// GET /api/billing/invoices list row — no lineItems/payments joined.
+export interface InvoiceListRow {
+  id: number;
+  invoice_number: string;
+  practice_id: number;
+  status: InvoiceStatus;
+  subtotal: string;
+  amount_paid: string;
+  notes?: string | null; // present for internal callers, absent for portal rows
+  created_at: string;
+}
+
+// GET /api/billing/invoices/:id — same row plus lineItems + payments.
+export interface InvoiceDetail {
+  id: number;
+  invoice_number: string;
+  practice_id: number;
+  status: InvoiceStatus;
+  subtotal: string;
+  amount_paid: string;
+  notes: string | null;
+  created_by: number | null;
+  created_at: string;
+  updated_at: string;
+  lineItems: InvoiceLineItem[];
+  payments: Payment[];
+}
+
+export interface ListInvoicesResponse {
+  invoices: InvoiceListRow[];
+}
+
+export interface GetInvoiceResponse {
+  invoice: InvoiceDetail;
+}
+
+export interface CreateInvoiceLineItemInput {
+  caseId?: number;
+  description: string;
+  quantity?: number;
+  unitPrice: number;
+}
+
+export interface CreateInvoicePayload {
+  practiceId: number;
+  notes?: string;
+  lineItems: CreateInvoiceLineItemInput[];
+}
+
+export interface CreateInvoiceResponse {
+  invoice: InvoiceDetail;
+}
+
+export interface RecordPaymentPayload {
+  amount: number;
+  method: string;
+  referenceNote?: string;
+}
+
+export interface RecordPaymentResponse {
+  payment: Payment;
+  invoice: {
+    id: number;
+    invoice_number: string;
+    practice_id: number;
+    status: InvoiceStatus;
+    subtotal: string;
+    amount_paid: string;
+    updated_at: string;
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// QC (Frontend Session 4) — confirmed directly against
+// backend/src/controllers/qc.controller.js and qc.routes.js. This session
+// only covers the three routes actually mounted on qc.routes.js
+// (checklists create/list, rework resolve-by-id) — recordQcResult /
+// createCaseRework / listCaseRework / final-approval are exported by the
+// controller but mounted under cases.routes.js instead and are out of this
+// session's scope per the resume prompt.
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface QcChecklistItem {
+  id: number;
+  item_text: string;
+  sort_order: number;
+}
+
+export interface QcChecklist {
+  id: number;
+  name: string;
+  case_type_id: number | null;
+  is_active: boolean;
+  created_at: string;
+  items: QcChecklistItem[];
+}
+
+export interface ListChecklistsResponse {
+  checklists: QcChecklist[];
+}
+
+export interface CreateChecklistPayload {
+  name: string;
+  caseTypeId?: number;
+  items: string[];
+}
+
+export interface CreateChecklistResponse {
+  checklist: QcChecklist;
+}
+
+export interface ReworkRecord {
+  id: number;
+  case_id: number;
+  case_qc_result_id: number | null;
+  reason: string;
+  requested_by: number;
+  resolved_at: string | null;
+  resolved_by: number | null;
+  resolution_notes: string | null;
+  created_at: string;
+}
+
+export interface ResolveReworkPayload {
+  resolutionNotes?: string;
+}
+
+export interface ResolveReworkResponse {
+  rework: ReworkRecord;
+}
