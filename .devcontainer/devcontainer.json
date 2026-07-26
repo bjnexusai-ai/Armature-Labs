@@ -4,19 +4,21 @@
   "service": "backend",
   "workspaceFolder": "/app",
   "shutdownAction": "stopCompose",
-
   "forwardPorts": [4000, 5173, 5432],
   "portsAttributes": {
     "4000": { "label": "API server", "onAutoForward": "notify" },
     "5173": { "label": "Frontend (Vite)", "onAutoForward": "openBrowser" },
     "5432": { "label": "PostgreSQL" }
   },
-
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {},
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+  },
   "customizations": {
     "vscode": {
       "extensions": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode"]
     }
   },
-
   "remoteUser": "node"
 }
