@@ -430,11 +430,14 @@ rather than bending either one out of shape.
   are manual mark-paid only, `method` is free text, no processor integration
 - Frontend for billing/QC (backend-only session)
 
-**Not committed:** this session's changes were delivered as a zip archive
-directly, not committed or pushed to the repo — a fresh clone of
-`bjnexusai-ai/Armature-Labs` will still show HEAD at the Session 3.5
-reorg commit and will need this session's files applied manually before
-`npm test` shows 69/69.
+**Correction (added during Session 5.5 close-out, verified against `git log`):**
+this note was stale. Session 4's changes ARE committed and pushed —
+commit `3668d7a` ("Session 4: billing (fee schedules, invoices,
+payments) + QC/rework/final approval"). A fresh clone of
+`bjnexusai-ai/Armature-Labs` already has this session's files; `npm test`
+shows 69/69 (part of the current 118/118 full suite) with no manual
+file application needed. See `PARALLEL_BUILD_PROTOCOL.md` §1 for the
+original correction.
 
 How to pick this up in a fresh session:
 1. Apply this session's files (fee_schedules/invoices/qc/rework migrations,
@@ -542,11 +545,13 @@ plan):**
 - Session 6 (Phase 3 inventory): `materials`, `vendors`, `purchase_orders`,
   `stock_transactions` with lot tracking, plus `practice_contracts`/notes
 
-**Not committed:** delivered as a zip, not committed/pushed — this sandbox
-has no GitHub write credentials configured (confirmed via a dry-run push
-attempt, not assumed). A fresh clone of `bjnexusai-ai/Armature-Labs` will
-still show HEAD at the Session 4 commit and needs this session's files
-applied manually before `npm test` shows 100/100.
+**Correction (added during Session 5.5 close-out, verified against `git log`):**
+this note was stale. Session 5's changes ARE committed and pushed —
+commit `90f3f5c` ("Session 5: case notes, progress photos, shipments,
+warranty claims"). A fresh clone of `bjnexusai-ai/Armature-Labs` already
+has this session's files; `npm test` shows 100/100 (part of the current
+118/118 full suite) with no manual file application needed. See
+`PARALLEL_BUILD_PROTOCOL.md` §1 for the original correction.
 
 How to pick this up in a fresh session:
 1. Apply this session's files (the 4 new migrations, `notes.controller.js`,
