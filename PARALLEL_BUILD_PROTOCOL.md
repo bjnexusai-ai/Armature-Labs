@@ -46,20 +46,28 @@ someone real time re-verifying something that's already fine.
 | 3 | ✅ COMPLETE (149/149 tests — 54 original + `GET /api/approvals` addendum, see BUILD_LOG.md) | ✅ COMPLETE *(code-complete — see FRONTEND_LOG.md's Session 3 entry for the one open item: no live browser click-through yet, Postgres wasn't installable in the build sandbox)* | — |
 | 3.5 | ✅ COMPLETE (repo reorg only, no new features) | — | — |
 | 4 | ✅ COMPLETE (69/69 tests) | ✅ BUILT — pending browser click-through (see FRONTEND_LOG.md Session 4) | — |
-| 5 | ✅ COMPLETE (100/100 tests) | ⬜ NOT STARTED | **✅ YES — ready now** |
+| 5 | ✅ COMPLETE (100/100 tests) | ✅ COMPLETE (Messages/notes, progress photos, shipments, warranty claims — tabs in `CaseDetailPage.tsx`, see `frontend/FRONTEND_LOG.md`) | — |
 | 5.5 | ✅ COMPLETE (118/118 tests, commit `0efddfa`) | ⬜ NOT STARTED | **✅ YES — ready now** |
 | 6 | ✅ COMPLETE (144/144 tests — see §9) | ⬜ NOT STARTED | **✅ YES — ready now** |
 | 7 | ✅ COMPLETE (174/174 tests, commit `a32fd77` — table was stale, corrected here per this doc's own §1 precedent: verify against `git log`, not prior table state) | ⬜ NOT STARTED | **✅ YES — ready now** |
 | 8 | ⬜ NOT STARTED | ⬜ NOT STARTED | ❌ blocked on backend |
 | 9 | ⬜ NOT STARTED | ⬜ NOT STARTED | ❌ blocked on backend |
 
-**Headline finding: backend is 3 full sessions ahead of frontend.**
+**Stale as of Frontend Session 5 — see the table above, not this
+paragraph.** This paragraph originally said "frontend hasn't started
+building against [Sessions 3-5] yet"; that's no longer true (Frontend
+Sessions 3, 4, and 5 are all ✅ COMPLETE per the table). Left as-is below
+rather than rewritten, per this doc's own convention of correcting the
+record in place instead of silently editing history — but don't read the
+prose below as current status; read the table.
+
+~~**Headline finding: backend is 3 full sessions ahead of frontend.**
 Sessions 3, 4, and 5 are backend-complete, tested, committed, and pushed
 — frontend hasn't started building against any of them yet. This is the
 actual opportunity for parallel work: backend can move on to Session 6
 while frontend spends the next few sessions catching up against
 already-finished, already-tested backend work — nobody needs to wait on
-anybody for Sessions 3-5.
+anybody for Sessions 3-5.~~
 
 ---
 

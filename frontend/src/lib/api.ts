@@ -81,6 +81,14 @@ import type {
   CreateChecklistResponse,
   CreateInvoicePayload,
   CreateInvoiceResponse,
+  CreateNotePayload,
+  CreateNoteResponse,
+  CreateProgressPhotoPayload,
+  CreateProgressPhotoResponse,
+  CreateShipmentPayload,
+  CreateShipmentResponse,
+  CreateWarrantyClaimPayload,
+  CreateWarrantyClaimResponse,
   GetCaseResponse,
   GetInvoiceResponse,
   ListApprovalsQuery,
@@ -90,12 +98,20 @@ import type {
   ListCaseTypesResponse,
   ListChecklistsResponse,
   ListInvoicesResponse,
+  ListNotesResponse,
   ListPracticesResponse,
+  ListProgressPhotosResponse,
+  ListShipmentsResponse,
+  ListWarrantyClaimsResponse,
   RecordPaymentPayload,
   RecordPaymentResponse,
   RequestChangesPayload,
   ResolveReworkPayload,
   ResolveReworkResponse,
+  ResolveWarrantyClaimPayload,
+  ResolveWarrantyClaimResponse,
+  UpdateShipmentStatusPayload,
+  UpdateShipmentStatusResponse,
 } from './caseTypes';
 
 interface GetPracticeResponse {
@@ -233,6 +249,109 @@ export function resolveRework(
   payload: ResolveReworkPayload = {}
 ): Promise<ResolveReworkResponse> {
   return apiFetch<ResolveReworkResponse>(`/api/qc/rework/${id}/resolve`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Case Notes / Messages (Frontend Session 5) — confirmed directly against
+// backend/src/controllers/notes.controller.js. Case-scoped, not
+// requireInternal — a dentist_client can create/list notes for their own
+// practice's cases too (tenant isolation enforces the scoping instead).
+// ─────────────────────────────────────────────────────────────────────────
+
+export function listNotes(caseId: string | number): Promise<ListNotesResponse> {
+  return apiFetch<ListNotesResponse>(`/api/cases/${caseId}/notes`);
+}
+
+export function createNote(caseId: string | number, payload: CreateNotePayload): Promise<CreateNoteResponse> {
+  return apiFetch<CreateNoteResponse>(`/api/cases/${caseId}/notes`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Progress Photos (Frontend Session 5) — confirmed directly against
+// backend/src/controllers/progressPhotos.controller.js. requireInternal at
+// the route — lab-staff only, both directions.
+// ─────────────────────────────────────────────────────────────────────────
+
+export function listProgressPhotos(caseId: string | number): Promise<ListProgressPhotosResponse> {
+  return apiFetch<ListProgressPhotosResponse>(`/api/cases/${caseId}/progress-photos`);
+}
+
+export function createProgressPhoto(
+  caseId: string | number,
+  payload: CreateProgressPhotoPayload
+): Promise<CreateProgressPhotoResponse> {
+  return apiFetch<CreateProgressPhotoResponse>(`/api/cases/${caseId}/progress-photos`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Shipments (Frontend Session 5) — confirmed directly against
+// backend/src/controllers/fulfillment.controller.js. Creation is
+// requireInternal (case-scoped route); the status-update endpoint is
+// mounted separately (not case-scoped) on fulfillment.routes.js, also
+// requireInternal. Reads are tenant-scoped, not staff-only.
+// ─────────────────────────────────────────────────────────────────────────
+
+export function listShipments(caseId: string | number): Promise<ListShipmentsResponse> {
+  return apiFetch<ListShipmentsResponse>(`/api/cases/${caseId}/shipments`);
+}
+
+export function createShipment(
+  caseId: string | number,
+  payload: CreateShipmentPayload = {}
+): Promise<CreateShipmentResponse> {
+  return apiFetch<CreateShipmentResponse>(`/api/cases/${caseId}/shipments`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateShipmentStatus(
+  shipmentId: string | number,
+  payload: UpdateShipmentStatusPayload
+): Promise<UpdateShipmentStatusResponse> {
+  return apiFetch<UpdateShipmentStatusResponse>(`/api/fulfillment/shipments/${shipmentId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Warranty Claims (Frontend Session 5) — confirmed directly against
+// backend/src/controllers/fulfillment.controller.js. Filing is open to
+// staff OR the owning dentist_client (case-scoped route, not
+// requireInternal — the backend gates it to Delivered-status cases only,
+// 409 otherwise). Resolving is a separate, not-case-scoped, staff-only
+// endpoint.
+// ─────────────────────────────────────────────────────────────────────────
+
+export function listWarrantyClaims(caseId: string | number): Promise<ListWarrantyClaimsResponse> {
+  return apiFetch<ListWarrantyClaimsResponse>(`/api/cases/${caseId}/warranty-claims`);
+}
+
+export function createWarrantyClaim(
+  caseId: string | number,
+  payload: CreateWarrantyClaimPayload
+): Promise<CreateWarrantyClaimResponse> {
+  return apiFetch<CreateWarrantyClaimResponse>(`/api/cases/${caseId}/warranty-claims`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function resolveWarrantyClaim(
+  claimId: string | number,
+  payload: ResolveWarrantyClaimPayload
+): Promise<ResolveWarrantyClaimResponse> {
+  return apiFetch<ResolveWarrantyClaimResponse>(`/api/fulfillment/warranty-claims/${claimId}/resolve`, {
     method: 'PATCH',
     body: JSON.stringify(payload),
   });

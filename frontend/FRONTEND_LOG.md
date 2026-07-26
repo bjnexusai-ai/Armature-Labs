@@ -489,3 +489,140 @@ demo directly for anything the demo itself doesn't have.
 - If frontend crash-loops with `ENOENT package.json` after a Codespace resume,
   the bind mount likely resolved against a stale path — a scoped
   `--force-recreate` on frontend alone fixes it without touching backend/postgres.
+
+## Session 5 — COMPLETE (Messages/notes, progress photos, shipments, warranty claims)
+
+**Depends on:** Backend Session 5 (case_notes, progress_photos, shipments,
+warranty_claims) — confirmed complete and tested per `BUILD_LOG.md`
+(100/100 at Session 5, 174/174 as of the latest backend session on this
+branch). Confirmed directly against
+`backend/src/controllers/notes.controller.js`,
+`backend/src/controllers/progressPhotos.controller.js`,
+`backend/src/controllers/fulfillment.controller.js`, and the exact route
+mounts in `backend/src/routes/cases.routes.js` /
+`backend/src/routes/fulfillment.routes.js` — not the Master Blueprint's
+schema description or a guessed shape, per this project's own §5 rule.
+
+**Casing confirmed (not assumed):** all four resources return snake_case
+row fields (`case_id`, `author_id`, `file_url`, `taken_at`,
+`tracking_number`, `shipped_at`, `delivered_at`, `filed_by`,
+`resolution_notes`, `resolved_by`, `resolved_at`) under camelCase wrapper
+keys (`note`/`notes`, `progressPhoto`/`progressPhotos`,
+`shipment`/`shipments`, `warrantyClaim`/`warrantyClaims`) — same convention
+as every prior session (CaseRecord/ApprovalRecord/InvoiceDetail). No `pick()`
+dual-fallback needed.
+
+**Key architectural decision (documented, not a guess):** all four
+resources are exposed ONLY as case-scoped endpoints
+(`/api/cases/:id/notes|progress-photos|shipments|warranty-claims`), plus two
+standalone staff actions on `fulfillment.routes.js`
+(`PATCH /api/fulfillment/shipments/:id/status`,
+`PATCH /api/fulfillment/warranty-claims/:id/resolve`). There is no
+`GET /api/notes` / `GET /api/shipments` / etc. list-everything endpoint —
+unlike Approvals (Session 3), which got its own top-level `/approvals` nav
+page precisely because `GET /api/approvals` exists as a real cross-case
+list. Building a standalone "Messages" nav screen here would mean guessing
+an endpoint that doesn't exist, which this project's own standing
+convention rules out. **Decision: all four features render as tabs inside
+`CaseDetailPage.tsx` (`CaseActivityPanel.tsx`), not as a new top-level
+route.** The `messages` entry in `navConfig.ts` is left as a Session 5 stub
+("Coming soon") rather than wired to a guessed endpoint — revisit only if
+a client answer or a future backend session adds a real cross-case list.
+
+**What's built:**
+
+- `lib/caseTypes.ts` — `CaseNote`/`ProgressPhoto`/`Shipment`/`WarrantyClaim`
+  plus their List/Create/Update response and payload types, each block
+  documenting exactly which controller/route file it was confirmed against.
+- `lib/api.ts` — `listNotes`/`createNote`, `listProgressPhotos`/
+  `createProgressPhoto`, `listShipments`/`createShipment`/
+  `updateShipmentStatus`, `listWarrantyClaims`/`createWarrantyClaim`/
+  `resolveWarrantyClaim`.
+- `lib/statusColors.ts` — `SHIPMENT_STATUS_COLORS`, `WARRANTY_STATUS_COLORS`.
+  Reuses existing `--pill-*`/`--badge-*` tokens exclusively, same rule
+  Session 4 followed for `INVOICE_STATUS_COLORS` — no new colors invented,
+  each mapping's reasoning commented inline in the file.
+- `components/ShipmentStatusPill.tsx`, `components/WarrantyStatusPill.tsx` —
+  same one-line shape as the existing `InvoiceStatusPill.tsx`.
+- `components/NotesPanel.tsx` — two-way message thread (list + compose).
+  Staff get an internal/portal visibility toggle built from the existing
+  `.range-toggle`/`.range-btn` classes (same reused pattern as Session 3's
+  status filter and Session 4's dashboard range switcher — no new tab
+  styling invented); a `dentist_client` author never sees the toggle since
+  the backend silently forces `visibility: 'portal'` for that role anyway
+  — sending it from the client would just be noise.
+- `components/ProgressPhotosPanel.tsx` — internal-only gallery (grid of
+  cards, add-photo form). Gated by role in `CaseActivityPanel.tsx`, not by
+  a second check duplicated inside the panel itself.
+- `components/ShipmentsPanel.tsx` + `components/ShipmentStatusModal.tsx` —
+  list + status/carrier/tracking update modal. Creation and the "Update"
+  action are internal-only; reads render for every role (the route isn't
+  `requireInternal` — the dental office has a legitimate interest in
+  tracking info for their own case, confirmed in the controller's own
+  comment).
+- `components/WarrantyClaimsPanel.tsx` +
+  `components/WarrantyClaimResolveModal.tsx` — list + file-a-claim form +
+  resolve modal. The "File a claim" button is hidden client-side unless
+  `caseRecord.current_status === 'Delivered'` (cosmetic mirror of the
+  backend's real 409 gate, not a substitute for it). Resolving is
+  internal-only, hidden once `resolved_at` is already set.
+- `components/CaseActivityPanel.tsx` — tab wrapper reusing `.range-toggle`
+  for tab switching, rendered inside `CaseDetailPage.tsx` below the existing
+  case-details/current-stage cards.
+- `pages/CaseDetailPage.tsx` — one import + one render line added
+  (`<CaseActivityPanel caseRecord={caseRecord} />`) — the existing
+  case-detail layout above it is untouched.
+
+**Verified:**
+
+- `npx tsc -b` and `npm run build` — both clean, zero errors, confirmed on
+  a fresh `npm install` baseline BEFORE this session's changes (per §5's
+  own rule — don't trust a prior session's claimed clean state without
+  re-running it) and again AFTER.
+- Grepped every new component's import outside its own file
+  (`NotesPanel`, `ProgressPhotosPanel`, `ShipmentsPanel`,
+  `WarrantyClaimsPanel`, `ShipmentStatusPill`, `WarrantyStatusPill`,
+  `ShipmentStatusModal`, `WarrantyClaimResolveModal`, `CaseActivityPanel` —
+  all nine confirmed imported and used somewhere other than their own file)
+  — the exact Session 2 checklist item this project keeps re-running.
+
+**Not verified (be honest about this, same standard as Sessions 3 and 4):**
+
+- Same sandbox constraint as every prior session on this branch: read-only
+  repo access, no push credentials, no runnable Postgres in this
+  environment (`apt-get`/`deb.nodesource.com` 403s here) — §6 rule 3
+  ("actually click through it in a running browser against the real
+  backend") has **not** been satisfied yet. Delivered as a zip of the
+  working tree per §10's sandbox workflow, not pushed directly.
+- Visual audit against the reference demo (`index.html`) done on request:
+  same situation as Sessions 3/4 — the demo has no Messages/Photos/
+  Shipments/Warranty screens to compare against. Audit was: confirm every
+  class/token used here (`.surface-card`, `.range-toggle`/`.range-btn`,
+  `.form-input`, `.btn-primary`, `.status-pill`, `.empty-state`,
+  `.skeleton`, `.modal-overlay`/`.modal-box`) was already ported and
+  verified in a prior session, not reinvented — confirmed against
+  `src/index.css` directly. All `--color-pill-*`/`--color-badge-*` tokens
+  used by the two new status-color maps are pre-existing ported tokens.
+  Root `:root` values in the reference `index.html` re-diffed against
+  `src/index.css` this session — confirmed byte-for-byte identical, no
+  drift to fix.
+
+**How to pick this up:**
+
+1. Apply the patch / unzip over the branch, confirm `npm run build` still
+   clean in the real Codespace.
+2. Do the click-through this log can't do here: `npm run dev` both sides,
+   log in as `owner@dentallab.test` — open a Delivered case (or advance one
+   there via the existing case-status endpoint), confirm all four tabs
+   render, send a message, add a progress photo, create + update a
+   shipment, file + resolve a warranty claim. Log in as
+   `dentist@brightsmile.test` (portal) against the same case — confirm the
+   Progress Photos tab is absent entirely (not just disabled), Messages
+   only shows portal-visible notes and hides the visibility toggle,
+   Shipments renders read-only (no "New shipment"/"Update" buttons),
+   Warranty Claims lets them file (case is Delivered) but not resolve.
+3. Once confirmed, Session 5 is fully closed. Session 5.5 (patients,
+   invoice due-date/tax/paid fields) is already closed per this branch's
+   own commit history (`0efddfa`, corrected status in `4cf4c5c`) — Session
+   6 (Phase 3 inventory/practice CRM) is next for frontend, its backend is
+   already complete per `BUILD_LOG.md`'s Session 6 entry (144/144 tests).

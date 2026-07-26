@@ -377,3 +377,170 @@ export interface ResolveReworkPayload {
 export interface ResolveReworkResponse {
   rework: ReworkRecord;
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Case Notes / Messages (Frontend Session 5) — confirmed directly against
+// backend/src/controllers/notes.controller.js and the notes routes mounted
+// on cases.routes.js (POST/GET /api/cases/:id/notes). Two-way: staff AND
+// dentist_client may author a note — NOT requireInternal at the route,
+// tenant isolation (assertPracticeAccess) is what scopes access instead.
+// Row fields snake_case under a camelCase wrapper key, same convention as
+// every other resource in this file.
+// ─────────────────────────────────────────────────────────────────────────
+
+export type NoteVisibility = 'internal' | 'portal';
+
+export interface CaseNote {
+  id: number;
+  case_id: number;
+  author_id: number;
+  body: string;
+  visibility: NoteVisibility;
+  created_at: string;
+}
+
+export interface ListNotesResponse {
+  notes: CaseNote[];
+}
+
+// visibility is accepted from staff callers only — a dentist_client's note
+// is always silently forced to 'portal' server-side even if sent, per the
+// controller's documented decision. Omit it entirely for a portal author
+// rather than send a value the backend will just override.
+export interface CreateNotePayload {
+  body: string;
+  visibility?: NoteVisibility;
+}
+
+export interface CreateNoteResponse {
+  note: CaseNote;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Progress Photos (Frontend Session 5) — confirmed directly against
+// backend/src/controllers/progressPhotos.controller.js and the
+// progress-photos routes mounted on cases.routes.js. requireInternal at the
+// route — lab-staff only, both to create and to view (documented decision:
+// no notification-table entry or portal permission flag covers this, so
+// it's treated as an internal production-tracking aid, not a client-facing
+// gallery, pending an explicit client answer).
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface ProgressPhoto {
+  id: number;
+  case_id: number;
+  uploaded_by: number;
+  file_url: string;
+  caption: string | null;
+  taken_at: string;
+  created_at: string;
+}
+
+export interface ListProgressPhotosResponse {
+  progressPhotos: ProgressPhoto[];
+}
+
+export interface CreateProgressPhotoPayload {
+  fileUrl: string;
+  caption?: string;
+  takenAt?: string; // ISO datetime, optional — defaults to now() server-side
+}
+
+export interface CreateProgressPhotoResponse {
+  progressPhoto: ProgressPhoto;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Shipments (Frontend Session 5) — confirmed directly against
+// backend/src/controllers/fulfillment.controller.js. Creation
+// (POST /api/cases/:id/shipments) is staff-only and explicit, never
+// auto-fired off a case-status change. Reads (GET /api/cases/:id/shipments)
+// are tenant-scoped, NOT staff-only — the dental office can see
+// tracking/carrier info for their own case. Status updates
+// (PATCH /api/fulfillment/shipments/:id/status) are a separate,
+// not-case-scoped, staff-only endpoint (a case can have more than one
+// shipment, e.g. a reshipment after a warranty claim).
+// ─────────────────────────────────────────────────────────────────────────
+
+export type ShipmentStatus = 'Preparing' | 'Shipped' | 'Delivered' | 'Returned';
+
+export interface Shipment {
+  id: number;
+  case_id: number;
+  carrier: string | null;
+  tracking_number: string | null;
+  status: ShipmentStatus;
+  shipped_at: string | null;
+  delivered_at: string | null;
+  created_by: number;
+  created_at: string;
+}
+
+export interface ListShipmentsResponse {
+  shipments: Shipment[];
+}
+
+export interface CreateShipmentPayload {
+  carrier?: string;
+  trackingNumber?: string;
+}
+
+export interface CreateShipmentResponse {
+  shipment: Shipment;
+}
+
+export interface UpdateShipmentStatusPayload {
+  status: ShipmentStatus;
+  carrier?: string;
+  trackingNumber?: string;
+}
+
+export interface UpdateShipmentStatusResponse {
+  shipment: Shipment;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Warranty Claims (Frontend Session 5) — confirmed directly against
+// backend/src/controllers/fulfillment.controller.js. Filing
+// (POST /api/cases/:id/warranty-claims) is open to either internal staff
+// or the dentist_client that owns the case (assertPracticeAccess, same
+// tenant-check shape as approvals) — but ONLY against a case already in
+// the terminal "Delivered" status (409 otherwise, checked server-side).
+// Resolving (PATCH /api/fulfillment/warranty-claims/:id/resolve) is
+// staff-only and not case-scoped.
+// ─────────────────────────────────────────────────────────────────────────
+
+export type WarrantyClaimStatus = 'Open' | 'Under Review' | 'Approved' | 'Denied' | 'Resolved';
+
+export interface WarrantyClaim {
+  id: number;
+  case_id: number;
+  filed_by: number;
+  description: string;
+  status: WarrantyClaimStatus;
+  resolution_notes: string | null;
+  resolved_by: number | null;
+  resolved_at: string | null;
+  created_at: string;
+}
+
+export interface ListWarrantyClaimsResponse {
+  warrantyClaims: WarrantyClaim[];
+}
+
+export interface CreateWarrantyClaimPayload {
+  description: string;
+}
+
+export interface CreateWarrantyClaimResponse {
+  warrantyClaim: WarrantyClaim;
+}
+
+export interface ResolveWarrantyClaimPayload {
+  status: Exclude<WarrantyClaimStatus, 'Open'>;
+  resolutionNotes?: string;
+}
+
+export interface ResolveWarrantyClaimResponse {
+  warrantyClaim: WarrantyClaim;
+}

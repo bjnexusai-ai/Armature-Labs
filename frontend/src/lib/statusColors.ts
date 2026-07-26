@@ -71,3 +71,35 @@ export const INVOICE_STATUS_COLORS: Record<
   Paid: { bg: 'var(--color-pill-green-bg)', text: 'var(--color-pill-green-text)' },
   Void: { bg: 'var(--color-badge-tan-bg)', text: 'var(--color-badge-tan)' },
 };
+
+// Shipment status pill (Frontend Session 5) — reuses the same tokens as
+// everywhere else rather than inventing new ones: Preparing mirrors the tan
+// neutral "not moving yet" tone, Shipped reuses the exact --pill-green
+// pairing the reference demo already used verbatim for "Shipped Out" case
+// statuses (statusColors.ts's own precedent above), Delivered reuses the
+// deeper --badge-green "done" tone to read as a step further than Shipped,
+// Returned reuses red (an exception path, same family as Delayed).
+export const SHIPMENT_STATUS_COLORS: Record<
+  'Preparing' | 'Shipped' | 'Delivered' | 'Returned',
+  { bg: string; text: string }
+> = {
+  Preparing: { bg: 'var(--color-badge-tan-bg)', text: 'var(--color-badge-tan)' },
+  Shipped: { bg: 'var(--color-pill-green-bg)', text: 'var(--color-pill-green-text)' },
+  Delivered: { bg: 'var(--color-badge-green-bg)', text: 'var(--color-badge-green)' },
+  Returned: { bg: 'var(--color-pill-red-bg)', text: 'var(--color-pill-red-text)' },
+};
+
+// Warranty claim status pill (Frontend Session 5) — Open/Under Review reuse
+// the mustard "awaiting action" tone (same as pending approvals/invoices
+// above), Approved/Resolved reuse green "done", Denied reuses red, matching
+// the exact same reasoning as INVOICE_STATUS_COLORS/APPROVAL_STATUS_COLORS.
+export const WARRANTY_STATUS_COLORS: Record<
+  'Open' | 'Under Review' | 'Approved' | 'Denied' | 'Resolved',
+  { bg: string; text: string }
+> = {
+  Open: { bg: 'var(--color-pill-mustard-bg)', text: 'var(--color-pill-mustard-text)' },
+  'Under Review': { bg: 'var(--color-badge-amber-bg)', text: 'var(--color-badge-amber)' },
+  Approved: { bg: 'var(--color-pill-green-bg)', text: 'var(--color-pill-green-text)' },
+  Denied: { bg: 'var(--color-pill-red-bg)', text: 'var(--color-pill-red-text)' },
+  Resolved: { bg: 'var(--color-badge-green-bg)', text: 'var(--color-badge-green)' },
+};

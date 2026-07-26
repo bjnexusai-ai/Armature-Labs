@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ApiError, getCase, getPractice } from '../lib/api';
 import type { CaseRecord, StageHistoryEntry, StatusAuditEntry } from '../lib/caseTypes';
 import { StatusPill } from '../components/StatusPill';
+import { CaseActivityPanel } from '../components/CaseActivityPanel';
 import { PRIORITY_COLORS } from '../lib/statusColors';
 
 export function CaseDetailPage() {
@@ -187,6 +188,12 @@ export function CaseDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Frontend Session 5 — Messages, progress photos, shipments, warranty
+          claims. All four backend resources are case-scoped, so they live
+          here as tabs rather than a standalone nav page (see
+          CaseActivityPanel.tsx for why). */}
+      <CaseActivityPanel caseRecord={caseRecord} />
     </div>
   );
 }
