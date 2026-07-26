@@ -47,7 +47,7 @@ someone real time re-verifying something that's already fine.
 | 3.5 | ✅ COMPLETE (repo reorg only, no new features) | — | — |
 | 4 | ✅ COMPLETE (69/69 tests) | ⬜ NOT STARTED | **✅ YES — ready now** |
 | 5 | ✅ COMPLETE (100/100 tests) | ⬜ NOT STARTED | **✅ YES — ready now** |
-| 5.5 | ⚠️ PARTIAL — schema-only, controllers/backfill not wired | ⬜ NOT STARTED | ⚠️ **NO** — see §4 |
+| 5.5 | ✅ COMPLETE (118/118 tests, commit `0efddfa`) | ⬜ NOT STARTED | **✅ YES — ready now** |
 | 6 | ⬜ NOT STARTED | ⬜ NOT STARTED | ❌ blocked on backend |
 | 7 | ⬜ NOT STARTED | ⬜ NOT STARTED | ❌ blocked on backend |
 | 8 | ⬜ NOT STARTED | ⬜ NOT STARTED | ❌ blocked on backend |
@@ -84,24 +84,26 @@ session that finishes doesn't repeat this.
 
 ---
 
-## 4. Current blocker: Session 5.5 is not safe to build frontend against yet
+## 4. Former blocker: Session 5.5 — resolved, closed out in commit `0efddfa`
 
-Backend Session 5.5 added `patients` (migration `0023`) and
-`invoices.due_date`/`tax_amount`/`paid_date` (migration `0024`) — **but
-migrations only.** Per `BUILD_LOG.md`'s own Session 5.5 entry:
-`patients.controller.js`/routes, the invoice due-date/tax display in
-`billing.controller.js`, and the `patient_id` backfill/cutover decision
-are all still open. `cases.patient_id` is nullable and unwired.
+Backend Session 5.5 originally added `patients` (migration `0023`) and
+`invoices.due_date`/`tax_amount`/`paid_date` (migration `0024`) as
+**migrations only**, with `patients.controller.js`/routes and the
+`patient_id` backfill left open (see `BUILD_LOG.md`'s Session 5.5 entry
+for that history). That gap is now closed: commit `0efddfa` added
+`patients.controller.js` + `patients.routes.js` (mounted at
+`/api/patients` in `app.js`) and `0025_backfill_case_patient_id.js`,
+backfilling `cases.patient_id` from the legacy flat field. Verified
+directly against `git log`/`git show --stat`, not just the commit
+message — full suite 118/118 passing, 10/10 suites.
 
-**Rule:** don't build any frontend screen that assumes a `patient_id` FK
-lookup or reads `invoice.dueDate`/`taxAmount`/`paidDate` from a live
-endpoint response until Session 5.5's controller-layer work is actually
-confirmed complete (run `npm test` on backend, hit `GET
-/api/patients` and a real invoice response directly, confirm the fields
-are actually there — same discipline as everywhere else in this
-project). Sessions 3/4/5's frontend work (Approvals, Billing/QC,
-Messaging/photos/shipments/warranty) do NOT depend on Session 5.5 and
-are safe to build now regardless of this blocker.
+**Still worth confirming before building against it (per §5's rule —
+don't trust a log's claimed number without running it):** pull fresh,
+`npm test`, and hit `GET /api/patients` plus a real invoice response
+directly to confirm `dueDate`/`taxAmount`/`paidDate` casing before
+wiring a frontend screen to them. But there is no longer a known open
+item blocking this — Sessions 3/4/5/5.5 are all backend-complete and
+safe to build against.
 
 ---
 
@@ -160,12 +162,11 @@ push. One addition specific to parallel-build coordination:
 
 ## 8. Immediate Recommended Next Actions
 
-**Backend:** proceed to Session 6 (Phase 3 inventory — materials,
-vendors, purchase_orders, stock_transactions with lot tracking,
-practice_contracts/notes) per `BUILD_LOG.md`'s own "not yet built"
-section — OR close out Session 5.5's remaining controller/backfill work
-first, so §4's blocker clears before frontend catches up to it. Either
-order is fine; just update the status board (§2) to say which.
+**Backend:** Session 5.5's remaining controller/backfill work is closed
+(commit `0efddfa`, §4). Proceed to Session 6 (Phase 3 inventory —
+materials, vendors, purchase_orders, stock_transactions with lot
+tracking, practice_contracts/notes) per `BUILD_LOG.md`'s own "not yet
+built" section.
 
 **Frontend:** Session 3 (Approvals UI) is next in sequence and has
 zero blockers — Backend Session 3 is complete, tested (part of the

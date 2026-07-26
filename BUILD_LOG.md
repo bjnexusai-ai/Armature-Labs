@@ -598,3 +598,11 @@ pre-5.5 baseline.
 
 This session is schema groundwork only — the patient entity is not yet
 usable end-to-end.
+
+**Close-out (commit `0efddfa`, verified directly against `git log` + `git
+show --stat`, not just the commit message):** all three items above are
+now done. `patients.controller.js` + `patients.routes.js` built and
+mounted at `/api/patients` in `app.js`. `0025_backfill_case_patient_id.js`
+backfills `cases.patient_id` from the legacy flat field. Full suite:
+118/118 passing, 10/10 suites. Session 5.5 is fully closed — no open
+items remain.
