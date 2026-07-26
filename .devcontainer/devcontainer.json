@@ -1,8 +1,8 @@
 {
   "name": "Armature Labs (Docker Compose)",
   "dockerComposeFile": "../docker-compose.yml",
-  "service": "backend",
-  "workspaceFolder": "/app",
+  "service": "devtools",
+  "workspaceFolder": "/workspaces/Armature-Labs",
   "shutdownAction": "stopCompose",
   "forwardPorts": [4000, 5173, 5432],
   "portsAttributes": {
