@@ -63,3 +63,60 @@ export async function apiFetch<T = unknown>(
 export function pick<T = unknown>(obj: Record<string, unknown>, camel: string, snake: string): T {
   return (obj[camel] ?? obj[snake]) as T;
 }
+
+// ===== Domain API functions =====
+// Endpoint shapes below match the confirmed contracts documented in
+// caseTypes.ts (verified against backend/src/controllers/cases.controller.js,
+// practices.controller.js, reference.controller.js). These were missing
+// entirely — CaseQueuePage.tsx, CaseDetailPage.tsx, and NewCaseModal.tsx
+// (commit ee0208b) were built to call them, but the functions themselves
+// were never added, which is the actual reason those screens could never
+// have worked even once routed.
+import type {
+  CreateCasePayload,
+  CreateCaseResponse,
+  GetCaseResponse,
+  ListCasesQuery,
+  ListCasesResponse,
+  ListCaseTypesResponse,
+  ListPracticesResponse,
+} from './caseTypes';
+
+interface GetPracticeResponse {
+  practice: import('./caseTypes').Practice;
+}
+
+export function listCases(query: ListCasesQuery = {}): Promise<ListCasesResponse> {
+  const params = new URLSearchParams();
+  if (query.status) params.set('status', query.status);
+  if (query.practiceId != null) params.set('practiceId', String(query.practiceId));
+  if (query.assignedStaffId != null) params.set('assignedStaffId', String(query.assignedStaffId));
+  if (query.priority) params.set('priority', query.priority);
+  if (query.page != null) params.set('page', String(query.page));
+  if (query.limit != null) params.set('limit', String(query.limit));
+  const qs = params.toString();
+  return apiFetch<ListCasesResponse>(`/api/cases${qs ? `?${qs}` : ''}`);
+}
+
+export function getCase(id: string | number): Promise<GetCaseResponse> {
+  return apiFetch<GetCaseResponse>(`/api/cases/${id}`);
+}
+
+export function createCase(payload: CreateCasePayload): Promise<CreateCaseResponse> {
+  return apiFetch<CreateCaseResponse>('/api/cases', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function listPractices(): Promise<ListPracticesResponse> {
+  return apiFetch<ListPracticesResponse>('/api/practices');
+}
+
+export function getPractice(id: string | number): Promise<GetPracticeResponse> {
+  return apiFetch<GetPracticeResponse>(`/api/practices/${id}`);
+}
+
+export function listCaseTypes(): Promise<ListCaseTypesResponse> {
+  return apiFetch<ListCaseTypesResponse>('/api/reference/case-types');
+}

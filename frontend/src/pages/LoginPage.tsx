@@ -9,13 +9,19 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ email: boolean; password: boolean }>({
+    email: false,
+    password: false,
+  });
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    setFieldErrors({ email: false, password: false });
 
     if (!email.trim() || !password.trim()) {
+      setFieldErrors({ email: !email.trim(), password: !password.trim() });
       setError('Enter both your email and password to sign in.');
       return;
     }
@@ -67,8 +73,9 @@ export function LoginPage() {
             <div className="hero-mesh-ring" />
             <div className="hero-mesh-ring two" />
             <div className="hero-tooth-wrap">
-              <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="#EAF7F5" strokeWidth="1.4">
-                <path d="M12 2C8 2 5 4.2 5 7.6c0 2.4.9 3.2 1.3 6.4.3 2.6.8 6 2.3 6 1.3 0 1.2-3.4 1.7-5.2.3-1 .8-1.4 1.7-1.4s1.4.4 1.7 1.4c.5 1.8.4 5.2 1.7 5.2 1.5 0 2-3.4 2.3-6C18.1 10.8 19 10 19 7.6 19 4.2 16 2 12 2Z" />
+              <svg viewBox="0 0 48 48" width="92" height="92" fill="none">
+                <path d="M24 6C16.8 6 11 11 11 17.8C11 22 12.2 25.3 13.3 29.2C14.6 33.7 16 40 18.7 40C21.2 40 21.4 32.8 22.7 29.4C23.3 27.9 24.7 27.9 25.3 29.4C26.6 32.8 26.8 40 29.3 40C32 40 33.4 33.7 34.7 29.2C35.8 25.3 37 22 37 17.8C37 11 31.2 6 24 6Z" fill="#fff" fillOpacity="0.95" />
+                <path d="M11 17.8c0-1.2 5.8-2.2 13-2.2s13 1 13 2.2" stroke="#0C6249" strokeOpacity="0.5" strokeWidth="1.2" fill="none" />
               </svg>
             </div>
           </div>
@@ -154,7 +161,7 @@ export function LoginPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="owner@dentallab.test"
-                    className="w-full h-[54px] rounded-2xl pl-12 pr-4 text-sm bg-white transition-colors"
+                    className={`field-input w-full h-[54px] rounded-2xl pl-12 pr-4 text-sm bg-white ${fieldErrors.email ? 'has-error' : ''}`}
                     style={{ border: '1.5px solid var(--color-border)' }}
                   />
                 </div>
@@ -176,14 +183,14 @@ export function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full h-[54px] rounded-2xl pl-12 pr-11 text-sm bg-white transition-colors"
+                    className={`field-input w-full h-[54px] rounded-2xl pl-12 pr-11 text-sm bg-white ${fieldErrors.password ? 'has-error' : ''}`}
                     style={{ border: '1.5px solid var(--color-border)' }}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((s) => !s)}
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    className="absolute right-1.5 w-[38px] h-[38px] rounded-[10px] flex items-center justify-center text-ink-soft hover:bg-page-bg-top transition-colors"
+                    className="password-toggle absolute right-1.5 w-[38px] h-[38px] rounded-[10px] flex items-center justify-center text-ink-soft"
                   >
                     <svg key={String(showPassword)} className="icon-swap w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
                       {showPassword ? (
@@ -207,7 +214,7 @@ export function LoginPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full h-[52px] rounded-2xl text-white font-bold text-[14.5px] mt-1.5 flex items-center justify-center gap-2.5 transition-all disabled:opacity-80 disabled:cursor-not-allowed"
+                className="login-btn w-full h-[52px] rounded-2xl text-white font-bold text-[14.5px] mt-1.5 flex items-center justify-center gap-2.5"
                 style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)', boxShadow: '0 8px 18px -9px rgba(23,140,143,0.42)' }}
               >
                 {submitting && <span className="btn-spinner" />}

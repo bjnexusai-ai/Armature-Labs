@@ -1,7 +1,84 @@
 import { type ReactNode, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { visibleNavItems } from '../lib/navConfig';
+import { visibleNavItems, type NavIconKey, type NavItem } from '../lib/navConfig';
+
+// Ported verbatim from the reference index.html's per-item `.nav-icon` svgs
+// (viewBox 0 0 24 24, stroke currentColor, 1.8 stroke-width). Approvals and
+// Messages don't exist in the reference demo, so those two are drawn in the
+// same stroke-icon style rather than left blank.
+const NAV_ICON_PATHS: Record<NavIconKey, ReactNode> = {
+  dashboard: (
+    <>
+      <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" />
+      <rect x="13.5" y="3.5" width="7" height="7" rx="1.5" />
+      <rect x="3.5" y="13.5" width="7" height="7" rx="1.5" />
+      <rect x="13.5" y="13.5" width="7" height="7" rx="1.5" />
+    </>
+  ),
+  queue: (
+    <path d="M12 3.5c-3 0-5.2 2-5.2 4.6 0 1.7.5 2.9 1 4.3.6 1.7 1.2 4.2 2.6 4.2 1.4 0 1.5-2.6 2-3.9.3-.6 1-.6 1.3 0 .5 1.3.6 3.9 2 3.9 1.4 0 2-2.5 2.6-4.2.5-1.4 1-2.6 1-4.3 0-2.6-2.2-4.6-5.3-4.6z" />
+  ),
+  approvals: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M8.5 12.3l2.3 2.3 4.7-5" />
+    </>
+  ),
+  materials: (
+    <>
+      <path d="M3.5 8 12 3.5 20.5 8 12 12.5 3.5 8Z" />
+      <path d="M3.5 8v8L12 20.5 20.5 16V8" />
+      <path d="M12 12.5V20.5" />
+    </>
+  ),
+  equipment: (
+    <>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 13.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V19.5a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H4.5a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H10a1.7 1.7 0 0 0 1-1.5V4.5a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V10a1.7 1.7 0 0 0 1.5 1H19.5a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z" />
+    </>
+  ),
+  invoices: (
+    <>
+      <rect x="3.5" y="5" width="17" height="14" rx="2" />
+      <path d="M3.5 9.5h17" />
+      <path d="M7 14h4" />
+    </>
+  ),
+  reports: (
+    <>
+      <path d="M5 3.5h9L20 8.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z" />
+      <path d="M14 3.5V8.5h6" />
+      <path d="M8.5 13h7M8.5 16.5h5" />
+    </>
+  ),
+  messages: (
+    <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7A2.5 2.5 0 0 1 17.5 16H10l-4.5 4V16H6.5A2.5 2.5 0 0 1 4 13.5v-7Z" />
+  ),
+};
+
+function NavIcon({ icon }: { icon: NavIconKey }) {
+  return (
+    <span className="nav-icon w-4 h-4 shrink-0 inline-flex">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        {NAV_ICON_PATHS[icon]}
+      </svg>
+    </span>
+  );
+}
+
+/** Groups the already-ordered, already-role-filtered nav items into
+ * consecutive runs by `section`, matching the reference's Overview /
+ * Operations / Finance `.nav-section` headers. */
+function groupBySection(items: NavItem[]): { section: string; items: NavItem[] }[] {
+  const groups: { section: string; items: NavItem[] }[] = [];
+  for (const item of items) {
+    const last = groups[groups.length - 1];
+    if (last && last.section === item.section) last.items.push(item);
+    else groups.push({ section: item.section, items: [item] });
+  }
+  return groups;
+}
 
 function initials(fullName: string): string {
   return fullName.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
@@ -40,8 +117,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               boxShadow: '0 0 0 1px rgba(255,255,255,0.18) inset, 0 4px 14px rgba(6,30,26,0.4), 0 0 20px rgba(95,232,206,0.4)',
             }}
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#EAF7F5" strokeWidth="1.5">
-              <path d="M12 2C8 2 5 4.2 5 7.6c0 2.4.9 3.2 1.3 6.4.3 2.6.8 6 2.3 6 1.3 0 1.2-3.4 1.7-5.2.3-1 .8-1.4 1.7-1.4s1.4.4 1.7 1.4c.5 1.8.4 5.2 1.7 5.2 1.5 0 2-3.4 2.3-6C18.1 10.8 19 10 19 7.6 19 4.2 16 2 12 2Z" />
+            <svg width="28" height="28" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M24 6C16.8 6 11 11 11 17.8C11 22 12.2 25.3 13.3 29.2C14.6 33.7 16 40 18.7 40C21.2 40 21.4 32.8 22.7 29.4C23.3 27.9 24.7 27.9 25.3 29.4C26.6 32.8 26.8 40 29.3 40C32 40 33.4 33.7 34.7 29.2C35.8 25.3 37 22 37 17.8C37 11 31.2 6 24 6Z" fill="#FFFFFF" stroke="#0D4A45" strokeWidth="1.6" />
+              <path d="M17.5 12C19 10.6 21.3 10 24 10" stroke="#0D4A45" strokeOpacity="0.35" strokeWidth="1.6" fill="none" strokeLinecap="round" />
             </svg>
           </div>
           <div className="font-display font-bold text-lg leading-tight text-white">
@@ -52,40 +130,56 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
 
-        <nav className="relative z-[1] flex-1 px-3 space-y-0.5">
-          {items.map((item) => {
-            const isStub = item.session > 1;
-            if (isStub) {
-              return (
-                <div
-                  key={item.key}
-                  className="flex items-center justify-between rounded-lg px-3 py-2.5 text-[13.5px] font-semibold text-white/50 cursor-not-allowed select-none"
-                  title={`Coming soon — Frontend Session ${item.session}`}
-                >
-                  <span>{item.label}</span>
-                  <span className="text-[10px] font-mono uppercase tracking-wide bg-white/10 rounded px-1.5 py-0.5">
-                    soon
-                  </span>
-                </div>
-              );
-            }
-            return (
-              <NavLink
-                key={item.key}
-                to={item.path}
-                className={({ isActive }) =>
-                  `nav-link block rounded-lg px-3 py-2.5 text-[13.5px] font-semibold transition-colors ${
-                    isActive ? 'active text-[#04302E]' : 'text-[#F2F8F5] hover:bg-white/10'
-                  }`
-                }
-                style={({ isActive }) =>
-                  isActive ? { background: 'linear-gradient(135deg,var(--color-nav-active),var(--color-nav-active-2))' } : undefined
-                }
-              >
-                {item.label}
-              </NavLink>
-            );
-          })}
+        <nav className="relative z-[1] flex-1">
+          {groupBySection(items).map((group) => (
+            <div key={group.section}>
+              <div className="nav-section px-6 pt-4 pb-1.5 text-[10.5px] font-bold tracking-[0.1em] uppercase text-[#9FD8CE]">
+                {group.section}
+              </div>
+              <div className="px-3 space-y-0.5">
+                {group.items.map((item) => {
+                  // FIX (was: `item.session > 1`, which ignored whether a
+                  // screen was actually built and permanently stubbed out
+                  // Case Queue even though it shipped for real in commit
+                  // ee0208b). A nav item is a stub only if it's beyond
+                  // Session 1 AND not explicitly marked live in navConfig.ts.
+                  const isStub = item.session > 1 && !item.live;
+                  if (isStub) {
+                    return (
+                      <div
+                        key={item.key}
+                        className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-[13.5px] font-semibold text-white/50 cursor-not-allowed select-none"
+                        title={`Coming soon — Frontend Session ${item.session}`}
+                      >
+                        <NavIcon icon={item.icon} />
+                        <span className="flex-1">{item.label}</span>
+                        <span className="text-[10px] font-mono uppercase tracking-wide bg-white/10 rounded px-1.5 py-0.5">
+                          soon
+                        </span>
+                      </div>
+                    );
+                  }
+                  return (
+                    <NavLink
+                      key={item.key}
+                      to={item.path}
+                      className={({ isActive }) =>
+                        `nav-link flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-[13.5px] font-semibold transition-colors ${
+                          isActive ? 'active text-[#04302E]' : 'text-[#F2F8F5] hover:bg-white/10'
+                        }`
+                      }
+                      style={({ isActive }) =>
+                        isActive ? { background: 'linear-gradient(135deg,var(--color-nav-active),var(--color-nav-active-2))' } : undefined
+                      }
+                    >
+                      <NavIcon icon={item.icon} />
+                      {item.label}
+                    </NavLink>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
         <div className="relative z-[1] px-3 mt-4">

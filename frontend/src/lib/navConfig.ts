@@ -1,9 +1,30 @@
 import type { AuthUser, Role } from './authTypes';
 
+/** Matches the reference demo's three sidebar section headers
+ * (Overview / Operations / Finance) — items are grouped and rendered
+ * under a `.nav-section` label matching each item's `section`. */
+export type NavSection = 'Overview' | 'Operations' | 'Finance';
+
+/** Icon key -> looked up against ICONS in AppShell.tsx. Ported 1:1 from the
+ * reference's per-item `.nav-icon` svg where a matching screen exists;
+ * screens the reference demo doesn't have (Approvals, Messages) use a
+ * same-style icon consistent with the rest of the set. */
+export type NavIconKey =
+  | 'dashboard'
+  | 'queue'
+  | 'approvals'
+  | 'materials'
+  | 'equipment'
+  | 'invoices'
+  | 'reports'
+  | 'messages';
+
 export interface NavItem {
   key: string;
   label: string;
   path: string;
+  section: NavSection;
+  icon: NavIconKey;
   /** Roles allowed to see this item at all. Empty = every authenticated role. */
   roles?: Role[];
   /**
@@ -12,42 +33,58 @@ export interface NavItem {
    * Prompt applied to the demo HTML. Don't wire ahead of the backend.
    */
   session: number;
+  /**
+   * Whether the real screen is built and wired. Defaults to true only for
+   * session 1 unless explicitly set. Case Queue (session 2) was built in
+   * commit ee0208b (CaseQueuePage.tsx, CaseDetailPage.tsx) but that commit
+   * never flipped this on or added the routes — this was a real gap, not a
+   * stylistic one. Fixed here.
+   */
+  live?: boolean;
 }
 
 // This is UI convenience only — every one of these is re-enforced server-side
 // (requireRole / requireBillingAccess / requirePortalPermission / tenant
 // isolation). Hiding a nav item here never becomes the only protection.
 export const NAV_ITEMS: NavItem[] = [
-  { key: 'dashboard', label: 'Dashboard', path: '/dashboard', session: 1 },
-  { key: 'cases', label: 'Case Queue', path: '/cases', session: 2 },
-  { key: 'approvals', label: 'Approvals', path: '/approvals', session: 3 },
-  {
-    key: 'invoices',
-    label: 'Invoices',
-    path: '/invoices',
-    roles: ['owner', 'office_manager', 'dentist_client'],
-    session: 4,
-  },
-  { key: 'messages', label: 'Messages', path: '/messages', session: 5 },
+  { key: 'dashboard', label: 'Dashboard', path: '/dashboard', section: 'Overview', icon: 'dashboard', session: 1 },
+  { key: 'cases', label: 'Case Queue', path: '/cases', section: 'Operations', icon: 'queue', session: 2, live: true },
+  { key: 'approvals', label: 'Approvals', path: '/approvals', section: 'Operations', icon: 'approvals', session: 3 },
   {
     key: 'materials',
     label: 'Materials',
     path: '/materials',
+    section: 'Operations',
+    icon: 'materials',
     roles: ['owner', 'office_manager', 'assistant_technician', 'designer'],
     session: 6,
-  },
-  {
-    key: 'reports',
-    label: 'Reports',
-    path: '/reports',
-    roles: ['owner', 'office_manager'],
-    session: 7,
   },
   {
     key: 'equipment',
     label: 'Equipment',
     path: '/equipment',
+    section: 'Operations',
+    icon: 'equipment',
     roles: ['owner', 'office_manager', 'assistant_technician', 'designer'],
+    session: 7,
+  },
+  { key: 'messages', label: 'Messages', path: '/messages', section: 'Operations', icon: 'messages', session: 5 },
+  {
+    key: 'invoices',
+    label: 'Invoices',
+    path: '/invoices',
+    section: 'Finance',
+    icon: 'invoices',
+    roles: ['owner', 'office_manager', 'dentist_client'],
+    session: 4,
+  },
+  {
+    key: 'reports',
+    label: 'Reports',
+    path: '/reports',
+    section: 'Finance',
+    icon: 'reports',
+    roles: ['owner', 'office_manager'],
     session: 7,
   },
 ];

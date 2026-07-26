@@ -55,6 +55,66 @@ notifications, 7 for aggregate metrics) is live. The demo HTML file itself
 is not used again after this — its markup/JS wasn't ported, only its design
 tokens and animation behavior, reimplemented natively in React/CSS.
 
+## Session 2 — COMPLETE (Case queue, case detail, New Case form)
+
+**Depends on:** Backend Session 2 (case CRUD, 10-status state machine) —
+confirmed live against `backend/src/routes/cases.routes.js`,
+`practices.routes.js`, `reference.routes.js`.
+
+**Correction to the historical record:** commit `ee0208b` ("Frontend: case
+queue, case detail, new case modal, status pill") added
+`CaseQueuePage.tsx`, `CaseDetailPage.tsx`, `NewCaseModal.tsx`,
+`StatusPill.tsx`, `caseTypes.ts`, and `statusColors.ts` — but that commit
+never updated `App.tsx`, `navConfig.ts`, or `lib/api.ts`, and never added
+the `--color-pill-*` tokens `statusColors.ts` already referenced. This log
+was also never updated at the time, so the gap sat undetected: every nav
+item beyond Session 1 still showed "Coming soon," `CaseQueuePage`/
+`CaseDetailPage` were dead code (never imported anywhere outside their own
+file), and every non-default status pill rendered with a transparent
+background. Found and fixed via two patches applied on top of `ee0208b`:
+
+- **`App.tsx`** — imports `CaseQueuePage`/`CaseDetailPage`, adds the real
+  `/cases` and `/cases/:id` routes (previously routed to the generic
+  `ComingSoon` stub).
+- **`navConfig.ts`** — added a `live` flag; Case Queue is the first item to
+  set it. `AppShell.tsx`'s stub check now reads `item.session > 1 &&
+  !item.live` instead of just `item.session > 1`.
+- **`lib/api.ts`** — added `listCases`, `getCase`, `createCase`,
+  `listPractices`, `getPractice`, `listCaseTypes`. These were missing
+  entirely; the three page/modal components were built calling functions
+  that didn't exist yet, which is the real reason nothing worked even once
+  routed. Every endpoint path and response shape was confirmed directly
+  against the real controllers (`backend/src/controllers/cases.controller.js`,
+  `practices.controller.js`, `reference.controller.js`), not guessed.
+- **`index.css`** — added the six missing `--color-pill-*` tokens
+  (purple/mustard/green/red, bg+text) so In Design / Pending Design
+  Approval / Pending Bisque Approval / Shipped Out / Delivered / Delayed
+  pills render with an actual background instead of transparent.
+
+**Visual-parity pass (same session):** the login hero icon and sidebar logo
+mark were still using a generic 24×24 stroke-outline tooth from an earlier
+draft, not the reference demo's 48×48 filled tooth shape — replaced with
+the exact reference path in both places. `.metric-card` had no background/
+border/shadow defined at all (only the corner-blob pseudo-element) — added,
+matching the reference's single flat-blur shadow rather than the Session
+1.5 "layered shadow" polish treatment. Sidebar nav now groups under
+Overview/Operations/Finance section headers with a per-item icon, ported
+from the reference's `.nav-icon` svgs (Approvals/Messages don't exist in
+the reference demo, so those two use a matching-style icon instead of
+being left blank). Login `.field-input`/`.login-btn`/`.password-toggle` had
+no hover or focus states anywhere in the CSS — added (border-glow on
+focus, darken+lift on button hover, red border on an empty field on
+submit), matching the reference exactly.
+
+`npm install && npm run typecheck && npm run build`: clean, zero errors,
+re-verified after both the routing/API fix and the visual-parity fix.
+
+**Not yet verified against a real running backend in this environment:**
+same caveat as Session 1 — confirmed against the controller source, not a
+live `npm run dev` instance (no network access to localhost:4000 from the
+sandbox this was fixed in). Run the pickup checklist below before trusting
+this in production.
+
 ## Session 1.5 — COMPLETE (Visual polish pass)
 
 Implemented the 8-item approved shortlist from the ChatGPT-sourced polish
@@ -110,8 +170,8 @@ starts, per the Master Frontend Plan's "how to proceed" checklist):
 
 **Not yet built (future sessions, per `Armature_Labs_Master_Frontend_Plan.md`):**
 
-- Session 2: real case queue / case detail / New Case form (currently a stub).
-- Session 3: approvals UI.
+- Session 3: approvals UI (Approve/Request Changes, notification triggers,
+  "Action required queue" panel).
 - Sessions 4-9: per the plan doc.
 
 **How to pick this up in a fresh session:**
@@ -127,9 +187,18 @@ starts, per the Master Frontend Plan's "how to proceed" checklist):
 4. `npm run dev`, log in as `owner@dentallab.test` / `TestPass123!`, confirm
    the dashboard loads with real user data (not mocked) and nav items show
    correctly for that role.
-5. Confirm `GET /api/cases` response casing against a real call (curl or
-   browser devtools) BEFORE starting Session 2's case queue UI — this is
-   flagged as unconfirmed in the Wiring Prompt and is the single most
-   important verification step before writing any table-render code.
-6. Read this file's "Not yet built" section, pick up at Session 2.
-7. Commit + push before ending the session — update this log first.
+5. Click into Case Queue and confirm it loads real cases (not "Coming
+   soon") — this was broken until the Session 2 fix above; if it's stubbed
+   again, something regressed.
+6. Before starting Session 3: confirm the real `approvals` endpoint shapes
+   against `backend/src/controllers/approvals.controller.js` directly, the
+   same way Session 2's fix confirmed cases/practices/reference endpoints
+   — don't build against the spec doc's guessed shape.
+7. **Before ending ANY session:** if you added a new page/component, grep
+   for it being imported somewhere outside its own file
+   (`grep -rn "YourComponent" src/ --include="*.tsx" | grep -v
+   "YourComponent.tsx:"`). Session 2's actual root cause was a component
+   that existed on disk but was never imported anywhere — a file existing is
+   not the same as a feature being live. Confirm nav items pointing at it
+   don't still show "Coming soon" in the running app.
+8. Update this log, commit + push.

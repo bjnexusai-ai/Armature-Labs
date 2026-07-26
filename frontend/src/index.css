@@ -31,6 +31,21 @@
   --color-hero-teal: #0D6B72;
   --color-hero-teal-2: #16A37A;
 
+  /* Pill tokens (distinct from --color-badge-*) — ported from the reference
+     demo's --pill-purple/mustard/green/red set. statusColors.ts (commit
+     ee0208b) already references these var names for the case-status pills,
+     but they were never added here — every status pill using them (In
+     Design, Pending Design/Bisque Approval, Shipped Out, Delivered, Delayed)
+     was rendering with a transparent background until this fix. */
+  --color-pill-purple-bg: #D4CBF5;
+  --color-pill-purple-text: #3D2F75;
+  --color-pill-mustard-bg: #CDEFEA;
+  --color-pill-mustard-text: #0D6B72;
+  --color-pill-green-bg: #DCF2E4;
+  --color-pill-green-text: #146E4E;
+  --color-pill-red-bg: #F3DDD5;
+  --color-pill-red-text: #8A3D22;
+
   --font-display: 'Plus Jakarta Sans', sans-serif;
   --font-body: 'Inter', sans-serif;
   --font-mono: 'IBM Plex Mono', monospace;
@@ -41,27 +56,27 @@
   --sidebar-scrim: linear-gradient(180deg, rgba(6,20,20,0.42), rgba(6,20,20,0.60));
 
   /*
-    Layered shadows (polish pass, item 5): small tight contact shadow +
-    a larger soft ambient one, instead of a single flat blur. Applied
-    globally via .surface-card and swapped into the topbar/notif-dropdown
-    below. Not stacked with any other hover effect (item 3) — hover only
-    ever deepens the shadow + a 2px lift, nothing else moves.
+    Shadow values ported verbatim from the reference index.html (single
+    flat blur, not layered) so cards/panels/topbar/notif-dropdown match
+    pixel-for-pixel: --shadow-sm = .panel / .metric-card / .topbar resting
+    state, --shadow-md = .panel:hover, --shadow-lg = .notif-dropdown.
   */
-  --shadow-sm: 0 1px 2px rgba(15,42,44,0.05), 0 6px 18px rgba(20,60,70,0.06);
-  --shadow-md: 0 2px 4px rgba(15,42,44,0.05), 0 10px 24px rgba(20,60,70,0.08), 0 22px 44px -16px rgba(20,60,70,0.12);
-  --shadow-lg: 0 4px 10px rgba(15,42,44,0.06), 0 16px 36px rgba(20,60,70,0.10), 0 30px 60px -20px rgba(20,60,70,0.16);
+  --shadow-sm: 0 6px 22px rgba(20,60,70,0.06);
+  --shadow-md: 0 10px 28px rgba(20,60,70,0.09);
+  --shadow-lg: 0 16px 40px rgba(20,60,70,0.16);
 }
 
-/* ===== Reusable card surface (shadow + restrained hover, item 3 & 5) ===== */
+/* ===== Reusable panel surface (ported from the reference's .panel — shadow
+   deepens on hover, no lift/transform) ===== */
 .surface-card {
   background: var(--color-card-bg);
   border: 1px solid rgba(18,140,150,0.08);
+  border-radius: 18px;
   box-shadow: var(--shadow-sm);
-  transition: box-shadow 220ms ease, transform 220ms ease;
+  transition: box-shadow 180ms ease;
 }
 .surface-card:hover {
   box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
 }
 
 body {
@@ -142,12 +157,57 @@ body {
   border: 1px solid rgba(255,255,255,0.8); box-shadow: var(--shadow-sm);
 }
 
-/* ===== Metric card corner blob ===== */
-.metric-card { position: relative; overflow: hidden; }
+/* ===== Metric card ===== */
+.metric-card {
+  background: var(--color-card-bg);
+  border: 1px solid rgba(18,140,150,0.08);
+  border-radius: 18px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 180ms ease, box-shadow 180ms ease;
+  position: relative;
+  overflow: hidden;
+}
+.metric-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+}
 .metric-card::before {
   content: ""; position: absolute; right: -40px; top: -40px; width: 100px; height: 100px; border-radius: 50%;
   background: radial-gradient(circle, rgba(24,143,163,0.08), transparent 72%); pointer-events: none;
 }
+
+/* ===== Login form field + button interactive states (ported verbatim from
+   the reference's .field-input / .login-btn — no equivalent existed
+   anywhere in this file, so the login inputs/button had no hover or focus
+   treatment at all) ===== */
+.field-input { transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease; }
+.field-input:hover { border-color: #C3D8D5; }
+.field-input:focus {
+  outline: none; border-color: var(--color-hero-teal-2);
+  box-shadow: 0 0 0 4px rgba(18,111,126,0.13);
+}
+.field-input.has-error { border-color: #C0503A; background: #FFFBFA; }
+.field-input.has-error:focus { box-shadow: 0 0 0 4px rgba(192,80,58,0.13); }
+
+.password-toggle { transition: background 140ms ease, color 140ms ease; }
+.password-toggle:hover { background: var(--color-page-bg-top); color: var(--color-ink); }
+.password-toggle:focus-visible {
+  outline: none; box-shadow: 0 0 0 3px rgba(18,111,126,0.28);
+  background: var(--color-page-bg-top); color: var(--color-hero-teal-2);
+}
+
+.login-btn { transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease, opacity 160ms ease; }
+.login-btn:hover {
+  background: linear-gradient(135deg,#146E72,#128F63);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px -9px rgba(23,140,143,0.5);
+}
+.login-btn:active { transform: translateY(0) scale(0.985); box-shadow: 0 6px 16px -6px rgba(23,140,143,0.5); }
+.login-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(18,111,126,0.30), 0 10px 24px -8px rgba(23,140,143,0.55);
+}
+.login-btn:disabled { cursor: not-allowed; opacity: 0.78; transform: none; box-shadow: 0 6px 16px -8px rgba(23,140,143,0.4); }
 
 /* ===== Sidebar active-indicator slide (item 8) ===== */
 .nav-link { position: relative; }
