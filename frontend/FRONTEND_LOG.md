@@ -308,3 +308,19 @@ standard):**
 2. Session 4 (Invoices/QC) and Session 5 (Messages/photos/shipments/
    warranty) are both unblocked — their backend sessions are complete,
    tested, and pushed on this branch, same as Session 3's was.
+
+## Codespaces/Docker dev-environment notes (added post Session 5.5)
+
+**Vite proxy + Codespaces gotchas found while verifying login end-to-end:**
+- `vite.config.ts` proxy target must be the Docker service name (`http://backend:4000`),
+  never `localhost` — localhost inside the frontend container is the container itself.
+- `server.allowedHosts: true` is required in `vite.config.ts` for the Codespaces
+  forwarded domain (`*.app.github.dev`) to not get blocked with a 403.
+- `.devcontainer/devcontainer.json` attaches VS Code's session to the `backend`
+  service. Never run un-scoped `docker compose up/down/build` from this terminal —
+  it can recreate `backend` and kill the active Codespace session. Always scope
+  frontend-only changes with `--no-deps`, e.g.:
+  `docker compose up -d --no-deps --force-recreate frontend`
+- If frontend crash-loops with `ENOENT package.json` after a Codespace resume,
+  the bind mount likely resolved against a stale path — a scoped
+  `--force-recreate` on frontend alone fixes it without touching backend/postgres.
