@@ -354,3 +354,95 @@ describe('POST /api/approvals/:id/request-changes', () => {
     expect(directRes.status).toBe(409);
   });
 });
+
+describe('GET /api/approvals', () => {
+  it('internal staff see a pending approval, joined with case + media info', async () => {
+    const ownerToken = await loginAs('owner@dentallab.test');
+    const caseId = await createCaseAt(ownerToken, 'In Design');
+    const uploadRes = await uploadDesignMedia(ownerToken, caseId);
+
+    const res = await request(app)
+      .get('/api/approvals')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .query({ caseId });
+    expect(res.status).toBe(200);
+    const found = res.body.approvals.find((a) => a.id === uploadRes.body.approval.id);
+    expect(found).toBeTruthy();
+    expect(found.status).toBe('pending');
+    expect(found.stage).toBe('design');
+    expect(found.case_number).toBeTruthy();
+    expect(found.media_file_name).toBe('design_v1.jpg');
+    expect(res.body.pagination).toMatchObject({ page: 1, limit: 25 });
+  });
+
+  it('filters by status', async () => {
+    const ownerToken = await loginAs('owner@dentallab.test');
+    const dentistToken = await grantApprovalPermission(ownerToken);
+    const caseId = await createCaseAt(ownerToken, 'In Design');
+    const uploadRes = await uploadDesignMedia(ownerToken, caseId);
+    await request(app)
+      .post(`/api/approvals/${uploadRes.body.approval.id}/approve`)
+      .set('Authorization', `Bearer ${dentistToken}`)
+      .send({});
+
+    const pendingRes = await request(app)
+      .get('/api/approvals')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .query({ caseId, status: 'pending' });
+    expect(pendingRes.body.approvals.find((a) => a.id === uploadRes.body.approval.id)).toBeFalsy();
+
+    const approvedRes = await request(app)
+      .get('/api/approvals')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .query({ caseId, status: 'approved' });
+    expect(approvedRes.body.approvals.find((a) => a.id === uploadRes.body.approval.id)).toBeTruthy();
+  });
+
+  it('a dentist_client only sees approvals for their own practice, even without can_approve_photos', async () => {
+    const ownerToken = await loginAs('owner@dentallab.test');
+    const managerToken = await loginAs('manager@dentallab.test');
+    await query("UPDATE users SET can_approve_photos = false WHERE email = 'dentist@brightsmile.test'");
+    const dentistToken = await loginAs('dentist@brightsmile.test');
+
+    // Practice A (seeded Bright Smile) approval — visible.
+    const caseIdA = await createCaseAt(ownerToken, 'In Design');
+    const uploadA = await uploadDesignMedia(ownerToken, caseIdA);
+
+    // Practice B (isolated) approval — must NOT be visible to Practice A's dentist.
+    const practiceB = await createIsolatedPracticeWithApprover(ownerToken, managerToken);
+    const { caseTypeId } = await getIds();
+    const createRes = await request(app)
+      .post('/api/cases')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        practiceId: practiceB.practiceId, dentistId: practiceB.dentistId, caseTypeId, dueDate: futureDueDate(),
+      });
+    const caseIdB = createRes.body.case.id;
+    await request(app).patch(`/api/cases/${caseIdB}/status`).set('Authorization', `Bearer ${ownerToken}`).send({ newStatus: 'In Design' });
+    const uploadB = await uploadDesignMedia(ownerToken, caseIdB);
+
+    const res = await request(app)
+      .get('/api/approvals')
+      .set('Authorization', `Bearer ${dentistToken}`);
+    expect(res.status).toBe(200);
+    const ids = res.body.approvals.map((a) => a.id);
+    expect(ids).toContain(uploadA.body.approval.id);
+    expect(ids).not.toContain(uploadB.body.approval.id);
+  });
+
+  it('400s a dentist_client passing practiceId explicitly', async () => {
+    const dentistToken = await loginAs('dentist@brightsmile.test');
+    const { practiceId } = await getIds();
+
+    const res = await request(app)
+      .get('/api/approvals')
+      .set('Authorization', `Bearer ${dentistToken}`)
+      .query({ practiceId });
+    expect(res.status).toBe(400);
+  });
+
+  it('401s an unauthenticated request', async () => {
+    const res = await request(app).get('/api/approvals');
+    expect(res.status).toBe(401);
+  });
+});

@@ -252,6 +252,36 @@ already works around it, same as Session 2's own tests do).
 5. Read this file's "Not yet built" section, pick up at Session 4
 6. Commit + push before ending the session, no exceptions — update this log first
 
+**Addendum (added while scoping Frontend Session 3 — verified against `git
+log`/`git show`, not just this note):** the `0014_approvals` migration's own
+comment said the table would be "queried both ways: pending approvals for a
+case, and all pending approvals across the practice, for a portal
+dashboard" — but only `POST /:id/approve` and `POST /:id/request-changes`
+were ever built. There was no `GET /api/approvals` anywhere, confirmed by
+reading `approvals.routes.js`, `cases.routes.js`, and `app.js`'s full route
+mount list directly. This blocked Frontend Session 3's approvals queue and
+notification bell, which have nothing to read from without it.
+
+Closed via `listApprovals` in `approvals.controller.js`, mounted as
+`GET /api/approvals` in `approvals.routes.js`. Supports `caseId`,
+`practiceId` (internal staff only, mirrors `listCases`' own restriction),
+`status`, `stage`, `page`, `limit`. Tenant-scoped via the existing
+`practiceScopeClause` helper joined through `cases.practice_id` — **not**
+gated on `can_approve_photos`, since that flag governs the two write
+actions per the client's §8 spec, not read visibility (same visibility
+rule as `GET /api/cases`). Joined against `cases` (case_number,
+patient_name, current_status) and `case_files` (file_name, file_url) in
+one query so the frontend doesn't need a second round-trip per row.
+
+5 new integration tests added (happy path + join shape, status filtering,
+cross-tenant isolation for a dentist_client without `can_approve_photos`,
+400 on an explicit `practiceId` from a portal user, 401 unauthenticated).
+Verified on a fully clean `DROP DATABASE` + migrate + seed, not a dirtied
+suite-run DB: **149/149 passing, 13/13 suites** (144 baseline + 5 new).
+Also hit live via `curl` after starting the server locally to confirm the
+actual JSON shape (snake_case field names, consistent with the rest of the
+cases/approvals API — not camelCase, unlike auth).
+
 ---
 
 

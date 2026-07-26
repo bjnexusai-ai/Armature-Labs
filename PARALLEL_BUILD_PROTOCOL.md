@@ -43,7 +43,7 @@ someone real time re-verifying something that's already fine.
 | 1 | ✅ COMPLETE (18/18 tests) | ✅ COMPLETE | — |
 | 1.5 | *(n/a — backend has no 1.5)* | ✅ COMPLETE (visual polish) | — |
 | 2 | ✅ COMPLETE (40/40 tests) | ✅ COMPLETE *(fixed — see §3 below)* | — |
-| 3 | ✅ COMPLETE (54/54 tests) | ⬜ NOT STARTED | **✅ YES — ready now** |
+| 3 | ✅ COMPLETE (149/149 tests — 54 original + `GET /api/approvals` addendum, see BUILD_LOG.md) | ⬜ NOT STARTED | **✅ YES — ready now** |
 | 3.5 | ✅ COMPLETE (repo reorg only, no new features) | — | — |
 | 4 | ✅ COMPLETE (69/69 tests) | ⬜ NOT STARTED | **✅ YES — ready now** |
 | 5 | ✅ COMPLETE (100/100 tests) | ⬜ NOT STARTED | **✅ YES — ready now** |
