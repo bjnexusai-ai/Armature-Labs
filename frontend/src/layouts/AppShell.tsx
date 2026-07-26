@@ -1,7 +1,9 @@
-import { type ReactNode, useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { type ReactNode, useEffect, useState } from 'react';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { visibleNavItems, type NavIconKey, type NavItem } from '../lib/navConfig';
+import { visibleNavItems, NAV_ITEMS, type NavIconKey, type NavItem } from '../lib/navConfig';
+import { listApprovals } from '../lib/api';
+import type { ApprovalRecord } from '../lib/caseTypes';
 
 // Ported verbatim from the reference index.html's per-item `.nav-icon` svgs
 // (viewBox 0 0 24 24, stroke currentColor, 1.8 stroke-width). Approvals and
@@ -87,22 +89,43 @@ function roleLabel(role: string): string {
   return role.split('_').map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
 }
 
-// Static preview items -- real notification triggers land in Backend/Frontend
-// Session 3. Kept here, clearly non-live, so the visual/interaction pattern
-// (bell, dot, dropdown, open/close) exists and is ready to wire later rather
-// than being invented from scratch in Session 3.
-const DEMO_NOTIFS = [
-  { icon: '🦷', title: 'Design approval requested', time: '12m ago' },
-  { icon: '📦', title: 'Case shipped', time: '1h ago' },
-  { icon: '⏰', title: 'Due date approaching', time: '3h ago' },
-];
+function timeAgo(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const mins = Math.max(1, Math.round(diffMs / 60000));
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.round(hrs / 24)}d ago`;
+}
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [notifOpen, setNotifOpen] = useState(false);
+  const [pendingApprovals, setPendingApprovals] = useState<ApprovalRecord[]>([]);
+
+  // Real pending-approval data (Frontend Session 3) — GET /api/approvals is
+  // visibility-only (not gated on canApprovePhotos, see approvals.controller.js),
+  // so every authenticated role sees what's pending, same as the demo bell
+  // implied but never actually wired to.
+  useEffect(() => {
+    if (!user) return;
+    listApprovals({ status: 'pending', limit: 5 })
+      .then((res) => setPendingApprovals(res.approvals))
+      .catch(() => {
+        /* Non-fatal — bell just shows no pending items. */
+      });
+  }, [user]);
+
   if (!user) return null;
 
   const items = visibleNavItems(user);
+  // Header title reflects the actual route instead of always saying
+  // "Dashboard" — pre-existing gap, fixed while touching this file for the
+  // Session 3 bell wiring rather than left visibly wrong on /approvals.
+  const activeNavItem = NAV_ITEMS.find((item) => item.path === location.pathname);
+  const pageTitle = activeNavItem?.label ?? (location.pathname.startsWith('/cases/') ? 'Case Detail' : 'Dashboard');
 
   return (
     <div className="flex min-h-screen">
@@ -198,7 +221,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       >
         <header className="topbar-glass mx-8 mt-5 mb-1 px-6.5 py-4 rounded-[18px] flex items-center justify-between">
           <div>
-            <h1 className="font-display text-[23px] font-bold m-0 tracking-[-0.015em]">Dashboard</h1>
+            <h1 className="font-display text-[23px] font-bold m-0 tracking-[-0.015em]">{pageTitle}</h1>
             <p className="m-0 mt-0.5 text-[13px] text-ink-soft">Welcome back, {user.fullName.split(' ')[0]}</p>
           </div>
 
@@ -229,27 +252,48 @@ export function AppShell({ children }: { children: ReactNode }) {
                   <path d="M6 8a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z" />
                   <path d="M10 20a2 2 0 0 0 4 0" />
                 </svg>
-                <span className="absolute top-[7px] right-[7px] w-2 h-2 rounded-full bg-badge-coral border-2 border-white" />
+                {pendingApprovals.length > 0 && (
+                  <span className="absolute top-[7px] right-[7px] w-2 h-2 rounded-full bg-badge-coral border-2 border-white" />
+                )}
               </button>
               <div
                 className={`notif-dropdown ${notifOpen ? 'open' : ''} absolute top-[46px] right-0 w-[300px] bg-white rounded-[14px] p-2 z-[80]`}
                 style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-lg)' }}
               >
                 <h4 className="text-[12.5px] font-bold px-2.5 pt-2 pb-1.5 text-ink">Notifications</h4>
-                {DEMO_NOTIFS.map((n, i) => (
-                  <div key={i} className="flex gap-2.5 px-2.5 py-2.5 rounded-[9px] hover:bg-page-bg-top cursor-default">
-                    <div className="w-[30px] h-[30px] rounded-lg flex items-center justify-center text-[13px] bg-badge-teal-bg shrink-0">
-                      {n.icon}
+                {pendingApprovals.length === 0 ? (
+                  <p className="text-[12px] text-ink-soft px-2.5 py-3">No pending approvals.</p>
+                ) : (
+                  pendingApprovals.map((a) => (
+                    <div
+                      key={a.id}
+                      onClick={() => {
+                        setNotifOpen(false);
+                        navigate('/approvals');
+                      }}
+                      className="flex gap-2.5 px-2.5 py-2.5 rounded-[9px] hover:bg-page-bg-top cursor-pointer"
+                    >
+                      <div className="w-[30px] h-[30px] rounded-lg flex items-center justify-center text-[13px] bg-badge-teal-bg shrink-0">
+                        🦷
+                      </div>
+                      <div>
+                        <p className="text-[12.5px] font-semibold m-0 text-ink">
+                          {a.case_number} — {a.stage} approval pending
+                        </p>
+                        <span className="text-[11px] text-ink-soft">{timeAgo(a.created_at)}</span>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-[12.5px] font-semibold m-0 text-ink">{n.title}</p>
-                      <span className="text-[11px] text-ink-soft">{n.time}</span>
-                    </div>
-                  </div>
-                ))}
-                <p className="text-[11px] text-ink-soft px-2.5 pt-1 pb-1.5">
-                  Preview only — real triggers land in Session 3.
-                </p>
+                  ))
+                )}
+                <button
+                  onClick={() => {
+                    setNotifOpen(false);
+                    navigate('/approvals');
+                  }}
+                  className="w-full text-left text-[11.5px] font-semibold text-[#1C8A93] px-2.5 pt-1.5 pb-1.5 hover:underline"
+                >
+                  View all approvals
+                </button>
               </div>
             </div>
 

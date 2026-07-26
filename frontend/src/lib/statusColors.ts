@@ -42,3 +42,16 @@ export const PRIORITY_COLORS: Record<string, { bg: string; text: string }> = {
   Rush: { bg: 'var(--color-badge-amber-bg)', text: 'var(--color-badge-amber)' },
   Urgent: { bg: 'var(--color-pill-red-bg)', text: 'var(--color-pill-red-text)' },
 };
+
+// Approval status pill (Frontend Session 3) — reuses the same tokens as the
+// case-status palette rather than inventing new ones: pending mirrors the
+// mustard "awaiting action" tone already used for Pending Design/Bisque
+// Approval, approved reuses the green "done" tone, rejected reuses red.
+export const APPROVAL_STATUS_COLORS: Record<
+  'pending' | 'approved' | 'rejected',
+  { bg: string; text: string }
+> = {
+  pending: { bg: 'var(--color-pill-mustard-bg)', text: 'var(--color-pill-mustard-text)' },
+  approved: { bg: 'var(--color-pill-green-bg)', text: 'var(--color-pill-green-text)' },
+  rejected: { bg: 'var(--color-pill-red-bg)', text: 'var(--color-pill-red-text)' },
+};

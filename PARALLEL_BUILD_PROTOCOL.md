@@ -43,13 +43,13 @@ someone real time re-verifying something that's already fine.
 | 1 | ✅ COMPLETE (18/18 tests) | ✅ COMPLETE | — |
 | 1.5 | *(n/a — backend has no 1.5)* | ✅ COMPLETE (visual polish) | — |
 | 2 | ✅ COMPLETE (40/40 tests) | ✅ COMPLETE *(fixed — see §3 below)* | — |
-| 3 | ✅ COMPLETE (149/149 tests — 54 original + `GET /api/approvals` addendum, see BUILD_LOG.md) | ⬜ NOT STARTED | **✅ YES — ready now** |
+| 3 | ✅ COMPLETE (149/149 tests — 54 original + `GET /api/approvals` addendum, see BUILD_LOG.md) | ✅ COMPLETE *(code-complete — see FRONTEND_LOG.md's Session 3 entry for the one open item: no live browser click-through yet, Postgres wasn't installable in the build sandbox)* | — |
 | 3.5 | ✅ COMPLETE (repo reorg only, no new features) | — | — |
 | 4 | ✅ COMPLETE (69/69 tests) | ⬜ NOT STARTED | **✅ YES — ready now** |
 | 5 | ✅ COMPLETE (100/100 tests) | ⬜ NOT STARTED | **✅ YES — ready now** |
 | 5.5 | ✅ COMPLETE (118/118 tests, commit `0efddfa`) | ⬜ NOT STARTED | **✅ YES — ready now** |
 | 6 | ✅ COMPLETE (144/144 tests — see §9) | ⬜ NOT STARTED | **✅ YES — ready now** |
-| 7 | ⬜ NOT STARTED | ⬜ NOT STARTED | ❌ blocked on backend |
+| 7 | ✅ COMPLETE (174/174 tests, commit `a32fd77` — table was stale, corrected here per this doc's own §1 precedent: verify against `git log`, not prior table state) | ⬜ NOT STARTED | **✅ YES — ready now** |
 | 8 | ⬜ NOT STARTED | ⬜ NOT STARTED | ❌ blocked on backend |
 | 9 | ⬜ NOT STARTED | ⬜ NOT STARTED | ❌ blocked on backend |
 

@@ -7,6 +7,7 @@ import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { CaseQueuePage } from './pages/CaseQueuePage';
 import { CaseDetailPage } from './pages/CaseDetailPage';
+import { ApprovalsPage } from './pages/ApprovalsPage';
 import { ComingSoon } from './pages/stubs/ComingSoon';
 import { NAV_ITEMS } from './lib/navConfig';
 
@@ -52,6 +53,19 @@ export default function App() {
             <ProtectedRoute>
               <AppShell>
                 <CaseDetailPage />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Session 3 — real approvals queue, backend GET /api/approvals
+            confirmed live against approvals.controller.js. */}
+        <Route
+          path="/approvals"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <ApprovalsPage />
               </AppShell>
             </ProtectedRoute>
           }

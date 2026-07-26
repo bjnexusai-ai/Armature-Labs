@@ -73,13 +73,18 @@ export function pick<T = unknown>(obj: Record<string, unknown>, camel: string, s
 // were never added, which is the actual reason those screens could never
 // have worked even once routed.
 import type {
+  ApprovalActionResponse,
+  ApprovePayload,
   CreateCasePayload,
   CreateCaseResponse,
   GetCaseResponse,
+  ListApprovalsQuery,
+  ListApprovalsResponse,
   ListCasesQuery,
   ListCasesResponse,
   ListCaseTypesResponse,
   ListPracticesResponse,
+  RequestChangesPayload,
 } from './caseTypes';
 
 interface GetPracticeResponse {
@@ -119,4 +124,38 @@ export function getPractice(id: string | number): Promise<GetPracticeResponse> {
 
 export function listCaseTypes(): Promise<ListCaseTypesResponse> {
   return apiFetch<ListCaseTypesResponse>('/api/reference/case-types');
+}
+
+// Confirmed against backend/src/controllers/approvals.controller.js and
+// approvals.routes.js — GET /api/approvals (list, visibility-only, not
+// gated on canApprovePhotos), POST /api/approvals/:id/approve and
+// POST /api/approvals/:id/request-changes (both gated server-side on
+// req.user.can_approve_photos; the frontend gate below is convenience only).
+export function listApprovals(query: ListApprovalsQuery = {}): Promise<ListApprovalsResponse> {
+  const params = new URLSearchParams();
+  if (query.caseId != null) params.set('caseId', String(query.caseId));
+  if (query.practiceId != null) params.set('practiceId', String(query.practiceId));
+  if (query.status) params.set('status', query.status);
+  if (query.stage) params.set('stage', query.stage);
+  if (query.page != null) params.set('page', String(query.page));
+  if (query.limit != null) params.set('limit', String(query.limit));
+  const qs = params.toString();
+  return apiFetch<ListApprovalsResponse>(`/api/approvals${qs ? `?${qs}` : ''}`);
+}
+
+export function approveApproval(id: number, payload: ApprovePayload = {}): Promise<ApprovalActionResponse> {
+  return apiFetch<ApprovalActionResponse>(`/api/approvals/${id}/approve`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function requestChangesApproval(
+  id: number,
+  payload: RequestChangesPayload
+): Promise<ApprovalActionResponse> {
+  return apiFetch<ApprovalActionResponse>(`/api/approvals/${id}/request-changes`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }

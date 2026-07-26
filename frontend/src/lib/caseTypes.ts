@@ -148,3 +148,71 @@ export interface ListCasesQuery {
   page?: number;
   limit?: number;
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Approvals (Frontend Session 3) — confirmed directly against
+// backend/src/controllers/approvals.controller.js. Row fields are
+// snake_case (selected straight off `approvals`/`cases`/`case_files` with
+// no aliasing, same convention as CaseRecord above) under camelCase
+// wrapper keys (`approvals`, `pagination`, `approval`, `case`).
+// ─────────────────────────────────────────────────────────────────────────
+
+export type ApprovalStage = 'design' | 'bisque';
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
+
+export interface ApprovalRecord {
+  id: number;
+  case_id: number;
+  media_id: number;
+  stage: ApprovalStage;
+  status: ApprovalStatus;
+  approved_by: number | null;
+  comments: string | null;
+  responded_at: string | null;
+  created_at: string;
+  case_number: string;
+  practice_id: number;
+  patient_name: string | null;
+  case_current_status: CaseStatus;
+  media_file_name: string;
+  media_file_url: string;
+}
+
+export interface ListApprovalsQuery {
+  caseId?: number;
+  practiceId?: number; // internal-only — 400 on the portal, mirrors listCases
+  status?: ApprovalStatus;
+  stage?: ApprovalStage;
+  page?: number;
+  limit?: number;
+}
+
+export interface ListApprovalsResponse {
+  approvals: ApprovalRecord[];
+  pagination: Pagination;
+}
+
+// approve/request-changes return a smaller shape than the list row above —
+// no case_number/patient_name/media_* join fields, just the updated
+// approval + the case after its status transition. Don't assume these
+// match ApprovalRecord.
+export interface ApprovalActionResult {
+  id: number;
+  case_id: number;
+  stage: ApprovalStage;
+  status: ApprovalStatus;
+  comments: string | null;
+}
+
+export interface ApprovalActionResponse {
+  approval: ApprovalActionResult;
+  case: CaseRecord;
+}
+
+export interface RequestChangesPayload {
+  comments: string; // required by the backend — min length 1
+}
+
+export interface ApprovePayload {
+  comments?: string;
+}

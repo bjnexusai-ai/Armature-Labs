@@ -202,3 +202,79 @@ starts, per the Master Frontend Plan's "how to proceed" checklist):
    not the same as a feature being live. Confirm nav items pointing at it
    don't still show "Coming soon" in the running app.
 8. Update this log, commit + push.
+
+## Session 3 — COMPLETE (Approvals UI)
+
+Built against backend's real `GET /api/approvals`, `POST /api/approvals/:id/approve`,
+and `POST /api/approvals/:id/request-changes` — confirmed directly against
+`backend/src/controllers/approvals.controller.js` and `approvals.routes.js`
+before writing any fetch call, per the Master Frontend Plan's "how to
+proceed" checklist. Backend Session 3's list endpoint gap (flagged in
+`BUILD_LOG.md`) was already closed in commit `e32397b` on this branch.
+
+**Built:**
+
+- `lib/caseTypes.ts` — `ApprovalRecord`, `ListApprovalsQuery`/`Response`,
+  `ApprovalActionResult`/`Response`, `ApprovePayload`, `RequestChangesPayload`.
+  Confirmed the list-row shape and the approve/request-changes response
+  shape are *not* the same (the latter has no `case_number`/`patient_name`/
+  `media_*` join fields) — typed both distinctly rather than assuming they
+  matched.
+- `lib/api.ts` — `listApprovals`, `approveApproval`, `requestChangesApproval`.
+- `lib/statusColors.ts` — `APPROVAL_STATUS_COLORS`, reusing existing tokens
+  (mustard/green/red) rather than inventing new ones, same convention as
+  the case-status palette.
+- `components/ApprovalStatusPill.tsx` — small sibling to `StatusPill`.
+- `components/ApprovalActionModal.tsx` — single modal for both Approve and
+  Request Changes (mirrors `NewCaseModal`'s form pattern), enforcing
+  client-side that `comments` is required for Request Changes (server also
+  enforces this — `requestChangesSchema.comments.min(1)` — this is UI
+  convenience only).
+- `pages/ApprovalsPage.tsx` — status-tab queue (Pending/Approved/Changes
+  requested/All), mirrors `CaseQueuePage.tsx`'s table/pagination structure.
+  Action buttons are gated on `user.canApprovePhotos` (UI convenience only —
+  the real 403 enforcement is `req.user.can_approve_photos` server-side).
+- `App.tsx` — routed `/approvals` to the real page (the exact Session 2
+  mistake: a page existing without a route — avoided here by wiring it in
+  the same commit as the page itself).
+- `lib/navConfig.ts` — flipped the `approvals` nav item's `live: true`.
+- `layouts/AppShell.tsx` — rewired the notification bell from the static
+  `DEMO_NOTIFS` preview to real pending-approval data via `listApprovals({
+  status: 'pending', limit: 5 })`; badge dot now only renders when there's
+  actually something pending. Also fixed a pre-existing bug found while in
+  this file: the header title was hardcoded to always say "Dashboard"
+  regardless of route — would have looked broken landing on `/approvals`;
+  now derived from `navConfig`'s matching item.
+
+**Verified:**
+
+- `tsc -b` and `npm run build` — both clean, zero errors.
+- Grepped every new component's import outside its own file (`ApprovalsPage`,
+  `ApprovalActionModal`, `ApprovalStatusPill` all confirmed imported and used
+  somewhere other than their own file) — the exact Session 2 checklist item.
+- Confirmed `navConfig.ts`'s `approvals` entry has `live: true` so the sidebar
+  no longer renders it as a "Coming soon" stub.
+
+**Not verified (be honest about this, same as the Session 2 log's own
+standard):**
+
+- No live browser click-through against a running backend in this
+  environment — Postgres wasn't installable here (package-repo mismatch:
+  `security.ubuntu.com` 404s on `postgresql-16`/`libpq5` at the version
+  `noble-updates` currently resolves to), so the backend couldn't actually
+  be started to click through against. The build/typecheck/grep checks
+  above are real, but §6 rule 3 of `PARALLEL_BUILD_PROTOCOL.md` ("actually
+  click through it in a running browser") has **not** been satisfied yet.
+  Do this before calling Session 3 fully done: `cd backend && npm install
+  && npm run migrate:up && npm run seed && npm run dev`, then `cd frontend
+  && npm run dev`, log in as a role with `canApprovePhotos: true`, click
+  the Approvals nav item (not a typed URL), and confirm a real pending
+  approval renders with working Approve / Request Changes actions.
+
+**How to pick this up:**
+
+1. Do the browser click-through above first — this is the one remaining
+   gap before Session 3 is fully closed per this project's own rules.
+2. Session 4 (Invoices/QC) and Session 5 (Messages/photos/shipments/
+   warranty) are both unblocked — their backend sessions are complete,
+   tested, and pushed on this branch, same as Session 3's was.

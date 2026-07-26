@@ -49,7 +49,15 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { key: 'dashboard', label: 'Dashboard', path: '/dashboard', section: 'Overview', icon: 'dashboard', session: 1 },
   { key: 'cases', label: 'Case Queue', path: '/cases', section: 'Operations', icon: 'queue', session: 2, live: true },
-  { key: 'approvals', label: 'Approvals', path: '/approvals', section: 'Operations', icon: 'approvals', session: 3 },
+  {
+    key: 'approvals',
+    label: 'Approvals',
+    path: '/approvals',
+    section: 'Operations',
+    icon: 'approvals',
+    session: 3,
+    live: true,
+  },
   {
     key: 'materials',
     label: 'Materials',
