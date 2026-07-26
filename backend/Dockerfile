@@ -10,6 +10,10 @@ RUN npm install
 # this COPY only matters for a standalone/prod image build.
 COPY . .
 
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
 EXPOSE 4000
 
+ENTRYPOINT ["entrypoint.sh"]
 CMD ["npm", "run", "dev"]
