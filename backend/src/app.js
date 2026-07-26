@@ -18,6 +18,9 @@ const qcRoutes = require('./routes/qc.routes');
 const fulfillmentRoutes = require('./routes/fulfillment.routes');
 const inventoryRoutes = require('./routes/inventory.routes');
 const procurementRoutes = require('./routes/procurement.routes');
+const reportsRoutes = require('./routes/reports.routes');
+const equipmentRoutes = require('./routes/equipment.routes');
+const planningRoutes = require('./routes/planning.routes');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 
 const app = express();
@@ -43,6 +46,9 @@ app.use('/api/qc', qcRoutes);
 app.use('/api/fulfillment', fulfillmentRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/procurement', procurementRoutes);
+app.use('/api/reports', reportsRoutes);
+app.use('/api/equipment', equipmentRoutes);
+app.use('/api/planning', planningRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

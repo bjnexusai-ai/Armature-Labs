@@ -1,0 +1,323 @@
+From c2fbd92e75f44368820f3f3532000db9f2ed566a Mon Sep 17 00:00:00 2001
+From: Claude <claude@armature-labs.local>
+Date: Sun, 26 Jul 2026 09:16:45 +0000
+Subject: [PATCH] Session 3 addendum: add GET /api/approvals (list endpoint gap
+ close-out)
+
+- The 0014_approvals migration's own comment said this table would be
+  queried both ways (per-case and practice-wide dashboard) but only the
+  two write actions (approve/request-changes) were ever built.
+- Adds listApprovals in approvals.controller.js, mounted as GET /api/approvals.
+- Supports caseId, practiceId (internal-only), status, stage, page, limit.
+- Tenant-scoped via existing practiceScopeClause helper; NOT gated on
+  can_approve_photos (that flag governs writes only, per client's own spec).
+- Joined against cases + case_files in one query (case_number, patient_name,
+  current_status, media file_name/file_url) to avoid extra round-trips.
+- 5 new integration tests. Full suite: 149/149 passing, 13/13 suites,
+  verified on a fully clean DROP DATABASE + migrate + seed.
+- Logged in BUILD_LOG.md (Session 3 addendum) and PARALLEL_BUILD_PROTOCOL.md
+  status board, per this project's own conventions.
+---
+ BUILD_LOG.md                                  |  30 +++++
+ PARALLEL_BUILD_PROTOCOL.md                    |   2 +-
+ .../src/controllers/approvals.controller.js   | 104 +++++++++++++++++-
+ backend/src/routes/approvals.routes.js        |   7 +-
+ backend/tests/approvals.integration.test.js   |  92 ++++++++++++++++
+ 5 files changed, 230 insertions(+), 5 deletions(-)
+
+diff --git a/BUILD_LOG.md b/BUILD_LOG.md
+index 56656c5..fa2fae5 100644
+--- a/BUILD_LOG.md
++++ b/BUILD_LOG.md
+@@ -252,6 +252,36 @@ already works around it, same as Session 2's own tests do).
+ 5. Read this file's "Not yet built" section, pick up at Session 4
+ 6. Commit + push before ending the session, no exceptions — update this log first
+ 
++**Addendum (added while scoping Frontend Session 3 — verified against `git
++log`/`git show`, not just this note):** the `0014_approvals` migration's own
++comment said the table would be "queried both ways: pending approvals for a
++case, and all pending approvals across the practice, for a portal
++dashboard" — but only `POST /:id/approve` and `POST /:id/request-changes`
++were ever built. There was no `GET /api/approvals` anywhere, confirmed by
++reading `approvals.routes.js`, `cases.routes.js`, and `app.js`'s full route
++mount list directly. This blocked Frontend Session 3's approvals queue and
++notification bell, which have nothing to read from without it.
++
++Closed via `listApprovals` in `approvals.controller.js`, mounted as
++`GET /api/approvals` in `approvals.routes.js`. Supports `caseId`,
++`practiceId` (internal staff only, mirrors `listCases`' own restriction),
++`status`, `stage`, `page`, `limit`. Tenant-scoped via the existing
++`practiceScopeClause` helper joined through `cases.practice_id` — **not**
++gated on `can_approve_photos`, since that flag governs the two write
++actions per the client's §8 spec, not read visibility (same visibility
++rule as `GET /api/cases`). Joined against `cases` (case_number,
++patient_name, current_status) and `case_files` (file_name, file_url) in
++one query so the frontend doesn't need a second round-trip per row.
++
++5 new integration tests added (happy path + join shape, status filtering,
++cross-tenant isolation for a dentist_client without `can_approve_photos`,
++400 on an explicit `practiceId` from a portal user, 401 unauthenticated).
++Verified on a fully clean `DROP DATABASE` + migrate + seed, not a dirtied
++suite-run DB: **149/149 passing, 13/13 suites** (144 baseline + 5 new).
++Also hit live via `curl` after starting the server locally to confirm the
++actual JSON shape (snake_case field names, consistent with the rest of the
++cases/approvals API — not camelCase, unlike auth).
++
+ ---
+ 
+ 
+diff --git a/PARALLEL_BUILD_PROTOCOL.md b/PARALLEL_BUILD_PROTOCOL.md
+index 52412bf..735e609 100644
+--- a/PARALLEL_BUILD_PROTOCOL.md
++++ b/PARALLEL_BUILD_PROTOCOL.md
+@@ -43,7 +43,7 @@ someone real time re-verifying something that's already fine.
+ | 1 | ✅ COMPLETE (18/18 tests) | ✅ COMPLETE | — |
+ | 1.5 | *(n/a — backend has no 1.5)* | ✅ COMPLETE (visual polish) | — |
+ | 2 | ✅ COMPLETE (40/40 tests) | ✅ COMPLETE *(fixed — see §3 below)* | — |
+-| 3 | ✅ COMPLETE (54/54 tests) | ⬜ NOT STARTED | **✅ YES — ready now** |
++| 3 | ✅ COMPLETE (149/149 tests — 54 original + `GET /api/approvals` addendum, see BUILD_LOG.md) | ⬜ NOT STARTED | **✅ YES — ready now** |
+ | 3.5 | ✅ COMPLETE (repo reorg only, no new features) | — | — |
+ | 4 | ✅ COMPLETE (69/69 tests) | ⬜ NOT STARTED | **✅ YES — ready now** |
+ | 5 | ✅ COMPLETE (100/100 tests) | ⬜ NOT STARTED | **✅ YES — ready now** |
+diff --git a/backend/src/controllers/approvals.controller.js b/backend/src/controllers/approvals.controller.js
+index 944d9db..718e76d 100644
+--- a/backend/src/controllers/approvals.controller.js
++++ b/backend/src/controllers/approvals.controller.js
+@@ -1,6 +1,6 @@
+ const { z } = require('zod');
+-const { withTransaction } = require('../config/db');
+-const { assertPracticeAccess } = require('../middleware/tenantIsolation');
++const { withTransaction, query } = require('../config/db');
++const { assertPracticeAccess, practiceScopeClause } = require('../middleware/tenantIsolation');
+ const { applyCaseStatusTransition } = require('../services/caseStatusTransition');
+ const notifications = require('../services/notifications');
+ 
+@@ -155,4 +155,102 @@ async function requestChangesApproval(req, res) {
+   return res.json({ approval: result.approval, case: result.case });
+ }
+ 
+-module.exports = { approveApproval, requestChangesApproval };
++// ─────────────────────────────────────────────────────────────────────────
++// GET /api/approvals
++//
++// The 0014 migration's own comment says this table is "queried both ways:
++// pending approvals for a case, and all pending approvals across the
++// practice, for a portal dashboard" — but no route was ever built for it.
++// This closes that gap. Not gated on can_approve_photos: that flag governs
++// the two write actions (approve/request-changes) per the client's §8 spec,
++// but everyone who can already see a case's status (internal staff lab-wide,
++// dentist_client scoped to their own practice via practiceScopeClause) can
++// see that an approval is pending on it — same visibility as GET /api/cases.
++// ─────────────────────────────────────────────────────────────────────────
++
++const listApprovalsQuerySchema = z.object({
++  caseId: z.coerce.number().int().positive().optional(),
++  practiceId: z.coerce.number().int().positive().optional(),
++  status: z.enum(['pending', 'approved', 'rejected']).optional(),
++  stage: z.enum(['design', 'bisque']).optional(),
++  page: z.coerce.number().int().positive().optional().default(1),
++  limit: z.coerce.number().int().positive().max(100).optional().default(25),
++});
++
++async function listApprovals(req, res) {
++  const input = listApprovalsQuerySchema.parse(req.query);
++
++  if (req.user.role === 'dentist_client' && input.practiceId) {
++    const err = new Error(
++      'practiceId filtering is not available on the portal — results are already scoped to your own practice.'
++    );
++    err.status = 400;
++    throw err;
++  }
++
++  const conditions = ['1=1'];
++  const params = [];
++
++  const scope = practiceScopeClause(req.user, params.length + 1, 'c.practice_id');
++  if (scope.clause) {
++    conditions.push(scope.clause.replace(/^ AND /, ''));
++    params.push(...scope.params);
++  }
++
++  if (input.caseId) {
++    params.push(input.caseId);
++    conditions.push(`a.case_id = $${params.length}`);
++  }
++  if (input.practiceId) {
++    params.push(input.practiceId);
++    conditions.push(`c.practice_id = $${params.length}`);
++  }
++  if (input.status) {
++    params.push(input.status);
++    conditions.push(`a.status = $${params.length}`);
++  }
++  if (input.stage) {
++    params.push(input.stage);
++    conditions.push(`a.stage = $${params.length}`);
++  }
++
++  const offset = (input.page - 1) * input.limit;
++
++  const countResult = await query(
++    `SELECT COUNT(*)::int AS total
++     FROM approvals a
++     JOIN cases c ON c.id = a.case_id
++     WHERE ${conditions.join(' AND ')}`,
++    params
++  );
++
++  params.push(input.limit);
++  params.push(offset);
++  const { rows } = await query(
++    `SELECT
++       a.id, a.case_id, a.media_id, a.stage, a.status, a.approved_by,
++       a.comments, a.responded_at, a.created_at,
++       c.case_number, c.practice_id, c.patient_name, c.current_status AS case_current_status,
++       cf.file_name AS media_file_name, cf.file_url AS media_file_url
++     FROM approvals a
++     JOIN cases c ON c.id = a.case_id
++     JOIN case_files cf ON cf.id = a.media_id
++     WHERE ${conditions.join(' AND ')}
++     ORDER BY a.created_at DESC
++     LIMIT $${params.length - 1} OFFSET $${params.length}`,
++    params
++  );
++
++  return res.json({
++    approvals: rows,
++    pagination: {
++      page: input.page,
++      limit: input.limit,
++      total: countResult.rows[0].total,
++      totalPages: Math.ceil(countResult.rows[0].total / input.limit),
++    },
++  });
++}
++
++module.exports = { approveApproval, requestChangesApproval, listApprovals };
++
+diff --git a/backend/src/routes/approvals.routes.js b/backend/src/routes/approvals.routes.js
+index 6dd5f4d..40cbe87 100644
+--- a/backend/src/routes/approvals.routes.js
++++ b/backend/src/routes/approvals.routes.js
+@@ -1,11 +1,16 @@
+ const express = require('express');
+ const { requireAuth } = require('../middleware/auth');
+-const { approveApproval, requestChangesApproval } = require('../controllers/approvals.controller');
++const { approveApproval, requestChangesApproval, listApprovals } = require('../controllers/approvals.controller');
+ 
+ const router = express.Router();
+ 
+ router.use(requireAuth);
+ 
++// List endpoint — visibility-only (tenant-scoped via practiceScopeClause
++// inside the controller), not gated on can_approve_photos. That flag is
++// reserved for the two write actions below, per the client's §8 spec.
++router.get('/', listApprovals);
++
+ // Portal endpoint — gated on req.user.can_approve_photos inside the
+ // controller (loaded fresh from the DB by requireAuth, per standing
+ // convention), not on role, since that flag is the client's own §8 spec for
+diff --git a/backend/tests/approvals.integration.test.js b/backend/tests/approvals.integration.test.js
+index 8c499bc..d270b0e 100644
+--- a/backend/tests/approvals.integration.test.js
++++ b/backend/tests/approvals.integration.test.js
+@@ -354,3 +354,95 @@ describe('POST /api/approvals/:id/request-changes', () => {
+     expect(directRes.status).toBe(409);
+   });
+ });
++
++describe('GET /api/approvals', () => {
++  it('internal staff see a pending approval, joined with case + media info', async () => {
++    const ownerToken = await loginAs('owner@dentallab.test');
++    const caseId = await createCaseAt(ownerToken, 'In Design');
++    const uploadRes = await uploadDesignMedia(ownerToken, caseId);
++
++    const res = await request(app)
++      .get('/api/approvals')
++      .set('Authorization', `Bearer ${ownerToken}`)
++      .query({ caseId });
++    expect(res.status).toBe(200);
++    const found = res.body.approvals.find((a) => a.id === uploadRes.body.approval.id);
++    expect(found).toBeTruthy();
++    expect(found.status).toBe('pending');
++    expect(found.stage).toBe('design');
++    expect(found.case_number).toBeTruthy();
++    expect(found.media_file_name).toBe('design_v1.jpg');
++    expect(res.body.pagination).toMatchObject({ page: 1, limit: 25 });
++  });
++
++  it('filters by status', async () => {
++    const ownerToken = await loginAs('owner@dentallab.test');
++    const dentistToken = await grantApprovalPermission(ownerToken);
++    const caseId = await createCaseAt(ownerToken, 'In Design');
++    const uploadRes = await uploadDesignMedia(ownerToken, caseId);
++    await request(app)
++      .post(`/api/approvals/${uploadRes.body.approval.id}/approve`)
++      .set('Authorization', `Bearer ${dentistToken}`)
++      .send({});
++
++    const pendingRes = await request(app)
++      .get('/api/approvals')
++      .set('Authorization', `Bearer ${ownerToken}`)
++      .query({ caseId, status: 'pending' });
++    expect(pendingRes.body.approvals.find((a) => a.id === uploadRes.body.approval.id)).toBeFalsy();
++
++    const approvedRes = await request(app)
++      .get('/api/approvals')
++      .set('Authorization', `Bearer ${ownerToken}`)
++      .query({ caseId, status: 'approved' });
++    expect(approvedRes.body.approvals.find((a) => a.id === uploadRes.body.approval.id)).toBeTruthy();
++  });
++
++  it('a dentist_client only sees approvals for their own practice, even without can_approve_photos', async () => {
++    const ownerToken = await loginAs('owner@dentallab.test');
++    const managerToken = await loginAs('manager@dentallab.test');
++    await query("UPDATE users SET can_approve_photos = false WHERE email = 'dentist@brightsmile.test'");
++    const dentistToken = await loginAs('dentist@brightsmile.test');
++
++    // Practice A (seeded Bright Smile) approval — visible.
++    const caseIdA = await createCaseAt(ownerToken, 'In Design');
++    const uploadA = await uploadDesignMedia(ownerToken, caseIdA);
++
++    // Practice B (isolated) approval — must NOT be visible to Practice A's dentist.
++    const practiceB = await createIsolatedPracticeWithApprover(ownerToken, managerToken);
++    const { caseTypeId } = await getIds();
++    const createRes = await request(app)
++      .post('/api/cases')
++      .set('Authorization', `Bearer ${ownerToken}`)
++      .send({
++        practiceId: practiceB.practiceId, dentistId: practiceB.dentistId, caseTypeId, dueDate: futureDueDate(),
++      });
++    const caseIdB = createRes.body.case.id;
++    await request(app).patch(`/api/cases/${caseIdB}/status`).set('Authorization', `Bearer ${ownerToken}`).send({ newStatus: 'In Design' });
++    const uploadB = await uploadDesignMedia(ownerToken, caseIdB);
++
++    const res = await request(app)
++      .get('/api/approvals')
++      .set('Authorization', `Bearer ${dentistToken}`);
++    expect(res.status).toBe(200);
++    const ids = res.body.approvals.map((a) => a.id);
++    expect(ids).toContain(uploadA.body.approval.id);
++    expect(ids).not.toContain(uploadB.body.approval.id);
++  });
++
++  it('400s a dentist_client passing practiceId explicitly', async () => {
++    const dentistToken = await loginAs('dentist@brightsmile.test');
++    const { practiceId } = await getIds();
++
++    const res = await request(app)
++      .get('/api/approvals')
++      .set('Authorization', `Bearer ${dentistToken}`)
++      .query({ practiceId });
++    expect(res.status).toBe(400);
++  });
++
++  it('401s an unauthenticated request', async () => {
++    const res = await request(app).get('/api/approvals');
++    expect(res.status).toBe(401);
++  });
++});
+-- 
+2.43.0
+
