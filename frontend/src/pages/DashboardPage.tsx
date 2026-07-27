@@ -2,43 +2,110 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { MetricCard } from '../components/MetricCard';
-import { WorkflowTracker } from '../components/WorkflowTracker';
+import { CaseSnapshotHero } from '../components/CaseSnapshotHero';
+import { TodaysWorkflowPanel } from '../components/TodaysWorkflowPanel';
+import { ActionRequiredQueue } from '../components/ActionRequiredQueue';
+import { listApprovals, listCaseTypes, listPractices } from '../lib/api';
+import {
+  buildExceptionQueueItems,
+  computeDashboardMetrics,
+  computeTodaysWorkflow,
+  fetchAllCasesForDashboard,
+  pickHeroCase,
+  type ActionQueueItem,
+  type DashboardMetrics,
+  type WorkflowStepData,
+} from '../lib/dashboardMetrics';
+import type { CaseRecord } from '../lib/caseTypes';
 
-const EXAMPLE_STEPS = [
-  { label: 'Submitted', sub: 'Jul 20', status: 'completed' as const },
-  { label: 'Intake', sub: 'Jul 20', status: 'completed' as const },
-  { label: 'Design', sub: 'In progress', status: 'active' as const },
-  { label: 'Review', sub: 'Pending', status: 'pending' as const },
-  { label: 'Production', sub: 'Pending', status: 'pending' as const },
-  { label: 'QC', sub: 'Pending', status: 'pending' as const },
-  { label: 'Shipping', sub: 'Pending', status: 'pending' as const },
-];
-
+/**
+ * Session 7 §0.2 retrofit — real Dashboard, replacing the Session 1
+ * placeholder (example steps, hardcoded metric numbers 14/3/5/1, no hero
+ * card, no tooth mark, no "Today's workflow" stepper). Confirmed via direct
+ * inspection this file was still headed "Frontend Session 1 — App Shell"
+ * before this change — see FRONTEND_LOG.md's Session 7 entry for the full
+ * retrofit note.
+ */
 export function DashboardPage() {
   const { user } = useAuth();
   const { showToast } = useToast();
-  // Example data has no real fetch yet, so this timer just demonstrates the
-  // skeleton state the Session 2 case-list will actually use once GET
-  // /api/cases is wired — a placeholder loading flag, not a real request.
+
   const [loading, setLoading] = useState(true);
+  const [heroCase, setHeroCase] = useState<CaseRecord | null>(null);
+  const [heroCaseTypeName, setHeroCaseTypeName] = useState<string | null>(null);
+  const [workflowSteps, setWorkflowSteps] = useState<WorkflowStepData[]>([]);
+  const [metrics, setMetrics] = useState<DashboardMetrics>({
+    activeCases: 0,
+    pendingApproval: 0,
+    dueThisWeek: 0,
+    onHold: 0,
+  });
+  const [queueItems, setQueueItems] = useState<ActionQueueItem[]>([]);
+
   useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 550);
-    return () => clearTimeout(t);
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      try {
+        const [allCases, pendingApprovals, practicesRes, caseTypesRes] = await Promise.all([
+          fetchAllCasesForDashboard(),
+          listApprovals({ status: 'pending', limit: 100 }),
+          listPractices(),
+          listCaseTypes(),
+        ]);
+        if (cancelled) return;
+
+        const practiceNames: Record<number, string> = {};
+        for (const p of practicesRes.practices) practiceNames[p.id] = p.practice_name;
+
+        const caseTypeNames: Record<number, string> = {};
+        for (const t of caseTypesRes.caseTypes) caseTypeNames[t.id] = t.name;
+
+        const hero = pickHeroCase(allCases);
+        setHeroCase(hero);
+        setHeroCaseTypeName(hero ? (caseTypeNames[hero.case_type_id] ?? null) : null);
+
+        setWorkflowSteps(computeTodaysWorkflow(allCases));
+        setMetrics(computeDashboardMetrics(allCases, pendingApprovals.pagination.total));
+
+        // Combine pending-approval rows (from GET /api/approvals, which
+        // already carries case_number/patient_name/practice_id join
+        // fields) with Delayed/Case on Hold rows built off the case list
+        // already fetched above — one queue, two real sources, no
+        // duplicate case shown twice if a case happens to be both (an
+        // exception-status case is excluded from the linear approval
+        // statuses anyway, so this can't double up in practice).
+        const approvalItems: ActionQueueItem[] = pendingApprovals.approvals.map((a) => ({
+          key: `approval-${a.id}`,
+          caseId: a.case_id,
+          caseNumber: a.case_number,
+          patientLabel: a.patient_name ?? '—',
+          practiceLabel: practiceNames[a.practice_id] ?? `Practice #${a.practice_id}`,
+          status: a.case_current_status,
+        }));
+        const exceptionItems = buildExceptionQueueItems(allCases, practiceNames);
+        setQueueItems([...approvalItems, ...exceptionItems]);
+      } catch {
+        if (!cancelled) showToast('Could not load dashboard data. Is the backend running?');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <div>
       <div className="flex items-start justify-between mb-5">
         <div>
-          <h2 className="font-display text-lg font-bold text-ink mb-1">
-            Frontend Session 1 — App Shell
-          </h2>
-          <p className="text-sm text-ink-soft max-w-xl">
-            Auth, routing, role-based nav, and the full visual system (colors,
-            animations, glass effects) are live. The metric numbers and
-            workflow steps below are example data — they wire to real
-            endpoints in Sessions 2 and 7.
-          </p>
+          <h2 className="font-display text-lg font-bold text-ink mb-1">Dashboard</h2>
+          <p className="text-sm text-ink-soft max-w-xl">Operational snapshot across all active practices.</p>
         </div>
         <button
           onClick={() => showToast('This is what a real action confirmation will look like')}
@@ -49,50 +116,44 @@ export function DashboardPage() {
         </button>
       </div>
 
+      <CaseSnapshotHero caseRecord={heroCase} caseTypeName={heroCaseTypeName} loading={loading} />
+
+      <TodaysWorkflowPanel steps={workflowSteps} loading={loading} />
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
         <MetricCard
           loading={loading}
-          value={14}
+          value={metrics.activeCases}
           label="Active cases"
           iconBg="var(--color-badge-teal-bg)"
           icon={<span className="text-badge-teal text-lg">🦷</span>}
         />
         <MetricCard
           loading={loading}
-          value={3}
+          value={metrics.pendingApproval}
           label="Pending approval"
           iconBg="var(--color-badge-amber-bg)"
           icon={<span className="text-badge-amber text-lg">⏳</span>}
         />
         <MetricCard
           loading={loading}
-          value={5}
+          value={metrics.dueThisWeek}
           label="Due this week"
           iconBg="var(--color-badge-coral-bg)"
           icon={<span className="text-badge-coral text-lg">📅</span>}
         />
         <MetricCard
           loading={loading}
-          value={1}
+          value={metrics.onHold}
           label="On hold"
           iconBg="var(--color-badge-green-bg)"
           icon={<span className="text-badge-green text-lg">⏸</span>}
         />
       </div>
 
-      <div className="surface-card fade-in d1 rounded-[18px] p-5 mb-5">
-        <div className="flex items-center justify-between mb-0.5">
-          <h3 className="font-display text-[15px] font-bold m-0 text-ink tracking-[-0.01em]">Example case pipeline</h3>
-          <span className="status-pill" style={{ background: 'var(--color-badge-green-bg)', color: 'var(--color-badge-green)' }}>
-            <span className="status-dot live" />
-            Live
-          </span>
-        </div>
-        <p className="text-xs text-ink-soft m-0">CASE-2026-00001 · Bright Smile Dental Clinic</p>
-        <WorkflowTracker steps={EXAMPLE_STEPS} />
-      </div>
+      <ActionRequiredQueue items={queueItems} loading={loading} />
 
-      <div className="surface-card rounded-[18px] p-6">
+      <div className="surface-card rounded-[18px] p-6 mt-5">
         <h2 className="font-display text-[15px] font-bold text-ink tracking-[-0.01em] mb-3">Signed in as</h2>
         <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm max-w-md">
           <dt className="text-ink-soft">Name</dt>

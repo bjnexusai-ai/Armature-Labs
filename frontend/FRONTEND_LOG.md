@@ -205,6 +205,17 @@ starts, per the Master Frontend Plan's "how to proceed" checklist):
 
 ## Session 3 — COMPLETE (Approvals UI)
 
+**Retrofit note added in Session 7:** this session's own listed scope never
+included the "Action required queue" dashboard panel, despite the Master
+Frontend Plan's explicit Session 3 instruction to "un-hide the 'Action
+required queue' panel that was left hardcoded/hidden in Session 0." That
+panel did not exist anywhere in the codebase until Session 7 built it
+(confirmed via `grep -rn "Action required" frontend/src/` returning zero
+matches prior to Session 7). Not rewriting this entry's history — flagging
+it here so a future reader of this entry alone doesn't get a false picture
+of what actually shipped at the time. See Session 7's entry below for the
+retrofit itself.
+
 Built against backend's real `GET /api/approvals`, `POST /api/approvals/:id/approve`,
 and `POST /api/approvals/:id/request-changes` — confirmed directly against
 `backend/src/controllers/approvals.controller.js` and `approvals.routes.js`
@@ -837,3 +848,118 @@ container (not the host, which fails on `DATABASE_URL` resolution):
 193/193 passing, 18/18 suites — matches `BUILD_LOG.md`'s Session 9 claim
 exactly. Session 6 is now fully closed per §6's own definition of done,
 not just code-complete.
+
+## Session 7 (Chunk 1 of 2) — Dashboard retrofit (§0.1 + §0.2), IN PROGRESS
+
+Delivered as a **standalone, self-contained chunk** per `SESSION_7_PROMPT.md`
+§3's own suggested build order — this chunk doesn't depend on the reports/
+equipment/scheduling work in Chunk 2, and is delivered separately so a
+tool-budget cutoff mid-Chunk-2 doesn't lose Chunk 1's already-finished,
+already-build-clean work. Chunk 2 (saved reports + 3 charts, equipment,
+technician scheduling) is a separate delivery.
+
+**Two confirmed gaps closed this chunk (per the prompt's own §0):**
+
+1. **§0.1 — "Action required queue" panel, never built (Session 3 scope,
+   silently dropped).** New `components/ActionRequiredQueue.tsx`. Data:
+   pending approvals from `GET /api/approvals?status=pending` (same
+   endpoint the notification bell already uses, confirmed against
+   `AppShell.tsx`) combined with cases in `Delayed` / `Case on Hold`
+   status pulled from the case list already fetched for the other
+   dashboard cards. No new backend endpoint invented, per the prompt's
+   explicit instruction. Client-side text filter (case number, patient,
+   practice, status), same "no backend search param" precedent already
+   established for Case Queue's search box.
+2. **§0.2 — hero "Case Snapshot" card + tooth animation + "Today's
+   workflow" stepper, never ported from the demo.** New
+   `components/CaseSnapshotHero.tsx` (real most-recently-updated
+   in-progress case, real stage % derived from the case's position in
+   the actual 8-step `LINEAR_STATUSES` list, tooth SVG mark copied
+   verbatim from `LoginPage.tsx`'s existing path rather than a new asset)
+   and `components/TodaysWorkflowPanel.tsx` (real aggregate counts per
+   pipeline stage, documented mapping decision below). The four
+   `MetricCard`s on `DashboardPage.tsx` now read real computed values
+   instead of the hardcoded `14`/`3`/`5`/`1`.
+
+**New file:** `lib/dashboardMetrics.ts` — pure aggregation functions
+(`fetchAllCasesForDashboard`, `computeDashboardMetrics`, `pickHeroCase`,
+`stagePercent`, `computeTodaysWorkflow`, `buildExceptionQueueItems`), kept
+separate from `DashboardPage.tsx` so the mapping decisions below are
+readable/testable on their own.
+
+**Documented decisions (record here, not silently guessed):**
+
+- **No dedicated dashboard-aggregate backend endpoint exists.**
+  `fetchAllCasesForDashboard` pages through the real `GET /api/cases`
+  (capped at 100/page server-side) up to 5 pages (500 cases) as a safety
+  valve appropriate for this lab's real scale. If case volume ever grows
+  past that, these aggregates will under-count — flagging this now as a
+  known limitation for a future dedicated backend aggregate endpoint,
+  not silently guessing it'll never matter.
+- **"Today's workflow" stepper mapping.** The backend's real 10-status
+  lifecycle (`caseStatus.js`) has no distinct "Scanning" sub-status —
+  its own comment confirms intake/scanning is an internal sub-step of
+  "Case Entered," not a separate status. Mapped: Received = every case
+  ever created; Scanning = cases currently in "Case Entered"; Design =
+  "In Design"; Approval = "Pending Design Approval" + "Pending Bisque
+  Approval"; Printing = "Processing" + "Finalizing"; Shipping = "Shipped
+  Out". "Delivered" excluded from every bucket (terminal, not part of
+  today's active pipeline).
+- **Hero card "Material" field has no real backend equivalent.**
+  Confirmed via `backend/migrations/` — no `material_id` column on
+  `cases`; materials belong to inventory (Session 6), not linked to
+  cases directly. Substituted the case type name (`GET
+  /api/reference/case-types`) instead of inventing a fake material
+  value. Similarly substituted "Assignment: Assigned/Unassigned" (real
+  `assigned_staff_id` presence) for the reference's "Printer" field,
+  since there's no printer-assignment field on `cases` either.
+- **Hero card selection logic:** most recently updated (`updated_at`
+  desc) case not in `Delivered` status — not a hardcoded "pick case #1"
+  shortcut, confirmed reasonable against `GET /api/cases`'s real fields
+  before building, per the prompt's explicit instruction.
+
+**Known side effect, flagged rather than silently left:**
+`components/WorkflowTracker.tsx` (the old Session 1 mock-data pipeline
+component) is no longer imported anywhere now that `DashboardPage.tsx`'s
+`EXAMPLE_STEPS` usage is gone — confirmed via `grep -rn "WorkflowTracker"`.
+It was never wired into `CaseDetailPage.tsx` either (checked directly —
+that page renders `currentStage` differently, not via this component).
+This is now genuinely dead code, not code this chunk introduced but a
+pre-existing gap this chunk's removal exposed. Not deleting it and not
+guessing where to wire it in without confirming intent first — flagging
+as an open item for a future session (most likely retrofitting it into
+`CaseDetailPage.tsx`'s per-case view, which is the shape of data it
+actually renders) rather than silently leaving it unexplained.
+
+**Verified this chunk:**
+
+- `npx tsc -b` and `npm run build` — both clean, zero errors, fresh
+  `npm install` baseline in this environment.
+- Grepped every new component's import outside its own file
+  (`CaseSnapshotHero`, `TodaysWorkflowPanel`, `ActionRequiredQueue` — all
+  three confirmed imported and used in `DashboardPage.tsx`, not just
+  present on disk) — the exact Session 2 checklist item this project
+  keeps re-running.
+- `npx oxlint` — 0 errors (2 pre-existing warnings on `AuthContext.tsx`/
+  `ToastContext.tsx`, unrelated to this chunk).
+
+**Not verified (be honest, same standard as every prior session):**
+
+- No runnable Postgres/backend in this environment — §6 rule 3 ("actually
+  click through it in a running browser against the real backend") has
+  **not** been satisfied yet for this chunk.
+- Visual comparison against the reference demo was done by direct markup
+  inspection (`index.html`'s hero card / workflow stepper / action queue
+  sections read line-by-line) and cross-checked against classes already
+  defined in `index.css` (`.hero-tooth-wrap`, `.wf-dot`, `.wf-connector`,
+  `.status-pill`, `.empty-state`, `.form-input`) — not a live pixel
+  screenshot diff, since there's no browser in this environment either.
+
+**How to pick this up:** `npm run dev` both sides, log in, confirm the
+hero card shows a real in-progress case (not example data) and clicking
+it navigates to `/cases/:id`, the tooth mark renders and floats, "Today's
+workflow" shows real counts, the four metric cards show real numbers, and
+the Action Required Queue lists real pending-approval + delayed/on-hold
+cases with a working filter input and click-through to the case. Then
+proceed to Chunk 2 (saved reports + 3 charts, equipment, technician
+scheduling) — separate delivery, per `SESSION_7_PROMPT.md` §3's chunk 2/3.
