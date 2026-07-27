@@ -228,7 +228,9 @@ async function getInvoice(req, res) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Payments — manual mark-paid only this session (Stripe is Session 8).
+// Payments — manual mark-paid (Check/Cash/Bank Transfer). Stripe payments
+// go through a separate path (stripe.controller.js, Session 8) that
+// reuses `applyPayment` below rather than duplicating this endpoint's logic.
 // ─────────────────────────────────────────────────────────────────────────
 
 const recordPaymentSchema = z
@@ -239,52 +241,80 @@ const recordPaymentSchema = z
   })
   .strict();
 
+/**
+ * Shared core of "apply a payment to an invoice": inserts the `payments`
+ * row and derives the resulting invoice status, the same way regardless of
+ * whether the payment came from a manual mark-paid (this function's
+ * original, pre-Session-8 home) or a Stripe webhook (stripe.controller.js,
+ * Session 8) — reused rather than duplicated per SESSION_8_PROMPT §3.
+ *
+ * Must be called with a transaction client that already holds the
+ * `invoices` row lock (see the `FOR UPDATE` in both callers) so two
+ * simultaneous payments can't both read a stale `amount_paid` and
+ * mis-derive the resulting status.
+ */
+async function applyPayment(client, { invoiceId, amount, method, referenceNote, recordedBy, stripePaymentIntentId, stripeCheckoutSessionId }) {
+  const invoiceRow = await client.query(
+    `SELECT id, practice_id, status, subtotal, amount_paid FROM invoices WHERE id = $1 FOR UPDATE`,
+    [invoiceId]
+  );
+  const invoice = invoiceRow.rows[0];
+  if (!invoice) {
+    const err = new Error('Invoice not found.');
+    err.status = 404;
+    throw err;
+  }
+  if (invoice.status === 'Void') {
+    const err = new Error('Cannot record a payment against a Void invoice.');
+    err.status = 409;
+    throw err;
+  }
+
+  const paymentRow = await client.query(
+    `INSERT INTO payments (invoice_id, amount, method, reference_note, recorded_by, stripe_payment_intent_id, stripe_checkout_session_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING id, amount, method, reference_note, stripe_payment_intent_id, stripe_checkout_session_id, created_at`,
+    [
+      invoiceId,
+      amount.toFixed(2),
+      method,
+      referenceNote || null,
+      recordedBy || null,
+      stripePaymentIntentId || null,
+      stripeCheckoutSessionId || null,
+    ]
+  );
+
+  const newAmountPaid = Number(invoice.amount_paid) + amount;
+  const subtotal = Number(invoice.subtotal);
+  // Partial-payment-safe: overpayment isn't rejected (real-world checks can
+  // overshoot slightly), but status only ever advances to Paid, never
+  // beyond it — auto-marks Paid the moment amount_paid meets or exceeds
+  // subtotal.
+  const newStatus = newAmountPaid >= subtotal ? 'Paid' : 'Partially Paid';
+
+  const updatedInvoiceRow = await client.query(
+    `UPDATE invoices SET amount_paid = $1, status = $2 WHERE id = $3
+     RETURNING id, invoice_number, practice_id, status, subtotal, amount_paid, updated_at`,
+    [newAmountPaid.toFixed(2), newStatus, invoiceId]
+  );
+
+  return { payment: paymentRow.rows[0], invoice: updatedInvoiceRow.rows[0] };
+}
+
 async function recordPayment(req, res) {
   const invoiceId = req.params.id;
   const input = recordPaymentSchema.parse(req.body);
 
-  const result = await withTransaction(async (client) => {
-    // Row-locked so two simultaneous payments can't both read a stale
-    // amount_paid and mis-derive the resulting status.
-    const invoiceRow = await client.query(
-      `SELECT id, practice_id, status, subtotal, amount_paid FROM invoices WHERE id = $1 FOR UPDATE`,
-      [invoiceId]
-    );
-    const invoice = invoiceRow.rows[0];
-    if (!invoice) {
-      const err = new Error('Invoice not found.');
-      err.status = 404;
-      throw err;
-    }
-    if (invoice.status === 'Void') {
-      const err = new Error('Cannot record a payment against a Void invoice.');
-      err.status = 409;
-      throw err;
-    }
-
-    const paymentRow = await client.query(
-      `INSERT INTO payments (invoice_id, amount, method, reference_note, recorded_by)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, amount, method, reference_note, created_at`,
-      [invoiceId, input.amount.toFixed(2), input.method, input.referenceNote || null, req.user.id]
-    );
-
-    const newAmountPaid = Number(invoice.amount_paid) + input.amount;
-    const subtotal = Number(invoice.subtotal);
-    // Partial-payment-safe: overpayment isn't rejected (real-world checks can
-    // overshoot slightly), but status only ever advances to Paid, never
-    // beyond it — auto-marks Paid the moment amount_paid meets or exceeds
-    // subtotal.
-    const newStatus = newAmountPaid >= subtotal ? 'Paid' : 'Partially Paid';
-
-    const updatedInvoiceRow = await client.query(
-      `UPDATE invoices SET amount_paid = $1, status = $2 WHERE id = $3
-       RETURNING id, invoice_number, practice_id, status, subtotal, amount_paid, updated_at`,
-      [newAmountPaid.toFixed(2), newStatus, invoiceId]
-    );
-
-    return { payment: paymentRow.rows[0], invoice: updatedInvoiceRow.rows[0] };
-  });
+  const result = await withTransaction((client) =>
+    applyPayment(client, {
+      invoiceId,
+      amount: input.amount,
+      method: input.method,
+      referenceNote: input.referenceNote,
+      recordedBy: req.user.id,
+    })
+  );
 
   return res.status(201).json(result);
 }
@@ -297,4 +327,5 @@ module.exports = {
   listInvoices,
   getInvoice,
   recordPayment,
+  applyPayment,
 };

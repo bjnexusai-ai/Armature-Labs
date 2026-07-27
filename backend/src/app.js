@@ -21,12 +21,25 @@ const procurementRoutes = require('./routes/procurement.routes');
 const reportsRoutes = require('./routes/reports.routes');
 const equipmentRoutes = require('./routes/equipment.routes');
 const planningRoutes = require('./routes/planning.routes');
+const manufacturersRoutes = require('./routes/manufacturers.routes');
+const { checkoutRouter: stripeCheckoutRoutes, webhookRouter: stripeWebhookRoutes } = require('./routes/stripe.routes');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 
 const app = express();
 
 app.use(helmet());
 app.use(cors());
+
+// ── Stripe webhook: MUST be mounted here, before express.json() below. ──
+// Stripe's signature verification (see stripe.controller.js#handleWebhook)
+// needs the raw, unparsed request body — if express.json() runs first, the
+// body arrives as an already-parsed object and signature verification
+// fails. Session 8 (SESSION_8_PROMPT §3) flags this explicitly as an easy
+// thing to silently break by adding routes in the wrong order later — do
+// not move this below the express.json() call, and do not add any other
+// route between here and express.json() without checking this comment.
+app.use('/api/webhooks', express.raw({ type: 'application/json' }), stripeWebhookRoutes);
+
 app.use(express.json({ limit: '10mb' }));
 if (process.env.NODE_ENV !== 'test') {
   app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
@@ -42,6 +55,11 @@ app.use('/api/cases', casesRoutes);
 app.use('/api/approvals', approvalsRoutes);
 app.use('/api/reference', referenceRoutes);
 app.use('/api/billing', billingRoutes);
+// Checkout-session creation is invoice-scoped, so it's mounted under the
+// same /api/billing namespace as billingRoutes (see stripe.routes.js for
+// why this is /api/billing/invoices/:id/checkout-session rather than the
+// /api/invoices/:id/checkout-session sketched in SESSION_8_PROMPT §3).
+app.use('/api/billing', stripeCheckoutRoutes);
 app.use('/api/qc', qcRoutes);
 app.use('/api/fulfillment', fulfillmentRoutes);
 app.use('/api/inventory', inventoryRoutes);
@@ -49,6 +67,7 @@ app.use('/api/procurement', procurementRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/equipment', equipmentRoutes);
 app.use('/api/planning', planningRoutes);
+app.use('/api/manufacturers', manufacturersRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

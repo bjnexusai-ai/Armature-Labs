@@ -27,6 +27,7 @@
     "morgan": "^1.11.0",
     "node-pg-migrate": "^9.0.0",
     "pg": "^8.22.0",
+    "stripe": "^17.7.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {

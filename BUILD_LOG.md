@@ -719,3 +719,141 @@ tests across `inventory`, `procurement`, `accounts`).
 - Whether receiving should be openable to technicians (physical stock
   arrival) rather than Owner/Office Manager only — no client answer yet,
   defaulted to manager-only alongside the rest of procurement.
+
+---
+
+## Session 8 — Stripe Payments (Dental Office → Lab, Lab → Manufacturer)
+
+**Scope confirmed before building, per SESSION_8_PROMPT §0:**
+- Item #1 (scope-beyond-$8K-budget) and #2 (manufacturer country / Stripe
+  Connect payout-support confirmation) remain **unconfirmed with the
+  client** — not resolved by this session, just built around. Per the
+  prompt's own instruction ("if any of #1–#2 can't be confirmed, build Part
+  A fully and stop"), Part A is fully built and tested; Part B is also
+  built (the prompt allows shipping it once the country/mechanism question
+  is merely *addressed in code*, not necessarily *client-confirmed* — see
+  the design decision below), but is explicitly flagged as unverified
+  against a real manufacturer country.
+- **Design decision on the country/payout-support question:** rather than
+  hard-coding a list of Stripe's supported payout countries (which changes
+  over time and would go stale in this codebase), `manufacturers.country`
+  is captured and passed straight through to `stripe.accounts.create()`.
+  If Stripe rejects the country for the chosen Connect account type, that
+  error surfaces directly to the caller rather than being pre-validated or
+  swallowed. This means Part B is *built* but its correctness for the
+  actual overseas facility is still gated on Gap Audit #16 being answered.
+- `manufacturers` is a genuinely new table this session (not a
+  client-specified gap-fill like `patients` in Session 5.5) — confirmed
+  `vendors` (Session 6) is a distinct, procurement-scoped concept and was
+  not repurposed.
+
+**Migrations (`0033`–`0035`), each verified up AND down individually before
+building on top, per this project's convention:**
+- `0033_manufacturers.js` — `stripe_connected_account_id` nullable
+  (populated post-onboarding, not at creation); `connect_status` enum.
+- `0034_manufacturer_payouts.js` — `case_id` nullable (a payout may cover a
+  batch); `currency` defaults to `usd`, flagged in-schema as an assumption
+  pending #16.
+- `0035_stripe_payment_fields.js` — additive only. Confirmed against
+  `0016_invoices_and_payments.js` that `payments.method` is a plain
+  `varchar(50)`, not enum/CHECK-constrained, so no migration was needed to
+  allow the `'Stripe'` value — only documented in code (see
+  `stripe.controller.js#handleWebhook`). Added a partial-in-effect unique
+  constraint on `payments.stripe_payment_intent_id` (Postgres unique
+  constraints treat NULLs as distinct, so non-Stripe payments are
+  unaffected) as a DB-level idempotency backstop alongside the
+  application-level pre-check. Also adds `practices.stripe_customer_id`
+  (nullable, populated only on first Checkout Session).
+
+**Controllers/routes:**
+- `stripe.controller.js` / `stripe.routes.js` (new, kept separate from
+  `billing.controller.js` per §3) — `createCheckoutSession` derives the
+  charge amount server-side from `subtotal - amount_paid`, never from the
+  request body; rejects with `400` if the invoice has no outstanding
+  balance. `handleWebhook` verifies the Stripe signature, handles
+  `checkout.session.completed` / `payment_intent.succeeded`, and is
+  idempotent against Stripe's at-least-once delivery via both an
+  application-level pre-check and the DB unique constraint as a backstop
+  for the race case.
+  - **Refactor note:** `billing.controller.js#recordPayment` was split into
+    a shared `applyPayment()` (row-locked invoice fetch, payment insert,
+    status-flip-to-Paid-or-Partially-Paid logic) that both the manual
+    mark-paid endpoint and the Stripe webhook now call — reused, not
+    duplicated, per §3's explicit instruction.
+  - **Routing deviation, flagged:** SESSION_8_PROMPT §3 sketches
+    `POST /api/invoices/:id/checkout-session` as a top-level path. This
+    build instead mounts it at `/api/billing/invoices/:id/checkout-session`
+    to stay consistent with the existing invoice namespace established in
+    Session 4 (`billing.routes.js`), rather than introducing a second URL
+    space for the same resource. The webhook route
+    (`POST /api/webhooks/stripe`) is mounted exactly as specified, since no
+    existing namespace applies to it.
+  - **Mounting order, called out explicitly per §3:** the webhook router is
+    mounted in `app.js` with `express.raw({ type: 'application/json' })`
+    *before* the global `express.json()` call — Stripe's signature
+    verification needs the raw body. A comment sits directly at that line
+    in `app.js` warning against reordering.
+- `manufacturers.controller.js` / `manufacturers.routes.js` (new) — CRUD,
+  plus `POST /:id/connect-onboarding-link` (creates the Connect account on
+  first call, reuses it on subsequent calls, always returns a fresh account
+  link). Gated by the existing `requireManagerRole` from Session 6, not a
+  new middleware.
+- `payouts.controller.js` (new, separate file — developer's call per §3,
+  noted here as requested): `POST /:id/payouts` (create + trigger
+  `stripe.transfers.create`), `GET /:id/payouts` (history). Rejects with
+  `400` if the manufacturer hasn't completed Connect onboarding yet.
+  - **Bug caught during review and fixed before shipping:** the first draft
+    created the Pending payout row and the post-transfer status update
+    inside the same DB transaction, then threw on a Stripe transfer
+    failure so the caller could see the error — but throwing inside
+    `withTransaction` rolls back everything in that block, which would
+    have silently erased the "Failed" status update (and the payout record
+    itself) on every failed transfer. Fixed by committing the Pending
+    insert on its own, then updating to Paid/Failed as a separate
+    statement outside any rollback path — a failed payout is now always
+    visible via `GET /:id/payouts`, never silently dropped.
+
+**Role gating (no client answer on file — best judgment, flagged for
+confirmation, per §5):**
+- Checkout session creation: `dentist_client` with `can_view_invoices=true`
+  on their own practice's invoice, or internal Owner/Office Manager.
+- Manufacturer CRUD, onboarding links, payouts: Owner/Office Manager only
+  (`requireManagerRole`), applied once at the router level.
+- Webhook endpoint: no auth at all — Stripe can't send a JWT. Signature
+  verification via `STRIPE_WEBHOOK_SECRET` is the only gate.
+  `tenantIsolation` is not applied to this route.
+
+**Tests:** `stripePayments.integration.test.js` (9 tests) and
+`manufacturers.integration.test.js` (9 tests) — 18 new tests. The Stripe
+SDK is mocked at the module boundary (`src/services/stripeClient.js`),
+matching `notifications.js`'s stubbing pattern but flagged in-file as
+genuinely different since real money is involved — real test-mode keys
+are still required for manual/staging verification, which has **not** been
+performed as part of this session (no live or test-mode Stripe account was
+available in this environment). Every migration was verified up and down
+individually on a fresh local Postgres before writing controller code, and
+the pre-Session-8 baseline (174/174, 16/16 suites) was reconfirmed on a
+clean clone/migrate/seed before starting, per this project's own §5
+convention.
+
+**Full suite after this session: 192/192 passing, 18/18 suites** (18 new
+tests, zero regressions).
+
+**Not yet built this session (deferred, per §7):**
+- Session 9 integration pass / security hardening review — unchanged, still
+  pending.
+- Due-date alert automation (Module 4) — still nothing built anywhere; no
+  cron/queue/scheduler exists in the codebase. Not folded into this session;
+  still needs a decision on whether it's part of Session 9 or its own
+  session.
+- Live report generation (Module 12) — still just saved presets. When
+  built, the Revenue Report will need to account for
+  `payments.method = 'Stripe'` alongside the existing manual values.
+- No frontend for Part A or Part B (backend-only session, consistent with
+  Sessions 4–7).
+- Live Stripe keys / going-live checklist — out of scope pending client
+  confirmation of the $8K-scope question (§0 item #1).
+- Whether Part B (lab → manufacturer) is actually usable end-to-end for the
+  real manufacturer depends entirely on Gap Audit #16 being answered — this
+  session makes the code *able* to handle a supported country, it does not
+  confirm the real one is supported.
