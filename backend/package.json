@@ -4,7 +4,7 @@
   "description": "Production backend for Armature Labs — Dental Lab Management & Case Tracking Platform (Phase 1: Core Operations)",
   "main": "index.js",
   "scripts": {
-    "test": "jest --runInBand",
+    "test": "NODE_ENV=test jest --runInBand",
     "migrate": "node-pg-migrate",
     "migrate:up": "node-pg-migrate up",
     "migrate:down": "node-pg-migrate down",
