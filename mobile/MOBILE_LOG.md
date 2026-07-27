@@ -68,3 +68,16 @@ session — see "Known gaps against plan" below.
 **Not started (by design, later sessions):** camera capture (M3), push
 registration (M3), approvals/invoices UI (M4), screenshot/clipboard
 protection (M5), CORS tightening (M5).
+
+---
+## Addendum — post-M1 session decisions (2026-07-27)
+- **MFA (B11) confirmed out of client scope** — §9.3 never asked for it;
+  it was only a self-imposed "enterprise-grade gap closure" item from the
+  plan doc's gap-check. Decision: skip/defer, do not build B11 unless the
+  client explicitly requests it. `mfa.tsx` stays in the codebase but is
+  inert — `mfaRequired` will never come back `true` from the backend, so
+  the screen is unreachable in practice, not a bug.
+- **B10 confirmed partial on `main`** (commit `afd3558`): refresh-token
+  revocation, rotation, rate limiting are live. `device_push_tokens`
+  table is NOT part of that package — still needs to land before M3
+  (push registration depends on it).
