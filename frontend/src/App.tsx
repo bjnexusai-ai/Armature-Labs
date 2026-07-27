@@ -17,6 +17,7 @@ import { PurchaseOrdersPage } from './pages/PurchaseOrdersPage';
 import { PurchaseOrderDetailPage } from './pages/PurchaseOrderDetailPage';
 import { PracticesPage } from './pages/PracticesPage';
 import { PracticeDetailPage } from './pages/PracticeDetailPage';
+import { ReportsPage } from './pages/ReportsPage';
 import { ComingSoon } from './pages/stubs/ComingSoon';
 import { NAV_ITEMS } from './lib/navConfig';
 
@@ -174,6 +175,20 @@ export default function App() {
             <ProtectedRoute>
               <AppShell>
                 <PracticeDetailPage />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Session 7 Chunk 2 — saved reports + charts, real endpoint
+            (GET/POST/DELETE /api/reports/saved-reports) confirmed against
+            reports.controller.js before building. */}
+        <Route
+          path="/reports"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <ReportsPage />
               </AppShell>
             </ProtectedRoute>
           }

@@ -147,6 +147,33 @@ interface GetPracticeResponse {
   practice: import('./caseTypes').Practice;
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Session 7 Chunk 2 — saved reports. Kept in a dedicated ./reportTypes
+// module rather than folded into the caseTypes.ts import block above,
+// since that block is already 60+ names deep and this is an unrelated
+// resource (a personal filter-preset, not case/practice domain data).
+// ─────────────────────────────────────────────────────────────────────────
+import type {
+  ListSavedReportsResponse,
+  CreateSavedReportPayload,
+  CreateSavedReportResponse,
+} from './reportTypes';
+
+export function listSavedReports(): Promise<ListSavedReportsResponse> {
+  return apiFetch<ListSavedReportsResponse>('/api/reports/saved-reports');
+}
+
+export function createSavedReport(payload: CreateSavedReportPayload): Promise<CreateSavedReportResponse> {
+  return apiFetch<CreateSavedReportResponse>('/api/reports/saved-reports', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteSavedReport(id: number): Promise<void> {
+  return apiFetch<void>(`/api/reports/saved-reports/${id}`, { method: 'DELETE' });
+}
+
 export function listCases(query: ListCasesQuery = {}): Promise<ListCasesResponse> {
   const params = new URLSearchParams();
   if (query.status) params.set('status', query.status);

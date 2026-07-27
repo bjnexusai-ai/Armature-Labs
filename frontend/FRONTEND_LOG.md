@@ -963,3 +963,107 @@ the Action Required Queue lists real pending-approval + delayed/on-hold
 cases with a working filter input and click-through to the case. Then
 proceed to Chunk 2 (saved reports + 3 charts, equipment, technician
 scheduling) — separate delivery, per `SESSION_7_PROMPT.md` §3's chunk 2/3.
+
+## Session 7 (Chunk 2 of 3) — Saved reports + 3 charts (§1.1)
+
+Second of the three chunks in `SESSION_7_PROMPT.md` §3's suggested build
+order. Depends on nothing from Chunk 1 (Dashboard retrofit) — built and
+verified independently, applied on top of Chunk 1 in this environment
+only to confirm no conflicts, not because of a real dependency. Chunk 3
+(equipment + technician scheduling, §1.2) is a separate delivery still to
+come.
+
+**Confirmed before writing any code, not guessed:**
+
+- `backend/src/controllers/reports.controller.js` — `saved_reports` is
+  create/list/delete only. No "generate" verb exists anywhere in the
+  controller. This matches the Master Frontend Plan's own §1.1
+  instruction ("they're views, not separate storage... don't build a
+  report screen that expects its own writable dataset") — confirmed
+  directly against the real controller, not assumed from that
+  instruction's wording alone.
+- `frontend/package.json` has no charting library installed (no
+  `recharts`, no Chart.js) — confirmed by reading it directly before
+  adding anything. Built dependency-free SVG chart components instead of
+  adding a new package to a drop-in patch delivery; matches this
+  codebase's own established convention of hand-rolled inline SVG for
+  icons/marks (`LoginPage.tsx`'s tooth path, `icons.svg`) rather than
+  pulling in an external chart library for three charts.
+- `backend/src/controllers/approvals.controller.js` — `responded_at` is
+  only set on approve/request-changes (`null` while pending), confirmed
+  via its own `UPDATE` statements. Response-time math excludes pending
+  rows rather than treating them as 0-hour responses.
+- `GET /api/cases`'s `practice_id` + `created_at` and `GET /api/practices`
+  confirmed as the real join needed for "top practices by volume" — no
+  dedicated backend aggregate for this either.
+
+**New files:**
+
+- `lib/reportTypes.ts` — `SavedReport` type + list/create response shapes.
+  Kept separate from `caseTypes.ts` (already 60+ exported names) rather
+  than bloating that file further with an unrelated resource.
+- `lib/api.ts` — added `listSavedReports` / `createSavedReport` /
+  `deleteSavedReport`, same `apiFetch` wrapper convention as every other
+  resource in this file.
+- `lib/reportMetrics.ts` — pure aggregation functions, no mock data,
+  same discipline as `dashboardMetrics.ts`:
+  - `casesByStatus` — real counts per the 10-status lifecycle, stable
+    ordering (`ALL_STATUSES`) so the donut's legend doesn't reshuffle.
+  - `fetchApprovalsForRange` / `approvalResponseTimeSeries` — pages
+    through real `GET /api/approvals` rows (stops early once a page's
+    oldest row is past the range cutoff, since the endpoint's own
+    `ORDER BY created_at DESC` makes that safe), buckets
+    `responded_at - created_at` in hours per the 7D (daily) / 6W (weekly)
+    / 90D (15-day) range, matching the reference demo's own range-toggle
+    granularity.
+  - `topPracticesByVolume` — cases with `created_at` in the last 30 days,
+    grouped by `practice_id`, joined to real practice names, top 8.
+- `components/DonutChart.tsx`, `LineChart.tsx`, `BarChart.tsx` — generic,
+  reusable, dependency-free SVG chart components. Donut supports the
+  reference's own "click a segment to isolate it" behavior (also
+  click-able from the legend, not just the arc itself).
+- `components/SavedReportModal.tsx` — create-only form (matches the
+  backend's real verbs). Revenue-type option hidden for non-Owner/Office
+  Manager roles client-side, mirroring `reports.controller.js`'s own
+  `assertRevenueAllowed` — cosmetic convenience, the 403 is the real gate.
+- `pages/ReportsPage.tsx` — saved reports list (create/delete, wired to
+  the toast pattern used everywhere else) + all three charts. The line
+  chart's range toggle re-fetches and re-buckets independently of the
+  page's core load, so switching 7D/6W/90D doesn't re-run the cases/
+  practices/saved-reports fetch.
+
+**Wiring:** `App.tsx` gets a real `/reports` route (ahead of the generic
+stub-route block that auto-generates `ComingSoon` pages for any nav item
+without `live: true`); `navConfig.ts`'s `reports` entry flipped to
+`live: true`. No `ComingSoon` stub reachable for this path anymore.
+
+**Verified this chunk:**
+
+- `npx tsc -b` and `npm run build` — both clean, zero errors, fresh
+  `npm install` baseline in this environment. (Two pre-existing `oxlint`
+  warnings on `AuthContext.tsx`/`ToastContext.tsx`'s fast-refresh export
+  shape — unrelated to this chunk's files, not introduced here.)
+- Grepped every new file (`reportTypes`, `reportMetrics`, `DonutChart`,
+  `LineChart`, `BarChart`, `SavedReportModal`, `ReportsPage`) for at least
+  one import outside its own file — all wired, no Session-2-shaped dead
+  code.
+
+**Not yet done — same open item as every chunk built in this sandbox:**
+no live Postgres/browser here, so this is build-verified only. The real
+click-through this needs before Session 7 can be called done: create a
+saved report and confirm it persists/lists/deletes; confirm the donut
+renders real per-status counts and segment-click isolation actually
+narrows the center total; confirm the line chart's 7D/6W/90D toggle
+visibly changes the plotted data (not just re-renders the same numbers);
+confirm the bar chart's practice names and counts match real recent
+cases; log in as a non-Owner/non-Office-Manager internal role and confirm
+the Reports nav item is absent (not just disabled).
+
+**How to pick this up:** `npm run dev` both sides, log in as
+`owner@dentallab.test`, click Reports in the sidebar (not by typing the
+URL). Create a saved report of each type available, confirm the list
+updates and delete works. Exercise the donut (click a segment, click it
+again to un-isolate), toggle the line chart's three ranges, confirm the
+bar chart against a few real cases' `created_at` dates. Then proceed to
+Chunk 3 (equipment + technician scheduling, §1.2) — separate delivery,
+independent of this chunk per `SESSION_7_PROMPT.md` §3.

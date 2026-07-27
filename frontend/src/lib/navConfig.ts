@@ -137,6 +137,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: 'reports',
     roles: ['owner', 'office_manager'],
     session: 7,
+    live: true,
   },
 ];
 
