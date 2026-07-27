@@ -24,6 +24,7 @@ const planningRoutes = require('./routes/planning.routes');
 const manufacturersRoutes = require('./routes/manufacturers.routes');
 const { checkoutRouter: stripeCheckoutRoutes, webhookRouter: stripeWebhookRoutes } = require('./routes/stripe.routes');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
+const { webhookRateLimiter } = require('./middleware/rateLimiter');
 
 const app = express();
 
@@ -38,7 +39,7 @@ app.use(cors());
 // thing to silently break by adding routes in the wrong order later — do
 // not move this below the express.json() call, and do not add any other
 // route between here and express.json() without checking this comment.
-app.use('/api/webhooks', express.raw({ type: 'application/json' }), stripeWebhookRoutes);
+app.use('/api/webhooks', webhookRateLimiter, express.raw({ type: 'application/json' }), stripeWebhookRoutes);
 
 app.use(express.json({ limit: '10mb' }));
 if (process.env.NODE_ENV !== 'test') {

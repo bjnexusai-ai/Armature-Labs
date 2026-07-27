@@ -1185,3 +1185,33 @@ that comes next on the backend (due-date alerts, live reports, rate
 limiting, CORS origins, refresh-token revocation, a real go-live
 checklist) is new, separately-scoped work, not a continuation of this
 plan.
+
+## Session B10 — Refresh Token Revocation, Rate Limiting (IN PROGRESS)
+
+**What's built:**
+- `migrations/0036_refresh_tokens.js` — refresh_tokens table (jti, revoked_at,
+  revoked_reason, replaced_by_jti), indexed on jti and user_id.
+- `src/utils/tokens.js` — signRefreshToken now requires a jti; added newJti()
+  and REFRESH_EXPIRES_SECONDS.
+- `src/controllers/auth.controller.js` — login issues a tracked refresh token;
+  refresh does rotation + reuse detection; added logout + logoutAll.
+  Reuse-detection scoping fix: every revocation check filters strictly on the
+  presented token's own jti (WHERE jti = $1) — never a table-wide "anything
+  revoked" check. This is the specific bug class an earlier build attempt hit
+  (logging out one session incorrectly invalidated an unrelated session) —
+  fixed by construction here, not patched after the fact.
+- `src/routes/auth.routes.js` — added POST /logout, POST /logout-all.
+- `src/middleware/rateLimiter.js` (new) — authRateLimiter on /api/auth/login,
+  webhookRateLimiter on /api/webhooks/stripe. Both skipped in NODE_ENV=test,
+  same convention as morgan logging, to avoid the test suite's shared-IP
+  rapid logins tripping the limiter.
+- `tests/refreshTokenScoping.integration.test.js` (new) — regression test:
+  logs out session A, asserts session B still refreshes fine, asserts A is
+  correctly rejected. Directly targets the bug class above.
+
+**Not yet built (remaining B10 scope):**
+- device_push_tokens table + endpoints.
+
+**Verification status:** [FILL IN AFTER RUNNING migrate:up + npm test — record
+the actual pass/fail count here before ending this session, do not leave this
+placeholder in.]
