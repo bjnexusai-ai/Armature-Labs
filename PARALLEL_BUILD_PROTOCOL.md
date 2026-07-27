@@ -50,7 +50,7 @@ someone real time re-verifying something that's already fine.
 | 5.5 | ✅ COMPLETE (118/118 tests, commit `0efddfa`) | ⬜ NOT STARTED | **✅ YES — ready now** |
 | 6 | ✅ COMPLETE (144/144 tests — see §9) | ⬜ NOT STARTED | **✅ YES — ready now** |
 | 7 | ✅ COMPLETE (174/174 tests, commit `a32fd77` — table was stale, corrected here per this doc's own §1 precedent: verify against `git log`, not prior table state) | ⬜ NOT STARTED | **✅ YES — ready now** |
-| 8 | ⬜ NOT STARTED | ⬜ NOT STARTED | ❌ blocked on backend |
+| 8 | ✅ COMPLETE (192/192 tests, commit `c787e86`) | ⬜ NOT STARTED | **✅ YES — ready now** |
 | 9 | ⬜ NOT STARTED | ⬜ NOT STARTED | ❌ blocked on backend |
 
 **Stale as of Frontend Session 5 — see the table above, not this
