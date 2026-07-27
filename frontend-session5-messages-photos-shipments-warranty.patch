@@ -1,0 +1,1608 @@
+From b0bd6bb933c61902acc486b57112dd5887290163 Mon Sep 17 00:00:00 2001
+From: Frontend Session 5 <build@bjnexus.local>
+Date: Sun, 26 Jul 2026 16:07:59 +0000
+Subject: [PATCH] Frontend Session 5: Messages/notes, progress photos,
+ shipments, warranty claims
+
+Case-scoped tabs (CaseActivityPanel.tsx) inside CaseDetailPage.tsx, backed
+by notes.controller.js / progressPhotos.controller.js /
+fulfillment.controller.js. No global list endpoint exists for any of these
+four resources, so they render as case-detail tabs rather than a guessed
+top-level Messages page -- see FRONTEND_LOG.md's Session 5 entry for the
+full reasoning and PARALLEL_BUILD_PROTOCOL.md's status board update.
+
+tsc -b and npm run build both clean from a fresh npm install. Every new
+component's import confirmed used outside its own file (the Session 2
+checklist item). Not click-tested against a live backend (no runnable
+Postgres in this sandbox) -- delivered as zip/patch, not pushed.
+---
+ PARALLEL_BUILD_PROTOCOL.md                    |  14 +-
+ frontend/FRONTEND_LOG.md                      | 137 ++++++++++++++
+ frontend/src/components/CaseActivityPanel.tsx |  55 ++++++
+ frontend/src/components/NotesPanel.tsx        | 158 +++++++++++++++++
+ .../src/components/ProgressPhotosPanel.tsx    | 141 +++++++++++++++
+ .../src/components/ShipmentStatusModal.tsx    | 140 +++++++++++++++
+ .../src/components/ShipmentStatusPill.tsx     |  11 ++
+ frontend/src/components/ShipmentsPanel.tsx    | 121 +++++++++++++
+ .../components/WarrantyClaimResolveModal.tsx  | 138 +++++++++++++++
+ .../src/components/WarrantyClaimsPanel.tsx    | 164 +++++++++++++++++
+ .../src/components/WarrantyStatusPill.tsx     |  11 ++
+ frontend/src/lib/api.ts                       | 119 +++++++++++++
+ frontend/src/lib/caseTypes.ts                 | 167 ++++++++++++++++++
+ frontend/src/lib/statusColors.ts              |  32 ++++
+ frontend/src/pages/CaseDetailPage.tsx         |   7 +
+ 15 files changed, 1412 insertions(+), 3 deletions(-)
+ create mode 100644 frontend/src/components/CaseActivityPanel.tsx
+ create mode 100644 frontend/src/components/NotesPanel.tsx
+ create mode 100644 frontend/src/components/ProgressPhotosPanel.tsx
+ create mode 100644 frontend/src/components/ShipmentStatusModal.tsx
+ create mode 100644 frontend/src/components/ShipmentStatusPill.tsx
+ create mode 100644 frontend/src/components/ShipmentsPanel.tsx
+ create mode 100644 frontend/src/components/WarrantyClaimResolveModal.tsx
+ create mode 100644 frontend/src/components/WarrantyClaimsPanel.tsx
+ create mode 100644 frontend/src/components/WarrantyStatusPill.tsx
+
+diff --git a/PARALLEL_BUILD_PROTOCOL.md b/PARALLEL_BUILD_PROTOCOL.md
+index 2dfcd2d..c619d44 100644
+--- a/PARALLEL_BUILD_PROTOCOL.md
++++ b/PARALLEL_BUILD_PROTOCOL.md
+@@ -46,20 +46,28 @@ someone real time re-verifying something that's already fine.
+ | 3 | ✅ COMPLETE (149/149 tests — 54 original + `GET /api/approvals` addendum, see BUILD_LOG.md) | ✅ COMPLETE *(code-complete — see FRONTEND_LOG.md's Session 3 entry for the one open item: no live browser click-through yet, Postgres wasn't installable in the build sandbox)* | — |
+ | 3.5 | ✅ COMPLETE (repo reorg only, no new features) | — | — |
+ | 4 | ✅ COMPLETE (69/69 tests) | ✅ BUILT — pending browser click-through (see FRONTEND_LOG.md Session 4) | — |
+-| 5 | ✅ COMPLETE (100/100 tests) | ⬜ NOT STARTED | **✅ YES — ready now** |
++| 5 | ✅ COMPLETE (100/100 tests) | ✅ COMPLETE (Messages/notes, progress photos, shipments, warranty claims — tabs in `CaseDetailPage.tsx`, see `frontend/FRONTEND_LOG.md`) | — |
+ | 5.5 | ✅ COMPLETE (118/118 tests, commit `0efddfa`) | ⬜ NOT STARTED | **✅ YES — ready now** |
+ | 6 | ✅ COMPLETE (144/144 tests — see §9) | ⬜ NOT STARTED | **✅ YES — ready now** |
+ | 7 | ✅ COMPLETE (174/174 tests, commit `a32fd77` — table was stale, corrected here per this doc's own §1 precedent: verify against `git log`, not prior table state) | ⬜ NOT STARTED | **✅ YES — ready now** |
+ | 8 | ⬜ NOT STARTED | ⬜ NOT STARTED | ❌ blocked on backend |
+ | 9 | ⬜ NOT STARTED | ⬜ NOT STARTED | ❌ blocked on backend |
+ 
+-**Headline finding: backend is 3 full sessions ahead of frontend.**
++**Stale as of Frontend Session 5 — see the table above, not this
++paragraph.** This paragraph originally said "frontend hasn't started
++building against [Sessions 3-5] yet"; that's no longer true (Frontend
++Sessions 3, 4, and 5 are all ✅ COMPLETE per the table). Left as-is below
++rather than rewritten, per this doc's own convention of correcting the
++record in place instead of silently editing history — but don't read the
++prose below as current status; read the table.
++
++~~**Headline finding: backend is 3 full sessions ahead of frontend.**
+ Sessions 3, 4, and 5 are backend-complete, tested, committed, and pushed
+ — frontend hasn't started building against any of them yet. This is the
+ actual opportunity for parallel work: backend can move on to Session 6
+ while frontend spends the next few sessions catching up against
+ already-finished, already-tested backend work — nobody needs to wait on
+-anybody for Sessions 3-5.
++anybody for Sessions 3-5.~~
+ 
+ ---
+ 
+diff --git a/frontend/FRONTEND_LOG.md b/frontend/FRONTEND_LOG.md
+index dde3afd..881bbeb 100644
+--- a/frontend/FRONTEND_LOG.md
++++ b/frontend/FRONTEND_LOG.md
+@@ -489,3 +489,140 @@ demo directly for anything the demo itself doesn't have.
+ - If frontend crash-loops with `ENOENT package.json` after a Codespace resume,
+   the bind mount likely resolved against a stale path — a scoped
+   `--force-recreate` on frontend alone fixes it without touching backend/postgres.
++
++## Session 5 — COMPLETE (Messages/notes, progress photos, shipments, warranty claims)
++
++**Depends on:** Backend Session 5 (case_notes, progress_photos, shipments,
++warranty_claims) — confirmed complete and tested per `BUILD_LOG.md`
++(100/100 at Session 5, 174/174 as of the latest backend session on this
++branch). Confirmed directly against
++`backend/src/controllers/notes.controller.js`,
++`backend/src/controllers/progressPhotos.controller.js`,
++`backend/src/controllers/fulfillment.controller.js`, and the exact route
++mounts in `backend/src/routes/cases.routes.js` /
++`backend/src/routes/fulfillment.routes.js` — not the Master Blueprint's
++schema description or a guessed shape, per this project's own §5 rule.
++
++**Casing confirmed (not assumed):** all four resources return snake_case
++row fields (`case_id`, `author_id`, `file_url`, `taken_at`,
++`tracking_number`, `shipped_at`, `delivered_at`, `filed_by`,
++`resolution_notes`, `resolved_by`, `resolved_at`) under camelCase wrapper
++keys (`note`/`notes`, `progressPhoto`/`progressPhotos`,
++`shipment`/`shipments`, `warrantyClaim`/`warrantyClaims`) — same convention
++as every prior session (CaseRecord/ApprovalRecord/InvoiceDetail). No `pick()`
++dual-fallback needed.
++
++**Key architectural decision (documented, not a guess):** all four
++resources are exposed ONLY as case-scoped endpoints
++(`/api/cases/:id/notes|progress-photos|shipments|warranty-claims`), plus two
++standalone staff actions on `fulfillment.routes.js`
++(`PATCH /api/fulfillment/shipments/:id/status`,
++`PATCH /api/fulfillment/warranty-claims/:id/resolve`). There is no
++`GET /api/notes` / `GET /api/shipments` / etc. list-everything endpoint —
++unlike Approvals (Session 3), which got its own top-level `/approvals` nav
++page precisely because `GET /api/approvals` exists as a real cross-case
++list. Building a standalone "Messages" nav screen here would mean guessing
++an endpoint that doesn't exist, which this project's own standing
++convention rules out. **Decision: all four features render as tabs inside
++`CaseDetailPage.tsx` (`CaseActivityPanel.tsx`), not as a new top-level
++route.** The `messages` entry in `navConfig.ts` is left as a Session 5 stub
++("Coming soon") rather than wired to a guessed endpoint — revisit only if
++a client answer or a future backend session adds a real cross-case list.
++
++**What's built:**
++
++- `lib/caseTypes.ts` — `CaseNote`/`ProgressPhoto`/`Shipment`/`WarrantyClaim`
++  plus their List/Create/Update response and payload types, each block
++  documenting exactly which controller/route file it was confirmed against.
++- `lib/api.ts` — `listNotes`/`createNote`, `listProgressPhotos`/
++  `createProgressPhoto`, `listShipments`/`createShipment`/
++  `updateShipmentStatus`, `listWarrantyClaims`/`createWarrantyClaim`/
++  `resolveWarrantyClaim`.
++- `lib/statusColors.ts` — `SHIPMENT_STATUS_COLORS`, `WARRANTY_STATUS_COLORS`.
++  Reuses existing `--pill-*`/`--badge-*` tokens exclusively, same rule
++  Session 4 followed for `INVOICE_STATUS_COLORS` — no new colors invented,
++  each mapping's reasoning commented inline in the file.
++- `components/ShipmentStatusPill.tsx`, `components/WarrantyStatusPill.tsx` —
++  same one-line shape as the existing `InvoiceStatusPill.tsx`.
++- `components/NotesPanel.tsx` — two-way message thread (list + compose).
++  Staff get an internal/portal visibility toggle built from the existing
++  `.range-toggle`/`.range-btn` classes (same reused pattern as Session 3's
++  status filter and Session 4's dashboard range switcher — no new tab
++  styling invented); a `dentist_client` author never sees the toggle since
++  the backend silently forces `visibility: 'portal'` for that role anyway
++  — sending it from the client would just be noise.
++- `components/ProgressPhotosPanel.tsx` — internal-only gallery (grid of
++  cards, add-photo form). Gated by role in `CaseActivityPanel.tsx`, not by
++  a second check duplicated inside the panel itself.
++- `components/ShipmentsPanel.tsx` + `components/ShipmentStatusModal.tsx` —
++  list + status/carrier/tracking update modal. Creation and the "Update"
++  action are internal-only; reads render for every role (the route isn't
++  `requireInternal` — the dental office has a legitimate interest in
++  tracking info for their own case, confirmed in the controller's own
++  comment).
++- `components/WarrantyClaimsPanel.tsx` +
++  `components/WarrantyClaimResolveModal.tsx` — list + file-a-claim form +
++  resolve modal. The "File a claim" button is hidden client-side unless
++  `caseRecord.current_status === 'Delivered'` (cosmetic mirror of the
++  backend's real 409 gate, not a substitute for it). Resolving is
++  internal-only, hidden once `resolved_at` is already set.
++- `components/CaseActivityPanel.tsx` — tab wrapper reusing `.range-toggle`
++  for tab switching, rendered inside `CaseDetailPage.tsx` below the existing
++  case-details/current-stage cards.
++- `pages/CaseDetailPage.tsx` — one import + one render line added
++  (`<CaseActivityPanel caseRecord={caseRecord} />`) — the existing
++  case-detail layout above it is untouched.
++
++**Verified:**
++
++- `npx tsc -b` and `npm run build` — both clean, zero errors, confirmed on
++  a fresh `npm install` baseline BEFORE this session's changes (per §5's
++  own rule — don't trust a prior session's claimed clean state without
++  re-running it) and again AFTER.
++- Grepped every new component's import outside its own file
++  (`NotesPanel`, `ProgressPhotosPanel`, `ShipmentsPanel`,
++  `WarrantyClaimsPanel`, `ShipmentStatusPill`, `WarrantyStatusPill`,
++  `ShipmentStatusModal`, `WarrantyClaimResolveModal`, `CaseActivityPanel` —
++  all nine confirmed imported and used somewhere other than their own file)
++  — the exact Session 2 checklist item this project keeps re-running.
++
++**Not verified (be honest about this, same standard as Sessions 3 and 4):**
++
++- Same sandbox constraint as every prior session on this branch: read-only
++  repo access, no push credentials, no runnable Postgres in this
++  environment (`apt-get`/`deb.nodesource.com` 403s here) — §6 rule 3
++  ("actually click through it in a running browser against the real
++  backend") has **not** been satisfied yet. Delivered as a zip of the
++  working tree per §10's sandbox workflow, not pushed directly.
++- Visual audit against the reference demo (`index.html`) done on request:
++  same situation as Sessions 3/4 — the demo has no Messages/Photos/
++  Shipments/Warranty screens to compare against. Audit was: confirm every
++  class/token used here (`.surface-card`, `.range-toggle`/`.range-btn`,
++  `.form-input`, `.btn-primary`, `.status-pill`, `.empty-state`,
++  `.skeleton`, `.modal-overlay`/`.modal-box`) was already ported and
++  verified in a prior session, not reinvented — confirmed against
++  `src/index.css` directly. All `--color-pill-*`/`--color-badge-*` tokens
++  used by the two new status-color maps are pre-existing ported tokens.
++  Root `:root` values in the reference `index.html` re-diffed against
++  `src/index.css` this session — confirmed byte-for-byte identical, no
++  drift to fix.
++
++**How to pick this up:**
++
++1. Apply the patch / unzip over the branch, confirm `npm run build` still
++   clean in the real Codespace.
++2. Do the click-through this log can't do here: `npm run dev` both sides,
++   log in as `owner@dentallab.test` — open a Delivered case (or advance one
++   there via the existing case-status endpoint), confirm all four tabs
++   render, send a message, add a progress photo, create + update a
++   shipment, file + resolve a warranty claim. Log in as
++   `dentist@brightsmile.test` (portal) against the same case — confirm the
++   Progress Photos tab is absent entirely (not just disabled), Messages
++   only shows portal-visible notes and hides the visibility toggle,
++   Shipments renders read-only (no "New shipment"/"Update" buttons),
++   Warranty Claims lets them file (case is Delivered) but not resolve.
++3. Once confirmed, Session 5 is fully closed. Session 5.5 (patients,
++   invoice due-date/tax/paid fields) is already closed per this branch's
++   own commit history (`0efddfa`, corrected status in `4cf4c5c`) — Session
++   6 (Phase 3 inventory/practice CRM) is next for frontend, its backend is
++   already complete per `BUILD_LOG.md`'s Session 6 entry (144/144 tests).
+diff --git a/frontend/src/components/CaseActivityPanel.tsx b/frontend/src/components/CaseActivityPanel.tsx
+new file mode 100644
+index 0000000..532cf2f
+--- /dev/null
++++ b/frontend/src/components/CaseActivityPanel.tsx
+@@ -0,0 +1,55 @@
++import { useState } from 'react';
++import type { CaseRecord } from '../lib/caseTypes';
++import { useAuth } from '../context/AuthContext';
++import { NotesPanel } from './NotesPanel';
++import { ProgressPhotosPanel } from './ProgressPhotosPanel';
++import { ShipmentsPanel } from './ShipmentsPanel';
++import { WarrantyClaimsPanel } from './WarrantyClaimsPanel';
++
++type Tab = 'messages' | 'photos' | 'shipments' | 'warranty';
++
++// Frontend Session 5 — Messages/notes, progress photo gallery, shipment
++// tracking, and warranty claims. All four backend resources
++// (case_notes, progress_photos, shipments, warranty_claims) are
++// case-scoped (POST/GET /api/cases/:id/...), so — unlike Approvals, which
++// got its own top-level nav item backed by a real GET /api/approvals list
++// endpoint — these render as tabs inside the case detail view instead of a
++// standalone page. There is no global "list all notes/shipments/etc across
++// every case" endpoint to build a Messages nav screen against (confirmed
++// against fulfillment.routes.js/notes routes — only two fulfillment
++// actions aren't case-scoped, and neither is a list), so the "Messages"
++// nav item stays a Session 5 stub for now rather than being wired to a
++// guessed endpoint. Documented decision, see FRONTEND_LOG.md.
++export function CaseActivityPanel({ caseRecord }: { caseRecord: CaseRecord }) {
++  const { user } = useAuth();
++  const isInternal = user?.role !== 'dentist_client';
++  const [tab, setTab] = useState<Tab>('messages');
++
++  return (
++    <div className="surface-card rounded-[18px] p-5 mt-4">
++      <div className="range-toggle mb-4 flex-wrap">
++        <button className={`range-btn ${tab === 'messages' ? 'active' : ''}`} onClick={() => setTab('messages')}>
++          Messages
++        </button>
++        {isInternal && (
++          <button className={`range-btn ${tab === 'photos' ? 'active' : ''}`} onClick={() => setTab('photos')}>
++            Progress photos
++          </button>
++        )}
++        <button className={`range-btn ${tab === 'shipments' ? 'active' : ''}`} onClick={() => setTab('shipments')}>
++          Shipments
++        </button>
++        <button className={`range-btn ${tab === 'warranty' ? 'active' : ''}`} onClick={() => setTab('warranty')}>
++          Warranty
++        </button>
++      </div>
++
++      {tab === 'messages' && <NotesPanel caseId={caseRecord.id} />}
++      {tab === 'photos' && isInternal && <ProgressPhotosPanel caseId={caseRecord.id} />}
++      {tab === 'shipments' && <ShipmentsPanel caseId={caseRecord.id} isInternal={isInternal} />}
++      {tab === 'warranty' && (
++        <WarrantyClaimsPanel caseId={caseRecord.id} caseStatus={caseRecord.current_status} isInternal={isInternal} />
++      )}
++    </div>
++  );
++}
+diff --git a/frontend/src/components/NotesPanel.tsx b/frontend/src/components/NotesPanel.tsx
+new file mode 100644
+index 0000000..b0e1645
+--- /dev/null
++++ b/frontend/src/components/NotesPanel.tsx
+@@ -0,0 +1,158 @@
++import { useEffect, useState } from 'react';
++import { ApiError, createNote, listNotes } from '../lib/api';
++import type { CaseNote, NoteVisibility } from '../lib/caseTypes';
++import { useAuth } from '../context/AuthContext';
++import { useToast } from '../context/ToastContext';
++
++function timeAgo(iso: string): string {
++  const diffMs = Date.now() - new Date(iso).getTime();
++  const mins = Math.max(1, Math.round(diffMs / 60000));
++  if (mins < 60) return `${mins}m ago`;
++  const hrs = Math.round(mins / 60);
++  if (hrs < 24) return `${hrs}h ago`;
++  return `${Math.round(hrs / 24)}d ago`;
++}
++
++// Case Notes / Messages (Frontend Session 5) — confirmed directly against
++// backend/src/controllers/notes.controller.js. Two-way: staff and the
++// owning dentist_client can both read and write here (route is NOT
++// requireInternal, tenant isolation scopes access instead). A
++// dentist_client only ever gets visibility='portal' rows back from the
++// list endpoint — the internal/portal toggle below is hidden for that role
++// since the backend silently forces 'portal' for a portal author anyway.
++export function NotesPanel({ caseId }: { caseId: number }) {
++  const { user } = useAuth();
++  const { showToast } = useToast();
++  const isInternal = user?.role !== 'dentist_client';
++
++  const [notes, setNotes] = useState<CaseNote[]>([]);
++  const [loading, setLoading] = useState(true);
++  const [error, setError] = useState<string | null>(null);
++
++  const [body, setBody] = useState('');
++  const [visibility, setVisibility] = useState<NoteVisibility>('internal');
++  const [submitting, setSubmitting] = useState(false);
++
++  function load() {
++    setLoading(true);
++    setError(null);
++    listNotes(caseId)
++      .then((res) => setNotes(res.notes))
++      .catch((err) => setError(err instanceof ApiError ? err.message : 'Could not load notes.'))
++      .finally(() => setLoading(false));
++  }
++
++  useEffect(load, [caseId]);
++
++  async function handleSubmit(e: React.FormEvent) {
++    e.preventDefault();
++    if (!body.trim()) return;
++    setSubmitting(true);
++    try {
++      await createNote(caseId, {
++        body: body.trim(),
++        // Omitted entirely for a portal author — the backend forces
++        // 'portal' regardless, sending it anyway would just be noise.
++        visibility: isInternal ? visibility : undefined,
++      });
++      setBody('');
++      showToast('Note sent');
++      load();
++    } catch (err) {
++      setError(err instanceof ApiError ? err.message : 'Could not send that note.');
++    } finally {
++      setSubmitting(false);
++    }
++  }
++
++  return (
++    <div>
++      <form onSubmit={handleSubmit} className="surface-card rounded-[16px] p-4 mb-4">
++        <label className="block text-[12.5px] font-semibold text-ink mb-1.5">
++          {isInternal ? 'New message' : 'Message the lab'}
++        </label>
++        <textarea
++          className="form-input h-20 resize-none py-2 mb-2.5"
++          placeholder={isInternal ? 'Write a note for the team or the dental office…' : 'Write a message to the lab…'}
++          value={body}
++          onChange={(e) => setBody(e.target.value)}
++          maxLength={2000}
++        />
++        <div className="flex items-center justify-between gap-2.5">
++          {isInternal ? (
++            <div className="range-toggle">
++              <button
++                type="button"
++                className={`range-btn ${visibility === 'internal' ? 'active' : ''}`}
++                onClick={() => setVisibility('internal')}
++              >
++                Internal only
++              </button>
++              <button
++                type="button"
++                className={`range-btn ${visibility === 'portal' ? 'active' : ''}`}
++                onClick={() => setVisibility('portal')}
++              >
++                Visible to office
++              </button>
++            </div>
++          ) : (
++            <span className="text-[11.5px] text-ink-soft">This message is visible to the assigned lab staff.</span>
++          )}
++          <button type="submit" className="btn-primary h-9 px-4 rounded-[9px] font-semibold text-[13px] disabled:opacity-60" disabled={submitting || !body.trim()}>
++            {submitting ? 'Sending…' : 'Send'}
++          </button>
++        </div>
++      </form>
++
++      {error && (
++        <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
++          {error}
++        </div>
++      )}
++
++      {loading ? (
++        <div className="space-y-2.5">
++          <div className="skeleton h-16 rounded-[14px]" />
++          <div className="skeleton h-16 rounded-[14px]" />
++        </div>
++      ) : notes.length === 0 ? (
++        <div className="empty-state">
++          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
++            <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7A2.5 2.5 0 0 1 17.5 16H10l-4.5 4V16H6.5A2.5 2.5 0 0 1 4 13.5v-7Z" />
++          </svg>
++          <h4>No messages yet</h4>
++          <p>Notes between the lab and dental office for this case will show up here.</p>
++        </div>
++      ) : (
++        <div className="space-y-2.5">
++          {notes.map((n) => {
++            const mine = n.author_id === user?.id;
++            return (
++              <div
++                key={n.id}
++                className="surface-card rounded-[14px] p-3.5"
++                style={mine ? { borderColor: 'rgba(28,138,147,0.28)' } : undefined}
++              >
++                <div className="flex items-center justify-between mb-1.5">
++                  <span className="text-[12px] font-semibold text-ink">
++                    {mine ? 'You' : `Author #${n.author_id}`}
++                  </span>
++                  <div className="flex items-center gap-2">
++                    {n.visibility === 'internal' && (
++                      <span className="text-[10px] font-mono uppercase tracking-wide bg-page-bg-top text-ink-soft rounded px-1.5 py-0.5">
++                        internal
++                      </span>
++                    )}
++                    <span className="text-[11px] text-ink-soft">{timeAgo(n.created_at)}</span>
++                  </div>
++                </div>
++                <p className="text-[13px] text-ink m-0 whitespace-pre-wrap">{n.body}</p>
++              </div>
++            );
++          })}
++        </div>
++      )}
++    </div>
++  );
++}
+diff --git a/frontend/src/components/ProgressPhotosPanel.tsx b/frontend/src/components/ProgressPhotosPanel.tsx
+new file mode 100644
+index 0000000..96b3e20
+--- /dev/null
++++ b/frontend/src/components/ProgressPhotosPanel.tsx
+@@ -0,0 +1,141 @@
++import { useEffect, useState } from 'react';
++import { ApiError, createProgressPhoto, listProgressPhotos } from '../lib/api';
++import type { ProgressPhoto } from '../lib/caseTypes';
++import { useToast } from '../context/ToastContext';
++
++// Progress Photos (Frontend Session 5) — confirmed directly against
++// backend/src/controllers/progressPhotos.controller.js. requireInternal at
++// the route — this component is only ever rendered for internal roles
++// (gated in CaseActivityPanel.tsx), not by a role check duplicated here.
++export function ProgressPhotosPanel({ caseId }: { caseId: number }) {
++  const { showToast } = useToast();
++  const [photos, setPhotos] = useState<ProgressPhoto[]>([]);
++  const [loading, setLoading] = useState(true);
++  const [error, setError] = useState<string | null>(null);
++
++  const [adding, setAdding] = useState(false);
++  const [fileUrl, setFileUrl] = useState('');
++  const [caption, setCaption] = useState('');
++  const [submitting, setSubmitting] = useState(false);
++
++  function load() {
++    setLoading(true);
++    setError(null);
++    listProgressPhotos(caseId)
++      .then((res) => setPhotos(res.progressPhotos))
++      .catch((err) => setError(err instanceof ApiError ? err.message : 'Could not load progress photos.'))
++      .finally(() => setLoading(false));
++  }
++
++  useEffect(load, [caseId]);
++
++  async function handleSubmit(e: React.FormEvent) {
++    e.preventDefault();
++    if (!fileUrl.trim()) return;
++    setSubmitting(true);
++    setError(null);
++    try {
++      await createProgressPhoto(caseId, { fileUrl: fileUrl.trim(), caption: caption.trim() || undefined });
++      setFileUrl('');
++      setCaption('');
++      setAdding(false);
++      showToast('Photo added');
++      load();
++    } catch (err) {
++      setError(err instanceof ApiError ? err.message : 'Could not add that photo.');
++    } finally {
++      setSubmitting(false);
++    }
++  }
++
++  return (
++    <div>
++      <div className="flex items-center justify-between mb-3.5">
++        <span className="text-[12.5px] text-ink-soft">Internal production shots — not visible to the dental office.</span>
++        <button
++          onClick={() => setAdding((a) => !a)}
++          className="btn-primary h-9 px-4 rounded-[9px] font-semibold text-[13px]"
++        >
++          {adding ? 'Cancel' : '+ Add photo'}
++        </button>
++      </div>
++
++      {adding && (
++        <form onSubmit={handleSubmit} className="surface-card rounded-[16px] p-4 mb-4">
++          <div className="mb-3">
++            <label className="block text-[12.5px] font-semibold text-ink mb-1.5">Photo URL</label>
++            <input
++              className="form-input"
++              type="text"
++              placeholder="https://…"
++              value={fileUrl}
++              onChange={(e) => setFileUrl(e.target.value)}
++              required
++            />
++          </div>
++          <div className="mb-3.5">
++            <label className="block text-[12.5px] font-semibold text-ink mb-1.5">
++              Caption <span className="text-ink-soft font-normal">(optional)</span>
++            </label>
++            <input
++              className="form-input"
++              type="text"
++              placeholder="e.g. Bisque try-in, occlusal view"
++              value={caption}
++              onChange={(e) => setCaption(e.target.value)}
++              maxLength={255}
++            />
++          </div>
++          <button
++            type="submit"
++            disabled={submitting || !fileUrl.trim()}
++            className="h-9 px-4 rounded-[9px] text-white font-semibold text-[13px] disabled:opacity-60"
++            style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)' }}
++          >
++            {submitting ? 'Adding…' : 'Add photo'}
++          </button>
++        </form>
++      )}
++
++      {error && (
++        <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
++          {error}
++        </div>
++      )}
++
++      {loading ? (
++        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
++          <div className="skeleton h-32 rounded-[14px]" />
++          <div className="skeleton h-32 rounded-[14px]" />
++          <div className="skeleton h-32 rounded-[14px]" />
++        </div>
++      ) : photos.length === 0 ? (
++        <div className="empty-state">
++          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
++            <rect x="3.5" y="5" width="17" height="14" rx="2" />
++            <circle cx="8.5" cy="10" r="1.5" fill="currentColor" stroke="none" />
++            <path d="M3.5 15.5 8 12l3 2.5 3.5-3.5L20.5 15" />
++          </svg>
++          <h4>No progress photos yet</h4>
++          <p>Production shots added for this case will show up here.</p>
++        </div>
++      ) : (
++        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
++          {photos.map((p) => (
++            <div key={p.id} className="surface-card rounded-[14px] overflow-hidden">
++              <div className="bg-page-bg-top aspect-square flex items-center justify-center overflow-hidden">
++                <img src={p.file_url} alt={p.caption || 'Progress photo'} className="w-full h-full object-cover" />
++              </div>
++              <div className="p-2.5">
++                {p.caption && <p className="text-[12px] text-ink m-0 mb-1">{p.caption}</p>}
++                <span className="text-[10.5px] text-ink-soft font-mono">
++                  {new Date(p.taken_at).toLocaleDateString()}
++                </span>
++              </div>
++            </div>
++          ))}
++        </div>
++      )}
++    </div>
++  );
++}
+diff --git a/frontend/src/components/ShipmentStatusModal.tsx b/frontend/src/components/ShipmentStatusModal.tsx
+new file mode 100644
+index 0000000..233ab85
+--- /dev/null
++++ b/frontend/src/components/ShipmentStatusModal.tsx
+@@ -0,0 +1,140 @@
++import { useEffect, useState } from 'react';
++import { ApiError, updateShipmentStatus } from '../lib/api';
++import type { Shipment, ShipmentStatus } from '../lib/caseTypes';
++import { useToast } from '../context/ToastContext';
++
++const STATUS_OPTIONS: ShipmentStatus[] = ['Preparing', 'Shipped', 'Delivered', 'Returned'];
++
++interface ShipmentStatusModalProps {
++  shipment: Shipment | null;
++  onClose: () => void;
++  onUpdated: () => void;
++}
++
++// Confirmed against updateShipmentStatusSchema in fulfillment.controller.js
++// — status (enum), carrier/trackingNumber both optional so this can also
++// double as "fill in the carrier once it's known" without forcing a status
++// change. shipped_at/delivered_at are set server-side, not sent from here.
++export function ShipmentStatusModal({ shipment, onClose, onUpdated }: ShipmentStatusModalProps) {
++  const { showToast } = useToast();
++  const [status, setStatus] = useState<ShipmentStatus>('Preparing');
++  const [carrier, setCarrier] = useState('');
++  const [trackingNumber, setTrackingNumber] = useState('');
++  const [submitting, setSubmitting] = useState(false);
++  const [error, setError] = useState<string | null>(null);
++
++  const open = shipment != null;
++
++  useEffect(() => {
++    if (shipment) {
++      setStatus(shipment.status);
++      setCarrier(shipment.carrier || '');
++      setTrackingNumber(shipment.tracking_number || '');
++      setError(null);
++    }
++  }, [shipment]);
++
++  async function handleSubmit(e: React.FormEvent) {
++    e.preventDefault();
++    if (!shipment) return;
++    setSubmitting(true);
++    setError(null);
++    try {
++      await updateShipmentStatus(shipment.id, {
++        status,
++        carrier: carrier.trim() || undefined,
++        trackingNumber: trackingNumber.trim() || undefined,
++      });
++      showToast('Shipment updated');
++      onUpdated();
++      onClose();
++    } catch (err) {
++      setError(err instanceof ApiError ? err.message : 'Could not update this shipment.');
++    } finally {
++      setSubmitting(false);
++    }
++  }
++
++  return (
++    <div
++      className={`modal-overlay ${open ? 'open' : ''}`}
++      aria-hidden={!open}
++      onClick={(e) => {
++        if (e.target === e.currentTarget) onClose();
++      }}
++    >
++      {shipment && (
++        <div className="modal-box w-full max-w-[420px] bg-card-bg rounded-[20px] p-[26px_26px_22px] shadow-[0_30px_70px_rgba(10,30,30,0.28)] max-h-[86vh] overflow-y-auto">
++          <div className="flex justify-between items-start mb-4">
++            <div>
++              <h3 className="font-display text-[17px] font-bold text-ink m-0">Update shipment</h3>
++              <p className="text-xs text-ink-soft mt-0.5 font-mono">Shipment #{shipment.id}</p>
++            </div>
++            <button
++              onClick={onClose}
++              className="w-7 h-7 rounded-lg bg-page-bg-top border-0 cursor-pointer flex items-center justify-center shrink-0 hover:bg-border"
++              aria-label="Close"
++            >
++              ✕
++            </button>
++          </div>
++
++          {error && (
++            <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
++              {error}
++            </div>
++          )}
++
++          <form onSubmit={handleSubmit}>
++            <div className="mb-3.5">
++              <label className="block text-[12.5px] font-semibold text-ink mb-1.5">Status</label>
++              <select className="form-input" value={status} onChange={(e) => setStatus(e.target.value as ShipmentStatus)}>
++                {STATUS_OPTIONS.map((s) => (
++                  <option key={s} value={s}>
++                    {s}
++                  </option>
++                ))}
++              </select>
++            </div>
++            <div className="mb-3.5">
++              <label className="block text-[12.5px] font-semibold text-ink mb-1.5">
++                Carrier <span className="text-ink-soft font-normal">(optional)</span>
++              </label>
++              <input className="form-input" type="text" placeholder="e.g. FedEx" value={carrier} onChange={(e) => setCarrier(e.target.value)} />
++            </div>
++            <div className="mb-3.5">
++              <label className="block text-[12.5px] font-semibold text-ink mb-1.5">
++                Tracking number <span className="text-ink-soft font-normal">(optional)</span>
++              </label>
++              <input
++                className="form-input"
++                type="text"
++                placeholder="e.g. 7712 4456 9021"
++                value={trackingNumber}
++                onChange={(e) => setTrackingNumber(e.target.value)}
++              />
++            </div>
++
++            <div className="flex gap-2.5 mt-2">
++              <button
++                type="button"
++                onClick={onClose}
++                className="flex-1 h-10 rounded-[9px] border border-border bg-white font-semibold text-[13px] cursor-pointer hover:bg-page-bg-top"
++              >
++                Cancel
++              </button>
++              <button
++                type="submit"
++                disabled={submitting}
++                className="flex-1 h-10 rounded-[9px] text-white font-semibold text-[13px] cursor-pointer disabled:opacity-60"
++                style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)' }}
++              >
++                {submitting ? 'Saving…' : 'Save'}
++              </button>
++            </div>
++          </form>
++        </div>
++      )}
++    </div>
++  );
++}
+diff --git a/frontend/src/components/ShipmentStatusPill.tsx b/frontend/src/components/ShipmentStatusPill.tsx
+new file mode 100644
+index 0000000..e4094b1
+--- /dev/null
++++ b/frontend/src/components/ShipmentStatusPill.tsx
+@@ -0,0 +1,11 @@
++import type { ShipmentStatus } from '../lib/caseTypes';
++import { SHIPMENT_STATUS_COLORS } from '../lib/statusColors';
++
++export function ShipmentStatusPill({ status }: { status: ShipmentStatus }) {
++  const colors = SHIPMENT_STATUS_COLORS[status];
++  return (
++    <span className="status-pill" style={{ background: colors.bg, color: colors.text }}>
++      {status}
++    </span>
++  );
++}
+diff --git a/frontend/src/components/ShipmentsPanel.tsx b/frontend/src/components/ShipmentsPanel.tsx
+new file mode 100644
+index 0000000..e5e0385
+--- /dev/null
++++ b/frontend/src/components/ShipmentsPanel.tsx
+@@ -0,0 +1,121 @@
++import { useEffect, useState } from 'react';
++import { ApiError, createShipment, listShipments } from '../lib/api';
++import type { Shipment } from '../lib/caseTypes';
++import { ShipmentStatusPill } from './ShipmentStatusPill';
++import { ShipmentStatusModal } from './ShipmentStatusModal';
++import { useToast } from '../context/ToastContext';
++
++// Shipments (Frontend Session 5) — confirmed directly against
++// backend/src/controllers/fulfillment.controller.js. Creation and status
++// updates are internal-only (gated by isInternal, mirroring requireInternal
++// server-side); reads render for every role since the route isn't
++// requireInternal — the dental office has a legitimate interest in
++// tracking/carrier info for their own case.
++export function ShipmentsPanel({ caseId, isInternal }: { caseId: number; isInternal: boolean }) {
++  const { showToast } = useToast();
++  const [shipments, setShipments] = useState<Shipment[]>([]);
++  const [loading, setLoading] = useState(true);
++  const [error, setError] = useState<string | null>(null);
++  const [creating, setCreating] = useState(false);
++  const [editingShipment, setEditingShipment] = useState<Shipment | null>(null);
++
++  function load() {
++    setLoading(true);
++    setError(null);
++    listShipments(caseId)
++      .then((res) => setShipments(res.shipments))
++      .catch((err) => setError(err instanceof ApiError ? err.message : 'Could not load shipments.'))
++      .finally(() => setLoading(false));
++  }
++
++  useEffect(load, [caseId]);
++
++  async function handleCreate() {
++    setCreating(true);
++    setError(null);
++    try {
++      await createShipment(caseId, {});
++      showToast('Shipment created');
++      load();
++    } catch (err) {
++      setError(err instanceof ApiError ? err.message : 'Could not create a shipment.');
++    } finally {
++      setCreating(false);
++    }
++  }
++
++  return (
++    <div>
++      {isInternal && (
++        <div className="flex items-center justify-between mb-3.5">
++          <span className="text-[12.5px] text-ink-soft">
++            Creation is explicit, not auto-fired off a case status change — a case can have more than one shipment (e.g. a reshipment).
++          </span>
++          <button
++            onClick={handleCreate}
++            disabled={creating}
++            className="btn-primary h-9 px-4 rounded-[9px] font-semibold text-[13px] disabled:opacity-60 shrink-0 ml-3"
++          >
++            {creating ? 'Creating…' : '+ New shipment'}
++          </button>
++        </div>
++      )}
++
++      {error && (
++        <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
++          {error}
++        </div>
++      )}
++
++      {loading ? (
++        <div className="space-y-2.5">
++          <div className="skeleton h-20 rounded-[14px]" />
++          <div className="skeleton h-20 rounded-[14px]" />
++        </div>
++      ) : shipments.length === 0 ? (
++        <div className="empty-state">
++          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
++            <path d="M3.5 8 12 3.5 20.5 8 12 12.5 3.5 8Z" />
++            <path d="M3.5 8v8L12 20.5 20.5 16V8" />
++            <path d="M12 12.5V20.5" />
++          </svg>
++          <h4>No shipments yet</h4>
++          <p>{isInternal ? 'Create one once the case is ready to go out.' : 'Shipment tracking for this case will show up here.'}</p>
++        </div>
++      ) : (
++        <div className="space-y-2.5">
++          {shipments.map((s) => (
++            <div key={s.id} className="surface-card rounded-[14px] p-4 flex items-center justify-between gap-3">
++              <div>
++                <div className="flex items-center gap-2 mb-1">
++                  <span className="text-[13px] font-semibold text-ink">Shipment #{s.id}</span>
++                  <ShipmentStatusPill status={s.status} />
++                </div>
++                <div className="text-[12.5px] text-ink-soft space-x-3">
++                  <span>{s.carrier || 'Carrier not set'}</span>
++                  <span className="font-mono">{s.tracking_number || 'No tracking number'}</span>
++                </div>
++                <div className="text-[11px] text-ink-soft mt-1 space-x-3">
++                  {s.shipped_at && <span>Shipped {new Date(s.shipped_at).toLocaleDateString()}</span>}
++                  {s.delivered_at && <span>Delivered {new Date(s.delivered_at).toLocaleDateString()}</span>}
++                </div>
++              </div>
++              {isInternal && (
++                <button
++                  onClick={() => setEditingShipment(s)}
++                  className="h-9 px-3.5 rounded-[9px] border border-border bg-white font-semibold text-[12.5px] cursor-pointer hover:bg-page-bg-top shrink-0"
++                >
++                  Update
++                </button>
++              )}
++            </div>
++          ))}
++        </div>
++      )}
++
++      {isInternal && (
++        <ShipmentStatusModal shipment={editingShipment} onClose={() => setEditingShipment(null)} onUpdated={load} />
++      )}
++    </div>
++  );
++}
+diff --git a/frontend/src/components/WarrantyClaimResolveModal.tsx b/frontend/src/components/WarrantyClaimResolveModal.tsx
+new file mode 100644
+index 0000000..73d777f
+--- /dev/null
++++ b/frontend/src/components/WarrantyClaimResolveModal.tsx
+@@ -0,0 +1,138 @@
++import { useEffect, useState } from 'react';
++import { ApiError, resolveWarrantyClaim } from '../lib/api';
++import type { WarrantyClaim, WarrantyClaimStatus } from '../lib/caseTypes';
++import { useToast } from '../context/ToastContext';
++
++const RESOLVE_STATUS_OPTIONS: Exclude<WarrantyClaimStatus, 'Open'>[] = ['Under Review', 'Approved', 'Denied', 'Resolved'];
++
++interface WarrantyClaimResolveModalProps {
++  claim: WarrantyClaim | null;
++  onClose: () => void;
++  onResolved: () => void;
++}
++
++// Confirmed against resolveWarrantyClaimSchema in fulfillment.controller.js
++// — status (enum, excludes 'Open' — a claim only ever moves forward),
++// resolutionNotes optional. Once resolved_at is set (Approved/Denied/
++// Resolved), the backend 409s any further attempt — this modal doesn't
++// pre-empt that client-side, the server's error message surfaces as-is.
++export function WarrantyClaimResolveModal({ claim, onClose, onResolved }: WarrantyClaimResolveModalProps) {
++  const { showToast } = useToast();
++  const [status, setStatus] = useState<Exclude<WarrantyClaimStatus, 'Open'>>('Under Review');
++  const [resolutionNotes, setResolutionNotes] = useState('');
++  const [submitting, setSubmitting] = useState(false);
++  const [error, setError] = useState<string | null>(null);
++
++  const open = claim != null;
++
++  useEffect(() => {
++    if (claim) {
++      setStatus(claim.status === 'Open' ? 'Under Review' : (claim.status as Exclude<WarrantyClaimStatus, 'Open'>));
++      setResolutionNotes(claim.resolution_notes || '');
++      setError(null);
++    }
++  }, [claim]);
++
++  async function handleSubmit(e: React.FormEvent) {
++    e.preventDefault();
++    if (!claim) return;
++    setSubmitting(true);
++    setError(null);
++    try {
++      await resolveWarrantyClaim(claim.id, { status, resolutionNotes: resolutionNotes.trim() || undefined });
++      showToast('Warranty claim updated');
++      onResolved();
++      onClose();
++    } catch (err) {
++      setError(err instanceof ApiError ? err.message : 'Could not update this claim.');
++    } finally {
++      setSubmitting(false);
++    }
++  }
++
++  return (
++    <div
++      className={`modal-overlay ${open ? 'open' : ''}`}
++      aria-hidden={!open}
++      onClick={(e) => {
++        if (e.target === e.currentTarget) onClose();
++      }}
++    >
++      {claim && (
++        <div className="modal-box w-full max-w-[440px] bg-card-bg rounded-[20px] p-[26px_26px_22px] shadow-[0_30px_70px_rgba(10,30,30,0.28)] max-h-[86vh] overflow-y-auto">
++          <div className="flex justify-between items-start mb-4">
++            <div>
++              <h3 className="font-display text-[17px] font-bold text-ink m-0">Resolve warranty claim</h3>
++              <p className="text-xs text-ink-soft mt-0.5 font-mono">Claim #{claim.id}</p>
++            </div>
++            <button
++              onClick={onClose}
++              className="w-7 h-7 rounded-lg bg-page-bg-top border-0 cursor-pointer flex items-center justify-center shrink-0 hover:bg-border"
++              aria-label="Close"
++            >
++              ✕
++            </button>
++          </div>
++
++          <div className="bg-page-bg-top rounded-[10px] p-3 mb-4">
++            <span className="block text-[10.5px] uppercase tracking-wider text-ink-soft mb-1">Description</span>
++            <p className="text-[13px] text-ink m-0">{claim.description}</p>
++          </div>
++
++          {error && (
++            <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
++              {error}
++            </div>
++          )}
++
++          <form onSubmit={handleSubmit}>
++            <div className="mb-3.5">
++              <label className="block text-[12.5px] font-semibold text-ink mb-1.5">Status</label>
++              <select
++                className="form-input"
++                value={status}
++                onChange={(e) => setStatus(e.target.value as Exclude<WarrantyClaimStatus, 'Open'>)}
++              >
++                {RESOLVE_STATUS_OPTIONS.map((s) => (
++                  <option key={s} value={s}>
++                    {s}
++                  </option>
++                ))}
++              </select>
++            </div>
++            <div className="mb-3.5">
++              <label className="block text-[12.5px] font-semibold text-ink mb-1.5">
++                Resolution notes <span className="text-ink-soft font-normal">(optional)</span>
++              </label>
++              <textarea
++                className="form-input h-24 resize-none py-2"
++                placeholder="What's the outcome, and why?"
++                value={resolutionNotes}
++                onChange={(e) => setResolutionNotes(e.target.value)}
++                maxLength={2000}
++              />
++            </div>
++
++            <div className="flex gap-2.5 mt-2">
++              <button
++                type="button"
++                onClick={onClose}
++                className="flex-1 h-10 rounded-[9px] border border-border bg-white font-semibold text-[13px] cursor-pointer hover:bg-page-bg-top"
++              >
++                Cancel
++              </button>
++              <button
++                type="submit"
++                disabled={submitting}
++                className="flex-1 h-10 rounded-[9px] text-white font-semibold text-[13px] cursor-pointer disabled:opacity-60"
++                style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)' }}
++              >
++                {submitting ? 'Saving…' : 'Save'}
++              </button>
++            </div>
++          </form>
++        </div>
++      )}
++    </div>
++  );
++}
+diff --git a/frontend/src/components/WarrantyClaimsPanel.tsx b/frontend/src/components/WarrantyClaimsPanel.tsx
+new file mode 100644
+index 0000000..bbf8d31
+--- /dev/null
++++ b/frontend/src/components/WarrantyClaimsPanel.tsx
+@@ -0,0 +1,164 @@
++import { useEffect, useState } from 'react';
++import { ApiError, createWarrantyClaim, listWarrantyClaims } from '../lib/api';
++import type { CaseStatus, WarrantyClaim } from '../lib/caseTypes';
++import { WarrantyStatusPill } from './WarrantyStatusPill';
++import { WarrantyClaimResolveModal } from './WarrantyClaimResolveModal';
++import { useToast } from '../context/ToastContext';
++
++// Warranty Claims (Frontend Session 5) — confirmed directly against
++// backend/src/controllers/fulfillment.controller.js. Filing is open to
++// staff OR the owning dentist_client, but the backend 409s unless the case
++// is already "Delivered" — the "File a claim" button below mirrors that
++// check client-side (cosmetic only; the 409 is the real enforcement) so
++// non-Delivered cases don't show a button that would just error.
++// Resolving is internal-only.
++export function WarrantyClaimsPanel({
++  caseId,
++  caseStatus,
++  isInternal,
++}: {
++  caseId: number;
++  caseStatus: CaseStatus;
++  isInternal: boolean;
++}) {
++  const { showToast } = useToast();
++  const [claims, setClaims] = useState<WarrantyClaim[]>([]);
++  const [loading, setLoading] = useState(true);
++  const [error, setError] = useState<string | null>(null);
++
++  const [filing, setFiling] = useState(false);
++  const [description, setDescription] = useState('');
++  const [submitting, setSubmitting] = useState(false);
++  const [resolvingClaim, setResolvingClaim] = useState<WarrantyClaim | null>(null);
++
++  const canFile = caseStatus === 'Delivered';
++
++  function load() {
++    setLoading(true);
++    setError(null);
++    listWarrantyClaims(caseId)
++      .then((res) => setClaims(res.warrantyClaims))
++      .catch((err) => setError(err instanceof ApiError ? err.message : 'Could not load warranty claims.'))
++      .finally(() => setLoading(false));
++  }
++
++  useEffect(load, [caseId]);
++
++  async function handleSubmit(e: React.FormEvent) {
++    e.preventDefault();
++    if (!description.trim()) return;
++    setSubmitting(true);
++    setError(null);
++    try {
++      await createWarrantyClaim(caseId, { description: description.trim() });
++      setDescription('');
++      setFiling(false);
++      showToast('Warranty claim filed');
++      load();
++    } catch (err) {
++      setError(err instanceof ApiError ? err.message : 'Could not file that claim.');
++    } finally {
++      setSubmitting(false);
++    }
++  }
++
++  return (
++    <div>
++      <div className="flex items-center justify-between mb-3.5">
++        <span className="text-[12.5px] text-ink-soft">
++          {canFile
++            ? 'Either the lab or the dental office can file a claim once a case has been delivered.'
++            : 'A warranty claim can only be filed once this case reaches "Delivered" status.'}
++        </span>
++        {canFile && (
++          <button
++            onClick={() => setFiling((f) => !f)}
++            className="btn-primary h-9 px-4 rounded-[9px] font-semibold text-[13px] shrink-0 ml-3"
++          >
++            {filing ? 'Cancel' : '+ File a claim'}
++          </button>
++        )}
++      </div>
++
++      {filing && canFile && (
++        <form onSubmit={handleSubmit} className="surface-card rounded-[16px] p-4 mb-4">
++          <label className="block text-[12.5px] font-semibold text-ink mb-1.5">What's the issue?</label>
++          <textarea
++            className="form-input h-24 resize-none py-2 mb-3"
++            placeholder="Describe the fit, shade, or damage issue…"
++            value={description}
++            onChange={(e) => setDescription(e.target.value)}
++            required
++          />
++          <button
++            type="submit"
++            disabled={submitting || !description.trim()}
++            className="h-9 px-4 rounded-[9px] text-white font-semibold text-[13px] disabled:opacity-60"
++            style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)' }}
++          >
++            {submitting ? 'Filing…' : 'File claim'}
++          </button>
++        </form>
++      )}
++
++      {error && (
++        <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
++          {error}
++        </div>
++      )}
++
++      {loading ? (
++        <div className="space-y-2.5">
++          <div className="skeleton h-24 rounded-[14px]" />
++        </div>
++      ) : claims.length === 0 ? (
++        <div className="empty-state">
++          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
++            <circle cx="12" cy="12" r="8.5" />
++            <path d="M12 7.5v5.5l3.5 2" />
++          </svg>
++          <h4>No warranty claims</h4>
++          <p>Nothing filed for this case yet.</p>
++        </div>
++      ) : (
++        <div className="space-y-2.5">
++          {claims.map((c) => (
++            <div key={c.id} className="surface-card rounded-[14px] p-4">
++              <div className="flex items-start justify-between gap-3 mb-2">
++                <div className="flex items-center gap-2">
++                  <span className="text-[13px] font-semibold text-ink">Claim #{c.id}</span>
++                  <WarrantyStatusPill status={c.status} />
++                </div>
++                {isInternal && !c.resolved_at && (
++                  <button
++                    onClick={() => setResolvingClaim(c)}
++                    className="h-8 px-3 rounded-[8px] border border-border bg-white font-semibold text-[12px] cursor-pointer hover:bg-page-bg-top shrink-0"
++                  >
++                    Resolve
++                  </button>
++                )}
++              </div>
++              <p className="text-[13px] text-ink m-0 mb-2">{c.description}</p>
++              {c.resolution_notes && (
++                <div className="bg-page-bg-top rounded-[10px] p-3">
++                  <span className="block text-[10.5px] uppercase tracking-wider text-ink-soft mb-1">
++                    Resolution notes
++                  </span>
++                  <p className="text-[13px] text-ink m-0">{c.resolution_notes}</p>
++                </div>
++              )}
++              <div className="text-[11px] text-ink-soft mt-2 space-x-3">
++                <span>Filed {new Date(c.created_at).toLocaleDateString()}</span>
++                {c.resolved_at && <span>Resolved {new Date(c.resolved_at).toLocaleDateString()}</span>}
++              </div>
++            </div>
++          ))}
++        </div>
++      )}
++
++      {isInternal && (
++        <WarrantyClaimResolveModal claim={resolvingClaim} onClose={() => setResolvingClaim(null)} onResolved={load} />
++      )}
++    </div>
++  );
++}
+diff --git a/frontend/src/components/WarrantyStatusPill.tsx b/frontend/src/components/WarrantyStatusPill.tsx
+new file mode 100644
+index 0000000..246e149
+--- /dev/null
++++ b/frontend/src/components/WarrantyStatusPill.tsx
+@@ -0,0 +1,11 @@
++import type { WarrantyClaimStatus } from '../lib/caseTypes';
++import { WARRANTY_STATUS_COLORS } from '../lib/statusColors';
++
++export function WarrantyStatusPill({ status }: { status: WarrantyClaimStatus }) {
++  const colors = WARRANTY_STATUS_COLORS[status];
++  return (
++    <span className="status-pill" style={{ background: colors.bg, color: colors.text }}>
++      {status}
++    </span>
++  );
++}
+diff --git a/frontend/src/lib/api.ts b/frontend/src/lib/api.ts
+index 71471f9..c584e38 100644
+--- a/frontend/src/lib/api.ts
++++ b/frontend/src/lib/api.ts
+@@ -81,6 +81,14 @@ import type {
+   CreateChecklistResponse,
+   CreateInvoicePayload,
+   CreateInvoiceResponse,
++  CreateNotePayload,
++  CreateNoteResponse,
++  CreateProgressPhotoPayload,
++  CreateProgressPhotoResponse,
++  CreateShipmentPayload,
++  CreateShipmentResponse,
++  CreateWarrantyClaimPayload,
++  CreateWarrantyClaimResponse,
+   GetCaseResponse,
+   GetInvoiceResponse,
+   ListApprovalsQuery,
+@@ -90,12 +98,20 @@ import type {
+   ListCaseTypesResponse,
+   ListChecklistsResponse,
+   ListInvoicesResponse,
++  ListNotesResponse,
+   ListPracticesResponse,
++  ListProgressPhotosResponse,
++  ListShipmentsResponse,
++  ListWarrantyClaimsResponse,
+   RecordPaymentPayload,
+   RecordPaymentResponse,
+   RequestChangesPayload,
+   ResolveReworkPayload,
+   ResolveReworkResponse,
++  ResolveWarrantyClaimPayload,
++  ResolveWarrantyClaimResponse,
++  UpdateShipmentStatusPayload,
++  UpdateShipmentStatusResponse,
+ } from './caseTypes';
+ 
+ interface GetPracticeResponse {
+@@ -237,3 +253,106 @@ export function resolveRework(
+     body: JSON.stringify(payload),
+   });
+ }
++
++// ─────────────────────────────────────────────────────────────────────────
++// Case Notes / Messages (Frontend Session 5) — confirmed directly against
++// backend/src/controllers/notes.controller.js. Case-scoped, not
++// requireInternal — a dentist_client can create/list notes for their own
++// practice's cases too (tenant isolation enforces the scoping instead).
++// ─────────────────────────────────────────────────────────────────────────
++
++export function listNotes(caseId: string | number): Promise<ListNotesResponse> {
++  return apiFetch<ListNotesResponse>(`/api/cases/${caseId}/notes`);
++}
++
++export function createNote(caseId: string | number, payload: CreateNotePayload): Promise<CreateNoteResponse> {
++  return apiFetch<CreateNoteResponse>(`/api/cases/${caseId}/notes`, {
++    method: 'POST',
++    body: JSON.stringify(payload),
++  });
++}
++
++// ─────────────────────────────────────────────────────────────────────────
++// Progress Photos (Frontend Session 5) — confirmed directly against
++// backend/src/controllers/progressPhotos.controller.js. requireInternal at
++// the route — lab-staff only, both directions.
++// ─────────────────────────────────────────────────────────────────────────
++
++export function listProgressPhotos(caseId: string | number): Promise<ListProgressPhotosResponse> {
++  return apiFetch<ListProgressPhotosResponse>(`/api/cases/${caseId}/progress-photos`);
++}
++
++export function createProgressPhoto(
++  caseId: string | number,
++  payload: CreateProgressPhotoPayload
++): Promise<CreateProgressPhotoResponse> {
++  return apiFetch<CreateProgressPhotoResponse>(`/api/cases/${caseId}/progress-photos`, {
++    method: 'POST',
++    body: JSON.stringify(payload),
++  });
++}
++
++// ─────────────────────────────────────────────────────────────────────────
++// Shipments (Frontend Session 5) — confirmed directly against
++// backend/src/controllers/fulfillment.controller.js. Creation is
++// requireInternal (case-scoped route); the status-update endpoint is
++// mounted separately (not case-scoped) on fulfillment.routes.js, also
++// requireInternal. Reads are tenant-scoped, not staff-only.
++// ─────────────────────────────────────────────────────────────────────────
++
++export function listShipments(caseId: string | number): Promise<ListShipmentsResponse> {
++  return apiFetch<ListShipmentsResponse>(`/api/cases/${caseId}/shipments`);
++}
++
++export function createShipment(
++  caseId: string | number,
++  payload: CreateShipmentPayload = {}
++): Promise<CreateShipmentResponse> {
++  return apiFetch<CreateShipmentResponse>(`/api/cases/${caseId}/shipments`, {
++    method: 'POST',
++    body: JSON.stringify(payload),
++  });
++}
++
++export function updateShipmentStatus(
++  shipmentId: string | number,
++  payload: UpdateShipmentStatusPayload
++): Promise<UpdateShipmentStatusResponse> {
++  return apiFetch<UpdateShipmentStatusResponse>(`/api/fulfillment/shipments/${shipmentId}/status`, {
++    method: 'PATCH',
++    body: JSON.stringify(payload),
++  });
++}
++
++// ─────────────────────────────────────────────────────────────────────────
++// Warranty Claims (Frontend Session 5) — confirmed directly against
++// backend/src/controllers/fulfillment.controller.js. Filing is open to
++// staff OR the owning dentist_client (case-scoped route, not
++// requireInternal — the backend gates it to Delivered-status cases only,
++// 409 otherwise). Resolving is a separate, not-case-scoped, staff-only
++// endpoint.
++// ─────────────────────────────────────────────────────────────────────────
++
++export function listWarrantyClaims(caseId: string | number): Promise<ListWarrantyClaimsResponse> {
++  return apiFetch<ListWarrantyClaimsResponse>(`/api/cases/${caseId}/warranty-claims`);
++}
++
++export function createWarrantyClaim(
++  caseId: string | number,
++  payload: CreateWarrantyClaimPayload
++): Promise<CreateWarrantyClaimResponse> {
++  return apiFetch<CreateWarrantyClaimResponse>(`/api/cases/${caseId}/warranty-claims`, {
++    method: 'POST',
++    body: JSON.stringify(payload),
++  });
++}
++
++export function resolveWarrantyClaim(
++  claimId: string | number,
++  payload: ResolveWarrantyClaimPayload
++): Promise<ResolveWarrantyClaimResponse> {
++  return apiFetch<ResolveWarrantyClaimResponse>(`/api/fulfillment/warranty-claims/${claimId}/resolve`, {
++    method: 'PATCH',
++    body: JSON.stringify(payload),
++  });
++}
+diff --git a/frontend/src/lib/caseTypes.ts b/frontend/src/lib/caseTypes.ts
+index a105fe2..be6dfc3 100644
+--- a/frontend/src/lib/caseTypes.ts
++++ b/frontend/src/lib/caseTypes.ts
+@@ -377,3 +377,170 @@ export interface ResolveReworkPayload {
+ export interface ResolveReworkResponse {
+   rework: ReworkRecord;
+ }
++
++// ─────────────────────────────────────────────────────────────────────────
++// Case Notes / Messages (Frontend Session 5) — confirmed directly against
++// backend/src/controllers/notes.controller.js and the notes routes mounted
++// on cases.routes.js (POST/GET /api/cases/:id/notes). Two-way: staff AND
++// dentist_client may author a note — NOT requireInternal at the route,
++// tenant isolation (assertPracticeAccess) is what scopes access instead.
++// Row fields snake_case under a camelCase wrapper key, same convention as
++// every other resource in this file.
++// ─────────────────────────────────────────────────────────────────────────
++
++export type NoteVisibility = 'internal' | 'portal';
++
++export interface CaseNote {
++  id: number;
++  case_id: number;
++  author_id: number;
++  body: string;
++  visibility: NoteVisibility;
++  created_at: string;
++}
++
++export interface ListNotesResponse {
++  notes: CaseNote[];
++}
++
++// visibility is accepted from staff callers only — a dentist_client's note
++// is always silently forced to 'portal' server-side even if sent, per the
++// controller's documented decision. Omit it entirely for a portal author
++// rather than send a value the backend will just override.
++export interface CreateNotePayload {
++  body: string;
++  visibility?: NoteVisibility;
++}
++
++export interface CreateNoteResponse {
++  note: CaseNote;
++}
++
++// ─────────────────────────────────────────────────────────────────────────
++// Progress Photos (Frontend Session 5) — confirmed directly against
++// backend/src/controllers/progressPhotos.controller.js and the
++// progress-photos routes mounted on cases.routes.js. requireInternal at the
++// route — lab-staff only, both to create and to view (documented decision:
++// no notification-table entry or portal permission flag covers this, so
++// it's treated as an internal production-tracking aid, not a client-facing
++// gallery, pending an explicit client answer).
++// ─────────────────────────────────────────────────────────────────────────
++
++export interface ProgressPhoto {
++  id: number;
++  case_id: number;
++  uploaded_by: number;
++  file_url: string;
++  caption: string | null;
++  taken_at: string;
++  created_at: string;
++}
++
++export interface ListProgressPhotosResponse {
++  progressPhotos: ProgressPhoto[];
++}
++
++export interface CreateProgressPhotoPayload {
++  fileUrl: string;
++  caption?: string;
++  takenAt?: string; // ISO datetime, optional — defaults to now() server-side
++}
++
++export interface CreateProgressPhotoResponse {
++  progressPhoto: ProgressPhoto;
++}
++
++// ─────────────────────────────────────────────────────────────────────────
++// Shipments (Frontend Session 5) — confirmed directly against
++// backend/src/controllers/fulfillment.controller.js. Creation
++// (POST /api/cases/:id/shipments) is staff-only and explicit, never
++// auto-fired off a case-status change. Reads (GET /api/cases/:id/shipments)
++// are tenant-scoped, NOT staff-only — the dental office can see
++// tracking/carrier info for their own case. Status updates
++// (PATCH /api/fulfillment/shipments/:id/status) are a separate,
++// not-case-scoped, staff-only endpoint (a case can have more than one
++// shipment, e.g. a reshipment after a warranty claim).
++// ─────────────────────────────────────────────────────────────────────────
++
++export type ShipmentStatus = 'Preparing' | 'Shipped' | 'Delivered' | 'Returned';
++
++export interface Shipment {
++  id: number;
++  case_id: number;
++  carrier: string | null;
++  tracking_number: string | null;
++  status: ShipmentStatus;
++  shipped_at: string | null;
++  delivered_at: string | null;
++  created_by: number;
++  created_at: string;
++}
++
++export interface ListShipmentsResponse {
++  shipments: Shipment[];
++}
++
++export interface CreateShipmentPayload {
++  carrier?: string;
++  trackingNumber?: string;
++}
++
++export interface CreateShipmentResponse {
++  shipment: Shipment;
++}
++
++export interface UpdateShipmentStatusPayload {
++  status: ShipmentStatus;
++  carrier?: string;
++  trackingNumber?: string;
++}
++
++export interface UpdateShipmentStatusResponse {
++  shipment: Shipment;
++}
++
++// ─────────────────────────────────────────────────────────────────────────
++// Warranty Claims (Frontend Session 5) — confirmed directly against
++// backend/src/controllers/fulfillment.controller.js. Filing
++// (POST /api/cases/:id/warranty-claims) is open to either internal staff
++// or the dentist_client that owns the case (assertPracticeAccess, same
++// tenant-check shape as approvals) — but ONLY against a case already in
++// the terminal "Delivered" status (409 otherwise, checked server-side).
++// Resolving (PATCH /api/fulfillment/warranty-claims/:id/resolve) is
++// staff-only and not case-scoped.
++// ─────────────────────────────────────────────────────────────────────────
++
++export type WarrantyClaimStatus = 'Open' | 'Under Review' | 'Approved' | 'Denied' | 'Resolved';
++
++export interface WarrantyClaim {
++  id: number;
++  case_id: number;
++  filed_by: number;
++  description: string;
++  status: WarrantyClaimStatus;
++  resolution_notes: string | null;
++  resolved_by: number | null;
++  resolved_at: string | null;
++  created_at: string;
++}
++
++export interface ListWarrantyClaimsResponse {
++  warrantyClaims: WarrantyClaim[];
++}
++
++export interface CreateWarrantyClaimPayload {
++  description: string;
++}
++
++export interface CreateWarrantyClaimResponse {
++  warrantyClaim: WarrantyClaim;
++}
++
++export interface ResolveWarrantyClaimPayload {
++  status: Exclude<WarrantyClaimStatus, 'Open'>;
++  resolutionNotes?: string;
++}
++
++export interface ResolveWarrantyClaimResponse {
++  warrantyClaim: WarrantyClaim;
++}
+diff --git a/frontend/src/lib/statusColors.ts b/frontend/src/lib/statusColors.ts
+index 27518f1..ea45ab6 100644
+--- a/frontend/src/lib/statusColors.ts
++++ b/frontend/src/lib/statusColors.ts
+@@ -71,3 +71,35 @@ export const INVOICE_STATUS_COLORS: Record<
+   Paid: { bg: 'var(--color-pill-green-bg)', text: 'var(--color-pill-green-text)' },
+   Void: { bg: 'var(--color-badge-tan-bg)', text: 'var(--color-badge-tan)' },
+ };
++
++// Shipment status pill (Frontend Session 5) — reuses the same tokens as
++// everywhere else rather than inventing new ones: Preparing mirrors the tan
++// neutral "not moving yet" tone, Shipped reuses the exact --pill-green
++// pairing the reference demo already used verbatim for "Shipped Out" case
++// statuses (statusColors.ts's own precedent above), Delivered reuses the
++// deeper --badge-green "done" tone to read as a step further than Shipped,
++// Returned reuses red (an exception path, same family as Delayed).
++export const SHIPMENT_STATUS_COLORS: Record<
++  'Preparing' | 'Shipped' | 'Delivered' | 'Returned',
++  { bg: string; text: string }
++> = {
++  Preparing: { bg: 'var(--color-badge-tan-bg)', text: 'var(--color-badge-tan)' },
++  Shipped: { bg: 'var(--color-pill-green-bg)', text: 'var(--color-pill-green-text)' },
++  Delivered: { bg: 'var(--color-badge-green-bg)', text: 'var(--color-badge-green)' },
++  Returned: { bg: 'var(--color-pill-red-bg)', text: 'var(--color-pill-red-text)' },
++};
++
++// Warranty claim status pill (Frontend Session 5) — Open/Under Review reuse
++// the mustard "awaiting action" tone (same as pending approvals/invoices
++// above), Approved/Resolved reuse green "done", Denied reuses red, matching
++// the exact same reasoning as INVOICE_STATUS_COLORS/APPROVAL_STATUS_COLORS.
++export const WARRANTY_STATUS_COLORS: Record<
++  'Open' | 'Under Review' | 'Approved' | 'Denied' | 'Resolved',
++  { bg: string; text: string }
++> = {
++  Open: { bg: 'var(--color-pill-mustard-bg)', text: 'var(--color-pill-mustard-text)' },
++  'Under Review': { bg: 'var(--color-badge-amber-bg)', text: 'var(--color-badge-amber)' },
++  Approved: { bg: 'var(--color-pill-green-bg)', text: 'var(--color-pill-green-text)' },
++  Denied: { bg: 'var(--color-pill-red-bg)', text: 'var(--color-pill-red-text)' },
++  Resolved: { bg: 'var(--color-badge-green-bg)', text: 'var(--color-badge-green)' },
++};
+diff --git a/frontend/src/pages/CaseDetailPage.tsx b/frontend/src/pages/CaseDetailPage.tsx
+index be543b8..8297f74 100644
+--- a/frontend/src/pages/CaseDetailPage.tsx
++++ b/frontend/src/pages/CaseDetailPage.tsx
+@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
+ import { ApiError, getCase, getPractice } from '../lib/api';
+ import type { CaseRecord, StageHistoryEntry, StatusAuditEntry } from '../lib/caseTypes';
+ import { StatusPill } from '../components/StatusPill';
++import { CaseActivityPanel } from '../components/CaseActivityPanel';
+ import { PRIORITY_COLORS } from '../lib/statusColors';
+ 
+ export function CaseDetailPage() {
+@@ -187,6 +188,12 @@ export function CaseDetailPage() {
+           )}
+         </div>
+       </div>
++
++      {/* Frontend Session 5 — Messages, progress photos, shipments, warranty
++          claims. All four backend resources are case-scoped, so they live
++          here as tabs rather than a standalone nav page (see
++          CaseActivityPanel.tsx for why). */}
++      <CaseActivityPanel caseRecord={caseRecord} />
+     </div>
+   );
+ }
+-- 
+2.43.0
+
