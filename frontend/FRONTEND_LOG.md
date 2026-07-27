@@ -799,3 +799,41 @@ prior sessions were lost before delivering a file):
    reports/dashboards, equipment + technician scheduling) is next for
    frontend — its backend is already complete per `BUILD_LOG.md`'s Session
    7 entry (174/174 tests, commit `a32fd77`).
+
+**Update — click-tested live (post-delivery verification):** Materials,
+Procurement, and Practices all confirmed working against the real
+running backend, not just build-clean. Verified directly: created and
+persisted a real practice contract (Net 30 / $5000) on Bright Smile
+Dental Clinic, confirmed it renders back correctly. Confirmed
+Procurement's PO status transitions (Draft→Ordered→Received, and
+Cancelled) already exercised and visible in the live data. Confirmed
+Materials/Procurement/Practices list and detail pages all load and
+render correctly with real data, not stubs. Role-gating confirmed by
+logging in as both `owner@dentallab.test` and `tech1@dentallab.test`:
+Procurement and Practices nav items are correctly absent for Assistant
+Technician, "Adjust" is correctly hidden on Material detail (only
+"Record transaction" shows), "+ New material" is correctly hidden.
+Backend `npm test` independently re-run inside the `armature-labs-backend-1`
+container (not the host, which fails on `DATABASE_URL` resolution):
+193/193 passing, 18/18 suites — matches `BUILD_LOG.md`'s Session 9 claim
+exactly. Session 6 is now fully closed per §6's own definition of done,
+not just code-complete.
+
+**Update — click-tested live (post-delivery verification):** Materials,
+Procurement, and Practices all confirmed working against the real
+running backend, not just build-clean. Verified directly: created and
+persisted a real practice contract (Net 30 / $5000) on Bright Smile
+Dental Clinic, confirmed it renders back correctly. Confirmed
+Procurement's PO status transitions (Draft→Ordered→Received, and
+Cancelled) already exercised and visible in the live data. Confirmed
+Materials/Procurement/Practices list and detail pages all load and
+render correctly with real data, not stubs. Role-gating confirmed by
+logging in as both `owner@dentallab.test` and `tech1@dentallab.test`:
+Procurement and Practices nav items are correctly absent for Assistant
+Technician, "Adjust" is correctly hidden on Material detail (only
+"Record transaction" shows), "+ New material" is correctly hidden.
+Backend `npm test` independently re-run inside the `armature-labs-backend-1`
+container (not the host, which fails on `DATABASE_URL` resolution):
+193/193 passing, 18/18 suites — matches `BUILD_LOG.md`'s Session 9 claim
+exactly. Session 6 is now fully closed per §6's own definition of done,
+not just code-complete.

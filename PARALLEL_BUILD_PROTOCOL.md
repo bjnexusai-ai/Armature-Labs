@@ -48,7 +48,7 @@ someone real time re-verifying something that's already fine.
 | 4 | ✅ COMPLETE (69/69 tests) | ✅ BUILT — pending browser click-through (see FRONTEND_LOG.md Session 4) | — |
 | 5 | ✅ COMPLETE (100/100 tests) | ✅ COMPLETE (Messages/notes, progress photos, shipments, warranty claims — tabs in `CaseDetailPage.tsx`, see `frontend/FRONTEND_LOG.md`) | — |
 | 5.5 | ✅ COMPLETE (118/118 tests, commit `0efddfa`) | ⬜ NOT STARTED | **✅ YES — ready now** |
-| 6 | ✅ COMPLETE (144/144 tests — see §9) | ✅ COMPLETE (Materials/inventory, procurement vendors+POs, practice CRM contracts+notes — see `frontend/FRONTEND_LOG.md`'s Session 6 entry; delivered as two zips per the person's request, not yet click-tested — no runnable Postgres in the build sandbox) | — |
+| 6 | ✅ COMPLETE (144/144 tests — see §9) | ✅ COMPLETE (Materials/inventory, procurement vendors+POs, practice CRM contracts+notes — see `frontend/FRONTEND_LOG.md`'s Session 6 entry; delivered as two zips, then click-tested live post-delivery: creates confirmed persisted (practice contract, PO status transitions), role-gating confirmed for Owner vs. Assistant Technician (nav items + Adjust button correctly hidden)) | — |
 | 7 | ✅ COMPLETE (174/174 tests, commit `a32fd77` — table was stale, corrected here per this doc's own §1 precedent: verify against `git log`, not prior table state) | ⬜ NOT STARTED | **✅ YES — ready now** |
 | 8 | ✅ COMPLETE (192/192 tests, commit `c787e86`) | ⬜ NOT STARTED | **✅ YES — ready now** |
 | 9 | ✅ COMPLETE — **last session of the 9-session backend plan** (integration pass + security hardening review, 193/193 tests — see `BUILD_LOG.md`'s Session 9 entry) | ⬜ NOT STARTED | **✅ YES — ready now** |
