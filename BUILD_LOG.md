@@ -1212,6 +1212,4 @@ plan.
 **Not yet built (remaining B10 scope):**
 - device_push_tokens table + endpoints.
 
-**Verification status:** 194/194 tests passing (fixed NODE_ENV=test bug in test script — see 12c2531).
-the actual pass/fail count here before ending this session, do not leave this
 placeholder in.]
