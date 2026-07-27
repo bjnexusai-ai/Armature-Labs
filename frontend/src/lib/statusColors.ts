@@ -103,3 +103,32 @@ export const WARRANTY_STATUS_COLORS: Record<
   Denied: { bg: 'var(--color-pill-red-bg)', text: 'var(--color-pill-red-text)' },
   Resolved: { bg: 'var(--color-badge-green-bg)', text: 'var(--color-badge-green)' },
 };
+
+// Material status pill (Frontend Session 6) — backend derives `status` as
+// a plain column (confirmed 'OK' | 'Low Stock' style values off `materials`
+// via inventory.controller.js's SELECT list, not computed client-side).
+// Low Stock reuses the amber "needs attention" tone (same family as
+// Case on Hold / Partially Paid above); anything else styles as the
+// neutral "OK" green, reusing the same tone WARRANTY/SHIPMENT use for a
+// clean done/fine state.
+export const MATERIAL_STATUS_COLORS: Record<string, { bg: string; text: string }> = {
+  'Low Stock': { bg: 'var(--color-badge-amber-bg)', text: 'var(--color-badge-amber)' },
+  OK: { bg: 'var(--color-pill-green-bg)', text: 'var(--color-pill-green-text)' },
+};
+
+// Purchase order status pill (Frontend Session 6) — Draft is the neutral
+// tan "not sent yet" tone (same as Invoice Draft), Ordered reuses mustard
+// "awaiting action" (same as pending approvals/invoices), Partially
+// Received reuses amber "in progress" (same as Partially Paid), Received
+// reuses green "done", Cancelled reuses red, matching this file's own
+// established reasoning for every prior status map.
+export const PO_STATUS_COLORS: Record<
+  'Draft' | 'Ordered' | 'Partially Received' | 'Received' | 'Cancelled',
+  { bg: string; text: string }
+> = {
+  Draft: { bg: 'var(--color-badge-tan-bg)', text: 'var(--color-badge-tan)' },
+  Ordered: { bg: 'var(--color-pill-mustard-bg)', text: 'var(--color-pill-mustard-text)' },
+  'Partially Received': { bg: 'var(--color-badge-amber-bg)', text: 'var(--color-badge-amber)' },
+  Received: { bg: 'var(--color-pill-green-bg)', text: 'var(--color-pill-green-text)' },
+  Cancelled: { bg: 'var(--color-pill-red-bg)', text: 'var(--color-pill-red-text)' },
+};

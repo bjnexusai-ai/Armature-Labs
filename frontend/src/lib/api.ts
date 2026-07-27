@@ -112,6 +112,35 @@ import type {
   ResolveWarrantyClaimResponse,
   UpdateShipmentStatusPayload,
   UpdateShipmentStatusResponse,
+  ListMaterialCategoriesResponse,
+  CreateMaterialCategoryPayload,
+  CreateMaterialCategoryResponse,
+  ListMaterialsQuery,
+  ListMaterialsResponse,
+  GetMaterialResponse,
+  CreateMaterialPayload,
+  CreateMaterialResponse,
+  StockTransactionResponse,
+  ConsumeMaterialPayload,
+  AdjustMaterialPayload,
+  ListStockTransactionsResponse,
+  ListVendorsResponse,
+  CreateVendorPayload,
+  CreateVendorResponse,
+  ListPurchaseOrdersResponse,
+  GetPurchaseOrderResponse,
+  CreatePurchaseOrderPayload,
+  CreatePurchaseOrderResponse,
+  UpdatePurchaseOrderStatusPayload,
+  UpdatePurchaseOrderStatusResponse,
+  ReceivePurchaseOrderPayload,
+  ReceivePurchaseOrderResponse,
+  ListPracticeContractsResponse,
+  CreatePracticeContractPayload,
+  CreatePracticeContractResponse,
+  ListPracticeNotesResponse,
+  CreatePracticeNotePayload,
+  CreatePracticeNoteResponse,
 } from './caseTypes';
 
 interface GetPracticeResponse {
@@ -353,6 +382,171 @@ export function resolveWarrantyClaim(
 ): Promise<ResolveWarrantyClaimResponse> {
   return apiFetch<ResolveWarrantyClaimResponse>(`/api/fulfillment/warranty-claims/${claimId}/resolve`, {
     method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Materials / Inventory (Frontend Session 6) — confirmed against
+// backend/src/controllers/inventory.controller.js and inventory.routes.js.
+// Entire router is requireAuth + requireInternal (no dentist_client
+// access). Category/material creation and /adjust are requireManagerRole;
+// /consume and all reads are open to any internal staff.
+// ─────────────────────────────────────────────────────────────────────────
+
+export function listMaterialCategories(): Promise<ListMaterialCategoriesResponse> {
+  return apiFetch<ListMaterialCategoriesResponse>('/api/inventory/categories');
+}
+
+export function createMaterialCategory(
+  payload: CreateMaterialCategoryPayload
+): Promise<CreateMaterialCategoryResponse> {
+  return apiFetch<CreateMaterialCategoryResponse>('/api/inventory/categories', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function listMaterials(query: ListMaterialsQuery = {}): Promise<ListMaterialsResponse> {
+  const params = new URLSearchParams();
+  if (query.categoryId != null) params.set('categoryId', String(query.categoryId));
+  if (query.lowStock) params.set('lowStock', 'true');
+  const qs = params.toString();
+  return apiFetch<ListMaterialsResponse>(`/api/inventory/materials${qs ? `?${qs}` : ''}`);
+}
+
+export function getMaterial(id: string | number): Promise<GetMaterialResponse> {
+  return apiFetch<GetMaterialResponse>(`/api/inventory/materials/${id}`);
+}
+
+export function createMaterial(payload: CreateMaterialPayload): Promise<CreateMaterialResponse> {
+  return apiFetch<CreateMaterialResponse>('/api/inventory/materials', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+// Consumption: any internal staff. Sign is applied server-side — always
+// send a positive quantity here, same as consumeMaterialSchema expects.
+export function consumeMaterial(
+  materialId: string | number,
+  payload: ConsumeMaterialPayload
+): Promise<StockTransactionResponse> {
+  return apiFetch<StockTransactionResponse>(`/api/inventory/materials/${materialId}/consume`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+// Adjustment: Owner/Office Manager only server-side (requireManagerRole) —
+// gate the UI action accordingly, same convention as canApprovePhotos etc.
+// Quantity is signed here (the one exception, per adjustMaterialSchema).
+export function adjustMaterial(
+  materialId: string | number,
+  payload: AdjustMaterialPayload
+): Promise<StockTransactionResponse> {
+  return apiFetch<StockTransactionResponse>(`/api/inventory/materials/${materialId}/adjust`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function listStockTransactions(materialId: string | number): Promise<ListStockTransactionsResponse> {
+  return apiFetch<ListStockTransactionsResponse>(`/api/inventory/materials/${materialId}/transactions`);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Procurement (Frontend Session 6) — confirmed against
+// backend/src/controllers/procurement.controller.js and procurement.routes.js.
+// Entire router is requireAuth + requireInternal + requireManagerRole on
+// EVERY route, including reads — stricter than Materials above. Don't gate
+// this one's reads as "any internal staff" by mistake.
+// ─────────────────────────────────────────────────────────────────────────
+
+export function listVendors(): Promise<ListVendorsResponse> {
+  return apiFetch<ListVendorsResponse>('/api/procurement/vendors');
+}
+
+export function createVendor(payload: CreateVendorPayload): Promise<CreateVendorResponse> {
+  return apiFetch<CreateVendorResponse>('/api/procurement/vendors', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function listPurchaseOrders(query: { vendorId?: number } = {}): Promise<ListPurchaseOrdersResponse> {
+  const params = new URLSearchParams();
+  if (query.vendorId != null) params.set('vendorId', String(query.vendorId));
+  const qs = params.toString();
+  return apiFetch<ListPurchaseOrdersResponse>(`/api/procurement/purchase-orders${qs ? `?${qs}` : ''}`);
+}
+
+export function getPurchaseOrder(id: string | number): Promise<GetPurchaseOrderResponse> {
+  return apiFetch<GetPurchaseOrderResponse>(`/api/procurement/purchase-orders/${id}`);
+}
+
+export function createPurchaseOrder(payload: CreatePurchaseOrderPayload): Promise<CreatePurchaseOrderResponse> {
+  return apiFetch<CreatePurchaseOrderResponse>('/api/procurement/purchase-orders', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+// Only Draft->Ordered / ->Cancelled are legal here — see
+// UpdatePurchaseOrderStatusPayload's comment. Partially Received/Received
+// are never sent from this function; they only ever come back FROM
+// receivePurchaseOrder below.
+export function updatePurchaseOrderStatus(
+  id: string | number,
+  payload: UpdatePurchaseOrderStatusPayload
+): Promise<UpdatePurchaseOrderStatusResponse> {
+  return apiFetch<UpdatePurchaseOrderStatusResponse>(`/api/procurement/purchase-orders/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function receivePurchaseOrder(
+  id: string | number,
+  payload: ReceivePurchaseOrderPayload
+): Promise<ReceivePurchaseOrderResponse> {
+  return apiFetch<ReceivePurchaseOrderResponse>(`/api/procurement/purchase-orders/${id}/receive`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Practice CRM (Frontend Session 6) — confirmed against
+// backend/src/controllers/accounts.controller.js, mounted on
+// practices.routes.js (not its own router). Both requireManagerRole,
+// internal-only, no visibility split on notes (unlike case notes).
+// ─────────────────────────────────────────────────────────────────────────
+
+export function listPracticeContracts(practiceId: string | number): Promise<ListPracticeContractsResponse> {
+  return apiFetch<ListPracticeContractsResponse>(`/api/practices/${practiceId}/contracts`);
+}
+
+export function createPracticeContract(
+  practiceId: string | number,
+  payload: CreatePracticeContractPayload
+): Promise<CreatePracticeContractResponse> {
+  return apiFetch<CreatePracticeContractResponse>(`/api/practices/${practiceId}/contracts`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function listPracticeNotes(practiceId: string | number): Promise<ListPracticeNotesResponse> {
+  return apiFetch<ListPracticeNotesResponse>(`/api/practices/${practiceId}/notes`);
+}
+
+export function createPracticeNote(
+  practiceId: string | number,
+  payload: CreatePracticeNotePayload
+): Promise<CreatePracticeNoteResponse> {
+  return apiFetch<CreatePracticeNoteResponse>(`/api/practices/${practiceId}/notes`, {
+    method: 'POST',
     body: JSON.stringify(payload),
   });
 }

@@ -14,6 +14,8 @@ export type NavIconKey =
   | 'queue'
   | 'approvals'
   | 'materials'
+  | 'procurement'
+  | 'practices'
   | 'equipment'
   | 'invoices'
   | 'reports'
@@ -67,6 +69,33 @@ export const NAV_ITEMS: NavItem[] = [
     icon: 'materials',
     roles: ['owner', 'office_manager', 'assistant_technician', 'designer'],
     session: 6,
+    live: true,
+  },
+  {
+    key: 'procurement',
+    label: 'Vendors & POs',
+    path: '/purchase-orders',
+    section: 'Operations',
+    icon: 'procurement',
+    // procurement.routes.js is requireManagerRole on every route including
+    // reads, stricter than Materials above — gated accordingly.
+    roles: ['owner', 'office_manager'],
+    session: 6,
+    live: true,
+  },
+  {
+    key: 'practices',
+    label: 'Practices',
+    path: '/practices',
+    section: 'Operations',
+    icon: 'practices',
+    // The list endpoint itself isn't requireInternal, but the CRM actions
+    // on the detail page (contracts/notes) are requireManagerRole — gating
+    // the nav item to match that reality rather than exposing a screen
+    // whose write actions would 403 for other internal roles.
+    roles: ['owner', 'office_manager'],
+    session: 6,
+    live: true,
   },
   {
     key: 'equipment',

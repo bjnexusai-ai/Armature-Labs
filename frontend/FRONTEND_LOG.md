@@ -626,3 +626,176 @@ a client answer or a future backend session adds a real cross-case list.
    own commit history (`0efddfa`, corrected status in `4cf4c5c`) — Session
    6 (Phase 3 inventory/practice CRM) is next for frontend, its backend is
    already complete per `BUILD_LOG.md`'s Session 6 entry (144/144 tests).
+
+## Session 6 — COMPLETE (Materials/inventory, procurement, practice CRM)
+
+**Depends on:** Backend Session 6 (Phase 3 inventory/procurement + practice
+CRM) — confirmed complete by re-cloning the live repo
+(`github.com/bjnexusai-ai/Armature-Labs`, `main` @ `87ab027`) and reading
+`inventory.controller.js`/`inventory.routes.js`,
+`procurement.controller.js`/`procurement.routes.js`, and
+`accounts.controller.js` (contracts/notes, mounted on `practices.routes.js`)
+directly — not from a prior session's notes. `BUILD_LOG.md`'s Session 6
+entry (144/144 tests, 13/13 suites, commit `35af7d7`) matches.
+`PARALLEL_BUILD_PROTOCOL.md`'s status board already had this row correct.
+
+**Context — two prior attempts at this exact session were lost before
+delivery** (ran out of tool-use/message budget mid-build in separate chat
+sessions, one of which got as far as writing files but never zipped or
+verified them). This session started from a fresh clone rather than trusting
+either prior attempt's claimed state, per this project's own "verify
+against ground truth" rule.
+
+**Casing correction worth flagging for any future session touching these
+three controllers:** unlike the auth response, `inventory.controller.js`,
+`procurement.controller.js`, and `accounts.controller.js` do **not**
+camelCase their SQL rows — there's no serializer middleware in `app.js`.
+Every row field is the raw snake_case column name off `RETURNING`/`SELECT`
+(`category_id`, `unit_cost`, `current_stock`, `po_number`,
+`quantity_ordered`, `payment_terms`, etc.), under a camelCase wrapper key
+(`material`, `materials`, `purchaseOrder`, `contract`...) — identical
+convention to `InvoiceListRow`/`InvoiceDetail`. Confirmed by reading the
+controller source directly, then cross-checked against
+`billing.controller.js` as a second data point. Input payload fields ARE
+camelCase (zod schemas use `z.coerce` on `categoryId`/`unitCost`/etc.).
+
+**Endpoint shapes confirmed against real source before building:**
+
+- `/api/inventory/*` — entire router `requireAuth` + `requireInternal` (no
+  `dentist_client` access anywhere in Phase 3). Category/material creation
+  and `POST /materials/:id/adjust` are `requireManagerRole`;
+  `POST /materials/:id/consume` and all reads are open to any internal
+  staff. Sign convention: Consumption always takes a positive "how much
+  used" from the caller and the backend stores it signed negative;
+  Adjustment is the one case where the caller supplies the actual signed
+  delta.
+- `/api/procurement/*` — entire router `requireInternal` +
+  `requireManagerRole` on **every** route including reads, stricter than
+  Materials. PO status: only `Draft -> Ordered` and `-> Cancelled` are
+  settable directly (`PATCH /purchase-orders/:id/status`); `Partially
+  Received`/`Received` are derived automatically by
+  `POST /purchase-orders/:id/receive` from actual item totals, never
+  caller-set — the 409 guard exists for both endpoints.
+- `/api/practices/:id/contracts` and `/notes` — both `requireManagerRole`,
+  internal-only, mounted on `practices.routes.js` alongside the existing
+  (Session 4) fee-schedule route on the same resource. No visibility split
+  on notes (contrast with case notes) — nothing here is ever client-visible.
+
+**What's built:**
+
+- `lib/caseTypes.ts` — full type coverage: `MaterialCategory`/`Material`/
+  `MaterialStockTransaction`, `Vendor`/`PurchaseOrder`/`PurchaseOrderItem`,
+  `PracticeContract`/`PracticeNote`, plus every List/Create/Update/Response
+  and payload type, each block documenting exactly which controller/route
+  file it was confirmed against and the casing correction above.
+- `lib/api.ts` — `listMaterialCategories`/`createMaterialCategory`,
+  `listMaterials`/`getMaterial`/`createMaterial`, `listStockTransactions`/
+  `consumeMaterial`/`adjustMaterial`, `listVendors`/`createVendor`,
+  `listPurchaseOrders`/`getPurchaseOrder`/`createPurchaseOrder`/
+  `updatePurchaseOrderStatus`/`receivePurchaseOrder`,
+  `listPracticeContracts`/`createPracticeContract`,
+  `listPracticeNotes`/`createPracticeNote`.
+- `lib/statusColors.ts` — `MATERIAL_STATUS_COLORS`, `PO_STATUS_COLORS`.
+  Reuses existing `--pill-*`/`--badge-*` tokens exclusively (no new colors
+  invented), same rule every prior session's status-color map followed.
+- `components/MaterialStatusPill.tsx`, `components/POStatusPill.tsx` — same
+  one-line shape as `InvoiceStatusPill.tsx`.
+- `components/NewMaterialModal.tsx` — category select with an inline
+  "+ new category" toggle (no standalone category-management screen in this
+  session's scope), name/unit/unit cost/reorder threshold/optional initial
+  stock.
+- `components/StockTransactionModal.tsx` — Consume/Adjust via the reused
+  `.range-toggle`/`.range-btn` pattern. Adjust tab is hidden client-side for
+  non-manager roles, mirroring `requireManagerRole` on that one sub-action.
+- `components/NewVendorModal.tsx`, `components/NewPurchaseOrderModal.tsx`
+  (material line items, same shape as `NewInvoiceModal`'s line-item array),
+  `components/ReceivePOModal.tsx` (only shows items with remaining
+  quantity; backend independently re-validates every amount).
+- `components/NewContractModal.tsx` — payment terms/credit limit/start-end
+  dates; `salesRepId` left unset (no staff picker in this session's scope).
+- `pages/MaterialsPage.tsx` (category + low-stock filters via
+  `.range-toggle`), `pages/MaterialDetailPage.tsx` (stock summary cards +
+  full transaction history table + record-transaction action).
+- `pages/PurchaseOrdersPage.tsx` (Vendors/POs tabbed, same
+  `.range-toggle` tab pattern), `pages/PurchaseOrderDetailPage.tsx` (items
+  table, manual status transitions gated to the only-legal ones, Receive
+  action).
+- `pages/PracticesPage.tsx` (list), `pages/PracticeDetailPage.tsx`
+  (Contracts/Notes tabs — no visibility toggle on notes since practice
+  notes have no client-facing side at all).
+- `lib/navConfig.ts` — `materials` flipped to `live: true`; added
+  `procurement` (`/purchase-orders`, label "Vendors & POs") and
+  `practices` (`/practices`) nav items, both gated to
+  `['owner', 'office_manager']` matching `requireManagerRole` on their
+  underlying write routes.
+- `layouts/AppShell.tsx` — added `procurement` (truck/dolly) and
+  `practices` (building) icon paths, same stroke-icon style as the rest of
+  the set (viewBox 0 0 24 24, stroke currentColor).
+- `App.tsx` — routes wired for `/materials`, `/materials/:id`,
+  `/purchase-orders`, `/purchase-orders/:id`, `/practices`,
+  `/practices/:id`. Auto-stub loop already skips these since `live: true`.
+
+**Verified:**
+
+- `npx tsc -b` and `npm run build` — both clean, zero errors, on a fresh
+  `npm install` baseline in this environment.
+- Grepped every new component's import outside its own file
+  (`MaterialsPage`, `MaterialDetailPage`, `PurchaseOrdersPage`,
+  `PurchaseOrderDetailPage`, `PracticesPage`, `PracticeDetailPage`,
+  `MaterialStatusPill`, `POStatusPill`, `NewMaterialModal`,
+  `StockTransactionModal`, `NewVendorModal`, `NewPurchaseOrderModal`,
+  `ReceivePOModal`, `NewContractModal` — all fourteen confirmed imported
+  and used somewhere other than their own file) — the exact Session 2
+  checklist item this project keeps re-running.
+
+**Not verified (be honest about this, same standard as every prior
+session):**
+
+- No runnable Postgres/backend in this environment — §6 rule 3 ("actually
+  click through it in a running browser against the real backend") has
+  **not** been satisfied yet.
+- Visual audit against the reference demo (`index.html`): same situation as
+  Sessions 3/4/5 — the demo has no Materials/Procurement/Practices CRM
+  screens to compare against. Confirmed every class/token used here
+  (`.surface-card`, `.range-toggle`/`.range-btn`, `.form-input`,
+  `.btn-primary`, `.status-pill`, `.empty-state`, `.skeleton`,
+  `.modal-overlay`/`.modal-box`) was already ported and verified in a prior
+  session, not reinvented.
+
+**Delivered as two zips** (per the person's explicit request, after two
+prior sessions were lost before delivering a file):
+
+1. `armature-labs-session6-part1-foundation.zip` — `lib/caseTypes.ts`,
+   `lib/api.ts`, `lib/statusColors.ts`, and all 8 new `components/*.tsx`
+   files. Self-contained but not yet wired into the app (no routes, no nav)
+   — applying only this part leaves the code present but unreachable,
+   same shape as the Session 2 mistake, deliberately, as an intermediate
+   checkpoint.
+2. `armature-labs-session6-part2-pages-and-wiring.zip` — all 6 new
+   `pages/*.tsx` files, plus the modified `lib/navConfig.ts`,
+   `layouts/AppShell.tsx`, `App.tsx`, and this log file. Depends on part 1
+   already being applied. Once both parts are applied, the app is fully
+   wired — this is the point equivalent to "session done" everywhere else
+   in this log.
+
+**How to pick this up:**
+
+1. Unzip part 1, then part 2, over the branch (or apply both to a fresh
+   clone of `main` @ `87ab027`). Confirm `npm run build` still clean in the
+   real Codespace.
+2. Do the click-through this log can't do here: `npm run dev` both sides,
+   log in as `owner@dentallab.test`. Materials: create a category inline,
+   create a material with an initial stock, consume some, adjust some
+   (confirm Adjust is hidden for a non-manager login), confirm the
+   transaction history table updates. Procurement: create a vendor, create
+   a PO against a material, mark it Ordered, receive a partial quantity,
+   confirm status flips to "Partially Received" automatically, receive the
+   rest, confirm it flips to "Received" and the Receive button disappears.
+   Practices: open an existing practice, add a contract, add a note,
+   confirm both tabs render. Log in as a non-manager internal role and
+   confirm procurement/practices nav items are absent, Adjust is hidden on
+   Materials.
+3. Once confirmed, Session 6 is fully closed. Session 7 (saved
+   reports/dashboards, equipment + technician scheduling) is next for
+   frontend — its backend is already complete per `BUILD_LOG.md`'s Session
+   7 entry (174/174 tests, commit `a32fd77`).

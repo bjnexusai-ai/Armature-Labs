@@ -544,3 +544,269 @@ export interface ResolveWarrantyClaimPayload {
 export interface ResolveWarrantyClaimResponse {
   warrantyClaim: WarrantyClaim;
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Materials / Inventory / Procurement / Practice CRM (Frontend Session 6)
+// — confirmed directly against backend/src/controllers/inventory.controller.js,
+// procurement.controller.js, accounts.controller.js and their matching
+// .routes.js files (re-cloned from github.com/bjnexusai-ai/Armature-Labs
+// main @ 87ab027, not assumed from a prior session's notes).
+//
+// IMPORTANT CASING CORRECTION vs. an earlier, never-delivered attempt at
+// this session: these three controllers do NOT camelCase their SQL rows
+// (no humps/serializer middleware exists in app.js). Every row field below
+// is the raw snake_case column name straight off RETURNING/SELECT, under a
+// camelCase wrapper key — identical convention to InvoiceListRow/
+// InvoiceDetail above. Input payload fields ARE camelCase (zod schemas use
+// z.coerce on categoryId/unitCost/etc.). Don't "fix" the row fields to
+// camelCase on a future pass without re-checking the controller first.
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface MaterialCategory {
+  id: number;
+  name: string;
+  created_at: string;
+}
+
+export type MaterialStatus = 'OK' | 'Low Stock' | string; // backend-derived column; treat unknown values as OK-styled
+
+export interface Material {
+  id: number;
+  category_id: number;
+  name: string;
+  unit: string;
+  unit_cost: string; // numeric(10,2) as string, same convention as Invoice
+  reorder_threshold: string;
+  current_stock: string;
+  status: MaterialStatus;
+  created_at: string;
+  updated_at?: string;
+}
+
+export type StockTransactionType = 'Receiving' | 'Consumption' | 'Adjustment';
+
+export interface MaterialStockTransaction {
+  id: number;
+  material_id: number;
+  type: StockTransactionType;
+  quantity: string; // signed — negative for Consumption, positive for Receiving, either sign for Adjustment
+  lot_number: string;
+  case_id: number | null;
+  purchase_order_id: number | null;
+  performed_by: number;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface ListMaterialCategoriesResponse {
+  categories: MaterialCategory[];
+}
+
+export interface CreateMaterialCategoryPayload {
+  name: string;
+}
+
+export interface CreateMaterialCategoryResponse {
+  category: MaterialCategory;
+}
+
+export interface ListMaterialsQuery {
+  categoryId?: number;
+  lowStock?: boolean;
+}
+
+export interface ListMaterialsResponse {
+  materials: Material[];
+}
+
+export interface GetMaterialResponse {
+  material: Material;
+}
+
+export interface CreateMaterialPayload {
+  categoryId: number;
+  name: string;
+  unit: string;
+  unitCost?: number;
+  reorderThreshold?: number;
+  initialStock?: number;
+}
+
+export interface CreateMaterialResponse {
+  material: Material;
+}
+
+// Both consume/adjust return the same shape: the new transaction row plus
+// the material row with its updated current_stock — confirmed against
+// recordStockTransaction's shared return in inventory.controller.js.
+export interface StockTransactionResponse {
+  stockTransaction: MaterialStockTransaction;
+  material: Material;
+}
+
+export interface ConsumeMaterialPayload {
+  quantity: number; // always positive — sign is applied server-side
+  lotNumber: string;
+  caseId?: number;
+  notes?: string;
+}
+
+export interface AdjustMaterialPayload {
+  quantity: number; // signed — caller supplies the actual delta, can be negative
+  lotNumber: string;
+  notes: string; // required server-side (a reason), unlike Consumption's optional notes
+}
+
+export interface ListStockTransactionsResponse {
+  stockTransactions: MaterialStockTransaction[];
+}
+
+// ─── Procurement: vendors, purchase orders ─────────────────────────────
+
+export interface Vendor {
+  id: number;
+  name: string;
+  contact_name: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  created_at: string;
+}
+
+export interface ListVendorsResponse {
+  vendors: Vendor[];
+}
+
+export interface CreateVendorPayload {
+  name: string;
+  contactName?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+}
+
+export interface CreateVendorResponse {
+  vendor: Vendor;
+}
+
+export type PurchaseOrderStatus = 'Draft' | 'Ordered' | 'Partially Received' | 'Received' | 'Cancelled';
+
+export interface PurchaseOrderItem {
+  id: number;
+  material_id: number;
+  quantity_ordered: string;
+  unit_cost: string;
+  quantity_received: string;
+}
+
+export interface PurchaseOrder {
+  id: number;
+  po_number: string;
+  vendor_id: number;
+  status: PurchaseOrderStatus;
+  notes: string | null;
+  created_by?: number;
+  created_at: string;
+  updated_at?: string;
+  items?: PurchaseOrderItem[]; // present on create + get-by-id, absent on list
+}
+
+export interface ListPurchaseOrdersResponse {
+  purchaseOrders: PurchaseOrder[];
+}
+
+export interface GetPurchaseOrderResponse {
+  purchaseOrder: PurchaseOrder;
+}
+
+export interface CreatePurchaseOrderItemInput {
+  materialId: number;
+  quantityOrdered: number;
+  unitCost: number;
+}
+
+export interface CreatePurchaseOrderPayload {
+  vendorId: number;
+  notes?: string;
+  items: CreatePurchaseOrderItemInput[];
+}
+
+export interface CreatePurchaseOrderResponse {
+  purchaseOrder: PurchaseOrder;
+}
+
+// Only these two manual transitions are legal server-side — Partially
+// Received/Received are derived by receivePurchaseOrder, never caller-set
+// (409 otherwise). Confirmed against updatePoStatusSchema.
+export interface UpdatePurchaseOrderStatusPayload {
+  status: 'Draft' | 'Ordered' | 'Cancelled';
+}
+
+export interface UpdatePurchaseOrderStatusResponse {
+  purchaseOrder: PurchaseOrder;
+}
+
+export interface ReceivePurchaseOrderItemInput {
+  purchaseOrderItemId: number;
+  quantityReceived: number;
+  lotNumber: string;
+}
+
+export interface ReceivePurchaseOrderPayload {
+  items: ReceivePurchaseOrderItemInput[];
+}
+
+export interface ReceivePurchaseOrderResponse {
+  purchaseOrder: PurchaseOrder;
+  stockTransactions: MaterialStockTransaction[];
+}
+
+// ─── Practice CRM: contracts, notes (accounts.controller.js) ──────────
+
+export interface PracticeContract {
+  id: number;
+  practice_id: number;
+  payment_terms: string;
+  credit_limit: string;
+  sales_rep_id: number | null;
+  contract_start_date: string;
+  contract_end_date: string | null;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface ListPracticeContractsResponse {
+  contracts: PracticeContract[];
+}
+
+export interface CreatePracticeContractPayload {
+  paymentTerms: string;
+  creditLimit?: number;
+  salesRepId?: number;
+  contractStartDate: string;
+  contractEndDate?: string;
+}
+
+export interface CreatePracticeContractResponse {
+  contract: PracticeContract;
+}
+
+export interface PracticeNote {
+  id: number;
+  practice_id: number;
+  author_id: number;
+  body: string;
+  created_at: string;
+}
+
+export interface ListPracticeNotesResponse {
+  notes: PracticeNote[];
+}
+
+export interface CreatePracticeNotePayload {
+  body: string;
+}
+
+export interface CreatePracticeNoteResponse {
+  note: PracticeNote;
+}

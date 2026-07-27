@@ -11,6 +11,12 @@ import { ApprovalsPage } from './pages/ApprovalsPage';
 import { InvoicesPage } from './pages/InvoicesPage';
 import { InvoiceDetailPage } from './pages/InvoiceDetailPage';
 import { QcPage } from './pages/QcPage';
+import { MaterialsPage } from './pages/MaterialsPage';
+import { MaterialDetailPage } from './pages/MaterialDetailPage';
+import { PurchaseOrdersPage } from './pages/PurchaseOrdersPage';
+import { PurchaseOrderDetailPage } from './pages/PurchaseOrderDetailPage';
+import { PracticesPage } from './pages/PracticesPage';
+import { PracticeDetailPage } from './pages/PracticeDetailPage';
 import { ComingSoon } from './pages/stubs/ComingSoon';
 import { NAV_ITEMS } from './lib/navConfig';
 
@@ -103,6 +109,71 @@ export default function App() {
             <ProtectedRoute>
               <AppShell>
                 <QcPage />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Session 6 — Materials/inventory, procurement (vendors + POs),
+            practice CRM (contracts/notes), confirmed live against
+            inventory.controller.js / procurement.controller.js /
+            accounts.controller.js (mounted on practices.routes.js). */}
+        <Route
+          path="/materials"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <MaterialsPage />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/materials/:id"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <MaterialDetailPage />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/purchase-orders"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <PurchaseOrdersPage />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/purchase-orders/:id"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <PurchaseOrderDetailPage />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/practices"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <PracticesPage />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/practices/:id"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <PracticeDetailPage />
               </AppShell>
             </ProtectedRoute>
           }
