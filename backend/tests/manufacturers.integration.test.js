@@ -211,6 +211,33 @@ describe('Manufacturers — payouts', () => {
     expect(found.status).toBe('Failed');
   });
 
+  // Session 9 security-hardening regression test — SESSION_9_PROMPT.md §3
+  // flagged this exact spot: the failure response used to interpolate the
+  // raw Stripe SDK error message directly into the client-facing error
+  // string, which isn't guaranteed safe for every Stripe error type (e.g.
+  // an auth/config error can echo back internal detail). This locks in
+  // that the caller now only ever sees a fixed, generic message — never
+  // the underlying err.message — regardless of what Stripe's SDK reports.
+  it('never leaks the raw Stripe SDK error message to the client on a failed transfer', async () => {
+    const ownerToken = await loginAs('owner@dentallab.test');
+    const manufacturerId = await onboardedManufacturer(ownerToken);
+
+    const sensitiveDetail = 'Invalid API Key provided: sk_test_51Sensitive_internal_detail';
+    stripeClient.transfers.create.mockRejectedValueOnce(new Error(sensitiveDetail));
+
+    const createRes = await request(app)
+      .post(`/api/manufacturers/${manufacturerId}/payouts`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ amount: 75 });
+
+    expect(createRes.status).toBe(402);
+    expect(createRes.body.error).not.toContain(sensitiveDetail);
+    expect(createRes.body.error).not.toContain('sk_test_');
+    expect(createRes.body.error).toBe(
+      "Stripe transfer failed. Check the manufacturer's Connect account status and try again, or contact support if this persists."
+    );
+  });
+
   it('a Technician (non-manager role) is blocked from creating a payout', async () => {
     const ownerToken = await loginAs('owner@dentallab.test');
     const techToken = await loginAs('tech1@dentallab.test');

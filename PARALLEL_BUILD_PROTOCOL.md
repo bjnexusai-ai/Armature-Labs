@@ -51,7 +51,14 @@ someone real time re-verifying something that's already fine.
 | 6 | ✅ COMPLETE (144/144 tests — see §9) | ⬜ NOT STARTED | **✅ YES — ready now** |
 | 7 | ✅ COMPLETE (174/174 tests, commit `a32fd77` — table was stale, corrected here per this doc's own §1 precedent: verify against `git log`, not prior table state) | ⬜ NOT STARTED | **✅ YES — ready now** |
 | 8 | ✅ COMPLETE (192/192 tests, commit `c787e86`) | ⬜ NOT STARTED | **✅ YES — ready now** |
-| 9 | ⬜ NOT STARTED | ⬜ NOT STARTED | ❌ blocked on backend |
+| 9 | ✅ COMPLETE — **last session of the 9-session backend plan** (integration pass + security hardening review, 193/193 tests — see `BUILD_LOG.md`'s Session 9 entry) | ⬜ NOT STARTED | **✅ YES — ready now** |
+
+**Backend plan closed as of Session 9.** There is no Session 10 in this
+numbered plan (see `SESSION_9_PROMPT.md`'s header note). Due-date alerts
+(Module 4), live reports (Module 12), rate limiting, CORS origin
+restriction, and refresh-token revocation are all real, confirmed gaps —
+each needs its own separately-scoped session going forward, not a slot in
+this table.
 
 **Stale as of Frontend Session 5 — see the table above, not this
 paragraph.** This paragraph originally said "frontend hasn't started

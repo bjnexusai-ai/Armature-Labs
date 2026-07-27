@@ -79,7 +79,21 @@ async function createPayout(req, res) {
     );
     // The payout row persists as Failed (visible via GET .../payouts) even
     // though this request reports the error rather than a 201.
-    return res.status(402).json({ error: `Stripe transfer failed: ${err.message}`, payout: failed[0] });
+    //
+    // Session 9 security-hardening fix: this used to return
+    // `Stripe transfer failed: ${err.message}` directly to the caller.
+    // Stripe SDK error messages aren't guaranteed client-safe across every
+    // error type (an auth or connection-level failure can echo back
+    // Stripe-internal detail). Full error logged server-side for
+    // debugging; only a generic message goes in the response — the Failed
+    // payout row (already visible via GET .../payouts) is enough signal
+    // that something went wrong without needing the raw SDK message.
+    // eslint-disable-next-line no-console
+    console.error('[payouts] Stripe transfer failed', { payoutId: payout.id, manufacturerId, err });
+    return res.status(402).json({
+      error: 'Stripe transfer failed. Check the manufacturer\'s Connect account status and try again, or contact support if this persists.',
+      payout: failed[0],
+    });
   }
 }
 

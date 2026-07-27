@@ -1001,3 +1001,187 @@ fix/verification trail.
   real manufacturer depends entirely on Gap Audit #16 being answered — this
   session makes the code *able* to handle a supported country, it does not
   confirm the real one is supported.
+
+---
+
+## Session 9 — Full Integration Pass & Security Hardening Review (last
+session of the 9-session backend plan)
+
+**Environment note, stated per §10's honesty precedent:** unlike prior
+sessions, this sandbox had a working `apt-get install postgresql` and a
+runnable local Postgres 16 for the full duration of this session. Every
+finding below was confirmed against the real running app (migrations
+actually executed, `npm test` actually run, endpoints actually hit with
+`curl` as each role), not inferred from reading source — this is stated
+explicitly because it's the exception rather than the rule for this
+project's AI-assisted sessions so far.
+
+**Baseline reconfirmed before writing anything, per §0's standing rule:**
+cloned fresh, `npm install`, `migrate:up` through `0035`, `npm run seed`,
+`npm test` → **192/192 passing, 18/18 suites**, matching `BUILD_LOG.md`'s
+Session 8 claim exactly (this project's own §5 discipline: verify the
+number, don't just trust the log).
+
+**Also confirmed before starting:** `main` (the repo's default branch) is
+stale — stuck at commit `043143c`, well before Session 4. All of Sessions
+6–8 and the corrected `PARALLEL_BUILD_PROTOCOL.md` only exist on
+`session-5-and-5.5`, which is the actual live branch. Not something this
+session can fix (branch-management/merge decision, not code), but flagged
+here so it doesn't cost the next person the same re-discovery time the
+Frontend Session 2 and Session 4/5 log corrections were about.
+
+### Part A — Integration pass
+
+- **Migration chain, full replay:** `migrate:down` in a loop to `0`
+  (confirmed via `pgmigrations` count = 0), then `migrate:up` through
+  `0035` in one pass. Clean — no migration depends on seed data or a
+  removed intermediate state. Re-seeded, re-ran full suite: still
+  192/192.
+- **Cross-session field consistency (`payments.method`):** confirmed
+  `payments.method` is a free-text `varchar(50)` (never enum/CHECK
+  constrained — see `0016_invoices_and_payments.js`), and grepped the
+  entire `src/` tree for hardcoded 3-value method lists (`'Check'`,
+  `'Cash'`, `'Bank Transfer'` together). None exist anywhere upstream.
+  This specific risk point from the prompt is a non-issue.
+- **Permission matrix, actually exercised:** ran one real authenticated
+  request per role (Owner, Office Manager, Assistant/Technician,
+  Designer, dentist_client) against a representative mutating endpoint
+  from each gated module — `POST /api/manufacturers`,
+  `POST /api/procurement/vendors`, `POST /api/inventory/categories`,
+  `POST /api/users`, `GET /api/reports/saved-reports`, `GET /api/cases`
+  — against the live server. Every result matched the gating documented
+  in each session's own `BUILD_LOG.md` entry exactly: Owner/Office
+  Manager pass every gate (the one 400 on `POST /api/users` is a
+  validation-schema rejection, not a permission failure — confirms the
+  role check passed and the zod schema caught it next); Assistant/
+  Technician/Designer get 403 on every manager-gated write but 200 on
+  internal-staff reads; dentist_client gets 403 on every internal-only
+  route and only reaches `GET /api/cases` (tenant-scoped).
+- **Tenant isolation, adversarial pass — done live, not by reading
+  source:** created a second, unrelated practice ("Rival Dental Group",
+  id 47) with its own `dentist_client` user and its own case via the
+  Owner account, then logged in as the seeded Bright Smile dentist and
+  attempted to reach the rival practice's data by guessing its numeric
+  ids. Every attempt returned a clean `403` (`"You do not have access to
+  this practice's data."`) — never partial data, never a 404-vs-200
+  leak: `GET /api/cases/:id`, `GET /api/cases/:id/notes`,
+  `GET /api/cases/:id/shipments`, `GET /api/cases/:id/warranty-claims`,
+  `POST /api/cases/:id/warranty-claims`, `GET /api/practices/:id`. Also
+  traced every controller with zero `assertPracticeAccess` calls
+  (`accounts`, `equipment`, `inventory`, `manufacturers`, `payouts`,
+  `planning`, `procurement`, `qc`, `reference`, `reports`, `users`) and
+  confirmed each is walled off entirely from `dentist_client` via
+  `requireInternal`/`requireManagerRole`/`requireRole` at the router
+  level, so no tenant check is actually needed on those paths. No gaps
+  found.
+- **Idempotency/concurrency spot-check:** checked `approvals.controller.js`
+  (`approveApproval`/`requestChangesApproval`) and
+  `fulfillment.controller.js#resolveWarrantyClaim` — both row-lock via
+  `SELECT ... FOR UPDATE` and reject an already-resolved/non-pending
+  record with `409` before making any state change. Same protection
+  Session 8 built for the Stripe webhook, already present here from
+  earlier sessions. `updateShipmentStatus` sets absolute status (not an
+  increment/insert), so a duplicate request is naturally idempotent by
+  construction. No gap found.
+- **Input validation coverage:** spot-checked every controller for a zod
+  schema behind each mutating endpoint. One apparent gap
+  (`stripe.controller.js#createCheckoutSession` has no zod schema) turned
+  out to be correct as-is — it takes no meaningful request body at all;
+  the invoice id comes from the URL and is looked up + tenant-checked,
+  and the charge amount is always derived server-side from
+  `subtotal - amount_paid`, exactly as documented in Session 8. No fix
+  needed.
+
+### Part B — Security hardening review
+
+- **CORS:** confirmed `app.js` still calls bare `cors()` — any origin
+  allowed. **Flagged, not touched**, per the prompt's explicit
+  instruction: the real portal/mobile origins aren't confirmed yet, so
+  tightening this now would just be a guess.
+- **Rate limiting:** confirmed (again, via grep) nothing like
+  `express-rate-limit` is installed anywhere. **Flagged as a
+  deploy-readiness candidate, not built** — explicitly out of scope per
+  this session's own §0.3 instruction not to bolt on "one more small
+  thing" without a scope decision. `/api/auth/login` and
+  `/api/webhooks/stripe` remain the two obvious candidates whenever this
+  does get scoped.
+- **JWT/session review:** confirmed refresh tokens
+  (`src/utils/tokens.js`) are pure stateless JWTs with no backing store —
+  grepped the whole `src/` and `migrations/` tree for anything
+  resembling a session/revocation table; none exists. **Confirmed: a
+  compromised refresh token cannot be revoked before its natural
+  `JWT_REFRESH_EXPIRES_IN` (7d default) expiry.** Access-token expiry is
+  short (15m default), which bounds how long a *stolen access token*
+  works, but does nothing for a stolen refresh token — an attacker with
+  a refresh token can keep minting fresh 15-minute access tokens for up
+  to 7 days with no way to cut them off server-side. This is a real gap,
+  **flagged and not built this session** — closing it properly needs a
+  `refresh_tokens` (or denylist) table and a "revoke on password
+  change/logout-everywhere" flow, which is a real feature, not a
+  hardening-pass patch, and deserves its own scoped session.
+- **Error handler information leakage — bug found and fixed.**
+  `errorHandler.js` itself is clean (generic message on any 5xx, no
+  stack traces, Postgres error codes mapped to safe generic messages).
+  But `payouts.controller.js#createPayout`'s catch block was
+  interpolating the raw Stripe SDK error directly into the client-facing
+  response: `` `Stripe transfer failed: ${err.message}` ``. This is
+  exactly the risk this session's own prompt named — Stripe SDK error
+  messages aren't guaranteed client-safe across every error type (an
+  auth/config error, for instance, can echo back part of the API key
+  configuration). **Fixed:** the full error is now logged server-side
+  (`console.error`, matching the pattern `errorHandler.js` already uses
+  for 5xx), and the client gets a fixed, generic message. The `Failed`
+  payout row (already visible via `GET /:id/payouts`, unaffected by this
+  fix) remains the source of truth that something went wrong. Regression
+  test added directly to `tests/manufacturers.integration.test.js`
+  (existing file, not a new grab-bag test file, per §4) — asserts a
+  deliberately sensitive-looking mock Stripe error message never appears
+  in the response body and the client only ever sees the fixed generic
+  string.
+- **Secrets in `.env.example` vs. actual required secrets — stale
+  doc, fixed.** `BUILD_LOG.md`'s own Session 8 entry (and
+  `SESSION_9_PROMPT.md`'s pickup instructions) both claim Session 8 added
+  4 Stripe-related vars to `.env.example`. Grepped `src/` for actual
+  `process.env.STRIPE_*`/`APP_BASE_URL` usage and confirmed
+  `.env.example` never actually got them — same "documented but not
+  actually done" pattern this project already caught once with the
+  Session 4/5 "not committed" note. **Fixed:** added
+  `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
+  `STRIPE_CONNECT_ACCOUNT_TYPE`, `APP_BASE_URL` (the 4 vars actually read
+  by running code). Deliberately did **not** add
+  `STRIPE_PUBLISHABLE_KEY` even though earlier docs mention it — grepped
+  and confirmed nothing in `backend/src` reads it (Checkout is a
+  server-created hosted Session, no client-side Stripe.js yet); adding an
+  unused var back in would just reintroduce the same kind of drift this
+  fix is closing.
+
+### §0.2 decision — due-date alerts (Module 4) and live reports
+(Module 12)
+
+**Decision made explicitly, not deferred silently again:** neither gets
+built as part of this integration/hardening session. Both are real
+features (a scheduler/queue for the former, live data-querying logic
+across seven report types for the latter), not gap-fixes that belong in
+a review pass — building either here would repeat the exact "one more
+small thing while already in the file" scope creep this session's own
+§0.3 warns against. **Both need their own session, numbered outside the
+original 9-session backend plan** (Session 10 and/or 11) — this is a
+decision, not a further deferral: recorded here so nobody has to
+re-raise it as new next time.
+
+### Tests
+
+193/193 passing, 18/18 suites (192 baseline + 1 new regression test for
+the error-leak fix). No other bugs found during Part A or Part B that
+needed a regression test — the tenant-isolation and idempotency checks
+above were live-verified but found nothing to fix.
+
+### Closing the 9-session backend plan
+
+This is the last row in `PARALLEL_BUILD_PROTOCOL.md`'s status board's
+backend column — marked as such there, not just "done." Per Session 9's
+own header note: there is no Session 10 in this numbered plan. Anything
+that comes next on the backend (due-date alerts, live reports, rate
+limiting, CORS origins, refresh-token revocation, a real go-live
+checklist) is new, separately-scoped work, not a continuation of this
+plan.
