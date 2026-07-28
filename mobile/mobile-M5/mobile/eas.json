@@ -1,0 +1,33 @@
+{
+  "cli": {
+    "version": ">= 13.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal",
+      "channel": "preview"
+    },
+    "production": {
+      "autoIncrement": true,
+      "channel": "production"
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "appleId": "REPLACE_WITH_REAL_APPLE_ID",
+        "ascAppId": "REPLACE_WITH_REAL_APP_STORE_CONNECT_APP_ID",
+        "appleTeamId": "REPLACE_WITH_REAL_APPLE_TEAM_ID"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./REPLACE_WITH_REAL_PLAY_SERVICE_ACCOUNT.json",
+        "track": "internal"
+      }
+    }
+  }
+}
