@@ -229,9 +229,12 @@ export interface ApprovePayload {
 // Row fields are snake_case (selected straight off `invoices` /
 // `invoice_line_items` / `payments` with no aliasing), under camelCase
 // wrapper keys (`invoice`, `invoices`, `payment`), same convention as
-// CaseRecord/ApprovalRecord. No `dueDate`/`taxAmount`/`paidDate` fields yet
-// — that's Session 5.5's still-open controller work per
-// PARALLEL_BUILD_PROTOCOL.md §4. Don't add them on a guess.
+// CaseRecord/ApprovalRecord. `dueDate`/`taxAmount`/`paidDate` are now wired
+// (Session 5.5 backend fix, 2026-07-28 — confirmed live via curl and the
+// backend's own integration tests, not assumed from the schema/migration
+// alone): due_date/tax_amount/paid_date appear on every invoice response.
+// paidDate is never client-accepted — server-set only, on the transition
+// into Paid.
 // ─────────────────────────────────────────────────────────────────────────
 
 export type InvoiceStatus = 'Draft' | 'Sent' | 'Partially Paid' | 'Paid' | 'Void';
@@ -254,6 +257,11 @@ export interface Payment {
 }
 
 // GET /api/billing/invoices list row — no lineItems/payments joined.
+// due_date/tax_amount/paid_date confirmed live (Session 5.5 backend fix,
+// 2026-07-28) — due_date/paid_date come back as full ISO datetime strings
+// (`date` columns aren't ::text-cast server-side), same ambiguity as
+// CaseRecord.due_date above — use parseFlexibleDate(), don't assume
+// bare YYYY-MM-DD.
 export interface InvoiceListRow {
   id: number;
   invoice_number: string;
@@ -261,6 +269,9 @@ export interface InvoiceListRow {
   status: InvoiceStatus;
   subtotal: string;
   amount_paid: string;
+  due_date: string | null;
+  tax_amount: string;
+  paid_date: string | null;
   notes?: string | null; // present for internal callers, absent for portal rows
   created_at: string;
 }
@@ -273,6 +284,9 @@ export interface InvoiceDetail {
   status: InvoiceStatus;
   subtotal: string;
   amount_paid: string;
+  due_date: string | null;
+  tax_amount: string;
+  paid_date: string | null;
   notes: string | null;
   created_by: number | null;
   created_at: string;
@@ -299,6 +313,8 @@ export interface CreateInvoiceLineItemInput {
 export interface CreateInvoicePayload {
   practiceId: number;
   notes?: string;
+  dueDate?: string; // YYYY-MM-DD, sent as typed; server stores as `date`
+  taxAmount?: number; // defaults to 0 server-side if omitted
   lineItems: CreateInvoiceLineItemInput[];
 }
 
@@ -321,6 +337,9 @@ export interface RecordPaymentResponse {
     status: InvoiceStatus;
     subtotal: string;
     amount_paid: string;
+    due_date: string | null;
+    tax_amount: string;
+    paid_date: string | null;
     updated_at: string;
   };
 }
@@ -815,4 +834,63 @@ export interface CreatePracticeNotePayload {
 
 export interface CreatePracticeNoteResponse {
   note: PracticeNote;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Patients (Frontend Session 5.5 §1) — confirmed live directly against a
+// running backend/src/controllers/patients.controller.js
+// (POST/GET/GET-by-id/PATCH all hit with curl before writing these types),
+// not inferred from the controller source alone. Row fields are
+// snake_case (id, practice_id, first_name, last_name, created_at — no
+// aliasing), under camelCase wrapper keys (`patient`/`patients`), same
+// convention as every other resource in this file. Only firstName/
+// lastName exist on the create/update schemas — no other fields exist,
+// don't add any on a guess.
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface Patient {
+  id: number;
+  practice_id: number;
+  first_name: string;
+  last_name: string;
+  created_at: string;
+}
+
+export interface ListPatientsResponse {
+  patients: Patient[];
+  pagination: Pagination;
+}
+
+export interface GetPatientResponse {
+  patient: Patient;
+}
+
+export interface ListPatientsQuery {
+  practiceId?: number; // required in practice for the practice-scoped tab; optional server-side for internal callers listing across all practices
+  page?: number;
+  limit?: number;
+}
+
+export interface CreatePatientPayload {
+  practiceId: number;
+  firstName: string;
+  lastName: string;
+}
+
+export interface CreatePatientResponse {
+  patient: Patient;
+}
+
+// Both fields optional on the backend (updatePatientSchema — partial
+// update, at least one field required or 400 "No updatable fields
+// provided") — the frontend form always sends both since it's a
+// two-field inline edit, but the type reflects what the schema actually
+// allows.
+export interface UpdatePatientPayload {
+  firstName?: string;
+  lastName?: string;
+}
+
+export interface UpdatePatientResponse {
+  patient: Patient;
 }

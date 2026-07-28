@@ -5,6 +5,7 @@ import type { InvoiceListRow } from '../lib/caseTypes';
 import { useAuth } from '../context/AuthContext';
 import { InvoiceStatusPill } from '../components/InvoiceStatusPill';
 import { NewInvoiceModal } from '../components/NewInvoiceModal';
+import { parseFlexibleDate } from '../lib/dateUtils';
 
 // Role-aware by design, not by branching here: GET /api/billing/invoices
 // itself branches server-side on req.user.role (internal Owner/Office
@@ -89,7 +90,7 @@ export function InvoicesPage() {
           <table className="w-full border-collapse">
             <thead>
               <tr>
-                {['Invoice #', 'Status', 'Subtotal', 'Paid', 'Balance', 'Created', ''].map((h) => (
+                {['Invoice #', 'Status', 'Subtotal', 'Paid', 'Balance', 'Due', 'Created', ''].map((h) => (
                   <th
                     key={h}
                     className="text-left text-[11px] uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border"
@@ -120,6 +121,11 @@ export function InvoicesPage() {
                     </td>
                     <td className="p-3 border-b border-border text-[13px] font-semibold">
                       ${balance.toFixed(2)}
+                    </td>
+                    <td className="p-3 border-b border-border text-[13px] text-ink-soft">
+                      {inv.due_date
+                        ? (parseFlexibleDate(inv.due_date)?.toLocaleDateString() ?? inv.due_date)
+                        : 'No due date'}
                     </td>
                     <td className="p-3 border-b border-border text-[13px] text-ink-soft">
                       {new Date(inv.created_at).toLocaleDateString()}

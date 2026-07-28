@@ -141,6 +141,13 @@ import type {
   ListPracticeNotesResponse,
   CreatePracticeNotePayload,
   CreatePracticeNoteResponse,
+  ListPatientsQuery,
+  ListPatientsResponse,
+  GetPatientResponse,
+  CreatePatientPayload,
+  CreatePatientResponse,
+  UpdatePatientPayload,
+  UpdatePatientResponse,
 } from './caseTypes';
 
 interface GetPracticeResponse {
@@ -574,6 +581,46 @@ export function createPracticeNote(
 ): Promise<CreatePracticeNoteResponse> {
   return apiFetch<CreatePracticeNoteResponse>(`/api/practices/${practiceId}/notes`, {
     method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Patients (Frontend Session 5.5 §1) — confirmed live against a running
+// backend/src/controllers/patients.controller.js + patients.routes.js,
+// mounted at /api/patients. Writes (create/update) are gated server-side:
+// internal staff always allowed; dentist_client requires
+// can_edit_patient_info (requirePortalPermission in patients.routes.js).
+// This module doesn't re-check that client-side beyond hiding the button —
+// same convention as canRecordPayment/canCreate elsewhere in this file.
+// ─────────────────────────────────────────────────────────────────────────
+
+export function listPatients(query: ListPatientsQuery = {}): Promise<ListPatientsResponse> {
+  const params = new URLSearchParams();
+  if (query.practiceId != null) params.set('practiceId', String(query.practiceId));
+  if (query.page != null) params.set('page', String(query.page));
+  if (query.limit != null) params.set('limit', String(query.limit));
+  const qs = params.toString();
+  return apiFetch<ListPatientsResponse>(`/api/patients${qs ? `?${qs}` : ''}`);
+}
+
+export function getPatient(id: string | number): Promise<GetPatientResponse> {
+  return apiFetch<GetPatientResponse>(`/api/patients/${id}`);
+}
+
+export function createPatient(payload: CreatePatientPayload): Promise<CreatePatientResponse> {
+  return apiFetch<CreatePatientResponse>('/api/patients', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updatePatient(
+  id: string | number,
+  payload: UpdatePatientPayload
+): Promise<UpdatePatientResponse> {
+  return apiFetch<UpdatePatientResponse>(`/api/patients/${id}`, {
+    method: 'PATCH',
     body: JSON.stringify(payload),
   });
 }

@@ -1240,3 +1240,99 @@ next click-through should confirm both fixes (metric cards animate to
 real non-zero numbers; hero card's Due field shows a real relative label
 or date instead of "Invalid Date"; Case Queue's Due column shows a
 formatted date).
+
+---
+
+## Session 5.5 — Patients tab + invoice due date/tax/paid display
+
+**Confirmed live before building, per this project's own §0 rule.** Ran
+the real backend against a fresh local Postgres (not previously possible
+in this sandbox — installed Postgres directly, migrated + seeded), then
+curl'd `GET/POST/PATCH /api/patients` and a real invoice response
+directly rather than trusting the prompt's guessed shapes. Both matched:
+`patients`/`patient` camelCase wrappers over snake_case rows
+(`id, practice_id, first_name, last_name, created_at`, ids as strings);
+invoices now genuinely return `due_date`/`tax_amount`/`paid_date` as of
+the same-day backend fix (see `BUILD_LOG.md`'s 2026-07-28 addendum) —
+confirmed the backend fix had actually landed before starting §2, per
+this prompt's own hard prerequisite.
+
+**§1 — Patients tab.** Added to `PracticeDetailPage.tsx` as a third tab
+alongside Contracts/Notes (not a standalone `/patients` nav item — per
+the client-spec doc, patients are practice-scoped). List, inline
+"Add patient" form (firstName/lastName only — no other fields exist on
+`createPatientSchema`), and inline edit (click a row's Edit link → two
+text inputs → Save/Cancel), all confirmed against the running API rather
+than guessed. Gating matches `patients.routes.js` exactly: internal staff
+always allowed; `dentist_client` requires `can_edit_patient_info`
+(`user.canEditPatientInfo` — confirmed via grep this was its first real
+consumer; the only other reference in the whole frontend was a raw debug
+dump in `DashboardPage.tsx`, not a real usage).
+
+Types (`Patient`, `ListPatientsResponse`, `GetPatientResponse`,
+`CreatePatientPayload`/`Response`, `UpdatePatientPayload`/`Response`) and
+API functions (`listPatients`/`getPatient`/`createPatient`/
+`updatePatient`) added to `caseTypes.ts`/`api.ts` following this file's
+existing conventions exactly (camelCase wrapper keys, snake_case row
+fields, no aliasing — same as every other resource here).
+
+**Known, flagged exception to this project's own "every new api.ts
+function must be called somewhere" rule:** `getPatient` has no call site.
+It was added for shape-parity with every other resource in this file
+(each has a get-by-id function), per the build prompt's explicit
+instruction — but there's no standalone patient-detail view in this
+session's scope (patients aren't a nav-level resource, and inline edit
+works off the already-loaded list row, so nothing needs to re-fetch a
+single patient by id). Documented here rather than silently left, or
+force-added a fake call site just to satisfy the check. `GetPatientResponse`
+is likewise currently unused for the same reason. Not a Session 2-style
+bug (nothing is unreachable in the running app) — just a currently-unused
+convenience function.
+
+**§2 — Invoice due date / tax / paid date display.**
+- `InvoiceDetailPage.tsx`: added a 4th stat card ("Due", alongside
+  Subtotal/Amount paid/Balance due — grid changed from 3 to 4 columns,
+  responsive `sm:grid-cols-2 lg:grid-cols-4`), rendering "No due date"
+  for `null` rather than a blank or crash. `paid_date` shown inline next
+  to the status pill, only when `status === 'Paid'`. When
+  `tax_amount > 0`, a distinct Subtotal → Tax → Total breakdown appears
+  under the line items (folded away entirely when tax is 0, so existing
+  zero-tax invoices look unchanged).
+- `InvoicesPage.tsx`: added a "Due" column to the list table, same
+  null-safe "No due date" rendering.
+- `NewInvoiceModal.tsx`: added an optional `<input type="date">` for due
+  date and a tax-amount number field, sent as `dueDate`/`taxAmount` in
+  `CreateInvoicePayload` (both `undefined` when left blank — matches the
+  backend's own optional-with-default-0 schema). Live subtotal+tax=total
+  preview shown only when tax is entered.
+- All three date fields reuse `parseFlexibleDate()` from `lib/dateUtils.ts`
+  (the Session 7 hotfix helper) rather than assuming a bare `YYYY-MM-DD`
+  shape — confirmed via curl that `due_date`/`paid_date` come back as full
+  ISO datetime strings, same ambiguity as `CaseRecord.due_date` already
+  has, exactly the class of bug that helper exists to absorb.
+- **Known, pre-existing, not introduced here:** "Balance due" still
+  compares `amount_paid` against `subtotal` only, not `subtotal + tax`,
+  because that's what the backend's own Paid-status transition logic
+  does (flagged in the same-day `BUILD_LOG.md` addendum as a business-logic
+  decision nobody's made yet). The frontend's Total line is informational
+  only — it does not change what "Balance due" or "Paid" mean here.
+
+**Definition of done:**
+- `npx tsc -b`, `npm run build`, `npx oxlint` all clean (oxlint's 2
+  warnings are pre-existing, in `AuthContext.tsx`/`ToastContext.tsx`,
+  files this session didn't touch).
+- Grep-confirmed every new `api.ts` function is called somewhere, except
+  the one documented exception above (`getPatient`).
+- No new nav item added (Patients tab lives inside `PracticeDetailPage.tsx`,
+  matches the existing Contracts/Notes pattern — confirmed this was the
+  right reading of the client-spec doc before building, not the
+  standalone-`/patients`-page fallback).
+- **Live click-through still isn't possible in a sandbox without a
+  persistent Postgres attached to a real browser session** — same honest
+  caveat Sessions 3/4/7/8 carried. What is different this time: the
+  backend side of this was actually run against a real local Postgres and
+  curl-verified end-to-end (not just build-checked), so the API contract
+  this UI was built against is confirmed-real, not assumed. The UI layer
+  itself is build-verified only; next session with browser access should
+  confirm the Patients tab and the four invoice-field changes render and
+  submit correctly against a live login.

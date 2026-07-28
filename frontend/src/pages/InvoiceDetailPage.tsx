@@ -5,6 +5,7 @@ import type { InvoiceDetail } from '../lib/caseTypes';
 import { useAuth } from '../context/AuthContext';
 import { InvoiceStatusPill } from '../components/InvoiceStatusPill';
 import { RecordPaymentModal } from '../components/RecordPaymentModal';
+import { parseFlexibleDate } from '../lib/dateUtils';
 
 export function InvoiceDetailPage() {
   const { id } = useParams();
@@ -82,6 +83,11 @@ export function InvoiceDetailPage() {
             <span className="text-xs text-ink-soft">
               Created {new Date(invoice.created_at).toLocaleDateString()}
             </span>
+            {invoice.status === 'Paid' && invoice.paid_date && (
+              <span className="text-xs text-ink-soft">
+                · Paid {parseFlexibleDate(invoice.paid_date)?.toLocaleDateString() ?? invoice.paid_date}
+              </span>
+            )}
           </div>
         </div>
         {canRecordPayment && invoice.status !== 'Void' && invoice.status !== 'Paid' && (
@@ -95,7 +101,7 @@ export function InvoiceDetailPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
         <div className="surface-card fade-in rounded-[18px] p-[18px_20px] flex items-center gap-3.5">
           <div
             className="w-11 h-11 rounded-[10px] flex items-center justify-center shrink-0"
@@ -136,6 +142,22 @@ export function InvoiceDetailPage() {
               ${balance.toFixed(2)}
             </div>
             <div className="text-[12.5px] text-ink-soft mt-[3px] font-medium">Balance due</div>
+          </div>
+        </div>
+        <div className="surface-card fade-in rounded-[18px] p-[18px_20px] flex items-center gap-3.5">
+          <div
+            className="w-11 h-11 rounded-[10px] flex items-center justify-center shrink-0"
+            style={{ background: 'var(--color-badge-teal-bg)' }}
+          >
+            <span className="text-badge-teal text-lg">📅</span>
+          </div>
+          <div>
+            <div className="font-display font-bold text-[22px] leading-none tracking-[-0.01em] text-ink">
+              {invoice.due_date
+                ? (parseFlexibleDate(invoice.due_date)?.toLocaleDateString() ?? invoice.due_date)
+                : 'No due date'}
+            </div>
+            <div className="text-[12.5px] text-ink-soft mt-[3px] font-medium">Due</div>
           </div>
         </div>
       </div>
@@ -183,6 +205,22 @@ export function InvoiceDetailPage() {
               ))}
             </tbody>
           </table>
+        )}
+        {Number(invoice.tax_amount) > 0 && (
+          <div className="mt-3 pt-3 border-t border-border space-y-1 text-[13px]">
+            <div className="flex justify-between text-ink-soft">
+              <span>Subtotal</span>
+              <span>${Number(invoice.subtotal).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-ink-soft">
+              <span>Tax</span>
+              <span>${Number(invoice.tax_amount).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between font-semibold text-ink">
+              <span>Total</span>
+              <span>${(Number(invoice.subtotal) + Number(invoice.tax_amount)).toFixed(2)}</span>
+            </div>
+          </div>
         )}
         {invoice.notes && (
           <p className="text-[12.5px] text-ink-soft mt-3 pt-3 border-t border-border">

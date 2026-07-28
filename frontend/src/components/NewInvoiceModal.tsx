@@ -34,6 +34,8 @@ export function NewInvoiceModal({ open, onClose, onCreated }: NewInvoiceModalPro
 
   const [practiceId, setPracticeId] = useState('');
   const [notes, setNotes] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [taxAmount, setTaxAmount] = useState('');
   const [lineItems, setLineItems] = useState<DraftLineItem[]>([emptyLineItem()]);
 
   const [submitting, setSubmitting] = useState(false);
@@ -56,6 +58,8 @@ export function NewInvoiceModal({ open, onClose, onCreated }: NewInvoiceModalPro
     if (!open) {
       setPracticeId('');
       setNotes('');
+      setDueDate('');
+      setTaxAmount('');
       setLineItems([emptyLineItem()]);
     }
   }, [open]);
@@ -101,6 +105,8 @@ export function NewInvoiceModal({ open, onClose, onCreated }: NewInvoiceModalPro
       await createInvoice({
         practiceId: Number(practiceId),
         notes: notes || undefined,
+        dueDate: dueDate || undefined,
+        taxAmount: taxAmount ? Number(taxAmount) : undefined,
         lineItems: cleanLineItems,
       });
       showToast('Invoice created');
@@ -218,7 +224,32 @@ export function NewInvoiceModal({ open, onClose, onCreated }: NewInvoiceModalPro
             </div>
             <p className="text-right text-[12.5px] font-semibold text-ink mt-2">
               Subtotal: ${subtotal.toFixed(2)}
+              {Number(taxAmount) > 0 && (
+                <>
+                  {' '}
+                  + tax ${Number(taxAmount).toFixed(2)} = total ${(subtotal + Number(taxAmount)).toFixed(2)}
+                </>
+              )}
             </p>
+          </div>
+
+          <div className="flex gap-2.5 mb-3.5">
+            <div className="flex-1">
+              <label className="block text-[12.5px] font-semibold text-ink mb-1.5">Due date (optional)</label>
+              <input className="form-input" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            </div>
+            <div className="flex-1">
+              <label className="block text-[12.5px] font-semibold text-ink mb-1.5">Tax amount ($, optional)</label>
+              <input
+                className="form-input"
+                type="number"
+                min={0}
+                step="0.01"
+                placeholder="0.00"
+                value={taxAmount}
+                onChange={(e) => setTaxAmount(e.target.value)}
+              />
+            </div>
           </div>
 
           <div className="mb-3.5">
