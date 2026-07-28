@@ -29,7 +29,36 @@ const { webhookRateLimiter } = require('./middleware/rateLimiter');
 const app = express();
 
 app.use(helmet());
-app.use(cors());
+
+// CORS: wide open (`cors()` with no options, reflects any origin) is fine
+// for local dev / Codespaces — its preview URL changes every session, so
+// there's no single fixed origin to pin there anyway. In production this
+// must be locked to the real deployed frontend domain(s), read from
+// CORS_ORIGIN (comma-separated if there's more than one, e.g. web +
+// mobile's dev server). Fails loudly on boot if NODE_ENV=production and
+// CORS_ORIGIN isn't set, rather than silently falling back to wide-open.
+const corsOrigin = process.env.CORS_ORIGIN;
+if (process.env.NODE_ENV === 'production' && !corsOrigin) {
+  throw new Error('CORS_ORIGIN must be set in production — refusing to start with CORS wide open.');
+}
+const allowedOrigins = corsOrigin ? corsOrigin.split(',').map((o) => o.trim()) : null;
+app.use(
+  cors(
+    allowedOrigins
+      ? {
+          origin: (origin, callback) => {
+            // `origin` is undefined for same-origin/non-browser requests
+            // (curl, server-to-server, Postman) — allow those through same
+            // as before; only browser cross-origin requests are checked
+            // against the allowlist.
+            if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+            callback(new Error(`Origin ${origin} not allowed by CORS`));
+          },
+          credentials: true,
+        }
+      : undefined
+  )
+);
 
 // ── Stripe webhook: MUST be mounted here, before express.json() below. ──
 // Stripe's signature verification (see stripe.controller.js#handleWebhook)
