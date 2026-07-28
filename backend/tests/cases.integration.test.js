@@ -352,3 +352,87 @@ describe('PATCH /api/cases/:id/status — state machine', () => {
     expect(res.status).toBe(403);
   });
 });
+
+// Session 5.5 backend fix — patient_id wiring. The column existed
+// (0023_patients.js / 0025 backfill) but nothing selected or accepted it
+// until now (see SESSION_5_5_BACKEND_FIX_PROMPT.md §2).
+describe('Case ↔ patient linking (Session 5.5 fix)', () => {
+  it('GET /api/cases/:id includes patient_id (null when not linked)', async () => {
+    const token = await loginAs('owner@dentallab.test');
+    const createRes = await createTestCase(token);
+    expect(createRes.body.case).toHaveProperty('patient_id');
+    expect(createRes.body.case.patient_id).toBeNull();
+  });
+
+  it('accepts an optional patientId on create, validated against the same practice', async () => {
+    const token = await loginAs('owner@dentallab.test');
+    const { practiceId, dentistId, caseTypeId } = await getIds();
+
+    const patientRes = await request(app)
+      .post('/api/patients')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ practiceId, firstName: 'Link', lastName: 'Test' });
+    const patientId = patientRes.body.patient.id;
+
+    const caseRes = await request(app)
+      .post('/api/cases')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ practiceId, dentistId, caseTypeId, patientId, dueDate: futureDueDate() });
+
+    expect(caseRes.status).toBe(201);
+    expect(caseRes.body.case.patient_id).toBe(patientId);
+  });
+
+  it('rejects a patientId belonging to a different practice with 400', async () => {
+    const token = await loginAs('owner@dentallab.test');
+    const { practiceId, dentistId, caseTypeId } = await getIds();
+
+    const otherPracticeRes = await query(
+      `INSERT INTO practices (practice_name) VALUES ('Other Practice For Link Test') RETURNING id`
+    );
+    const otherPracticeId = otherPracticeRes.rows[0].id;
+    const patientRes = await request(app)
+      .post('/api/patients')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ practiceId: otherPracticeId, firstName: 'Other', lastName: 'Practice' });
+    const patientId = patientRes.body.patient.id;
+
+    const caseRes = await request(app)
+      .post('/api/cases')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ practiceId, dentistId, caseTypeId, patientId, dueDate: futureDueDate() });
+
+    expect(caseRes.status).toBe(400);
+  });
+
+  it('rejects a nonexistent patientId with 400', async () => {
+    const token = await loginAs('owner@dentallab.test');
+    const { practiceId, dentistId, caseTypeId } = await getIds();
+    const res = await request(app)
+      .post('/api/cases')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ practiceId, dentistId, caseTypeId, patientId: 9999999, dueDate: futureDueDate() });
+    expect(res.status).toBe(400);
+  });
+
+  it('allows setting patientId via PATCH /api/cases/:id after creation', async () => {
+    const token = await loginAs('owner@dentallab.test');
+    const { practiceId } = await getIds();
+    const createRes = await createTestCase(token);
+    const caseId = createRes.body.case.id;
+
+    const patientRes = await request(app)
+      .post('/api/patients')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ practiceId, firstName: 'Later', lastName: 'Linked' });
+    const patientId = patientRes.body.patient.id;
+
+    const updateRes = await request(app)
+      .patch(`/api/cases/${caseId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ patientId });
+
+    expect(updateRes.status).toBe(200);
+    expect(updateRes.body.case.patient_id).toBe(patientId);
+  });
+});

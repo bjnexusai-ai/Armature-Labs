@@ -108,6 +108,13 @@ const createInvoiceSchema = z
   .object({
     practiceId: z.coerce.number().int().positive(),
     notes: z.string().optional(),
+    // Optional per the client-spec INVOICE entity (Project Scope §8) — an
+    // invoice doesn't have to carry a due date or tax at creation time.
+    // `paidDate` is deliberately NOT accepted here: it's server-set only,
+    // on the transition into Paid status (see applyPayment below), the same
+    // way amount_paid is derived rather than client-supplied.
+    dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'dueDate must be an ISO date (YYYY-MM-DD).').optional(),
+    taxAmount: z.coerce.number().nonnegative().optional().default(0),
     lineItems: z
       .array(
         z.object({
@@ -135,10 +142,10 @@ async function createInvoice(req, res) {
     const subtotal = input.lineItems.reduce((sum, li) => sum + li.quantity * li.unitPrice, 0);
 
     const invoiceRow = await client.query(
-      `INSERT INTO invoices (practice_id, status, subtotal, notes, created_by)
-       VALUES ($1, 'Sent', $2, $3, $4)
-       RETURNING id, invoice_number, practice_id, status, subtotal, amount_paid, notes, created_at`,
-      [input.practiceId, subtotal.toFixed(2), input.notes || null, req.user.id]
+      `INSERT INTO invoices (practice_id, status, subtotal, notes, created_by, due_date, tax_amount)
+       VALUES ($1, 'Sent', $2, $3, $4, $5, $6)
+       RETURNING id, invoice_number, practice_id, status, subtotal, amount_paid, notes, due_date, tax_amount, paid_date, created_at`,
+      [input.practiceId, subtotal.toFixed(2), input.notes || null, req.user.id, input.dueDate || null, input.taxAmount.toFixed(2)]
     );
     const invoice = invoiceRow.rows[0];
 
@@ -183,7 +190,7 @@ async function listInvoices(req, res) {
   if (req.user.role === 'dentist_client') {
     const ids = req.user.practice_ids.length ? req.user.practice_ids : [-1];
     const { rows } = await query(
-      `SELECT id, invoice_number, practice_id, status, subtotal, amount_paid, created_at
+      `SELECT id, invoice_number, practice_id, status, subtotal, amount_paid, due_date, tax_amount, paid_date, created_at
        FROM invoices WHERE practice_id = ANY($1::bigint[]) ORDER BY created_at DESC`,
       [ids]
     );
@@ -192,7 +199,7 @@ async function listInvoices(req, res) {
 
   const practiceFilter = req.query.practiceId ? [req.query.practiceId] : null;
   const { rows } = await query(
-    `SELECT id, invoice_number, practice_id, status, subtotal, amount_paid, notes, created_at
+    `SELECT id, invoice_number, practice_id, status, subtotal, amount_paid, notes, due_date, tax_amount, paid_date, created_at
      FROM invoices
      WHERE ($1::bigint IS NULL OR practice_id = $1::bigint)
      ORDER BY created_at DESC`,
@@ -204,7 +211,7 @@ async function listInvoices(req, res) {
 async function getInvoice(req, res) {
   const invoiceId = req.params.id;
   const { rows } = await query(
-    `SELECT id, invoice_number, practice_id, status, subtotal, amount_paid, notes, created_by, created_at, updated_at
+    `SELECT id, invoice_number, practice_id, status, subtotal, amount_paid, notes, due_date, tax_amount, paid_date, created_by, created_at, updated_at
      FROM invoices WHERE id = $1`,
     [invoiceId]
   );
@@ -255,7 +262,7 @@ const recordPaymentSchema = z
  */
 async function applyPayment(client, { invoiceId, amount, method, referenceNote, recordedBy, stripePaymentIntentId, stripeCheckoutSessionId }) {
   const invoiceRow = await client.query(
-    `SELECT id, practice_id, status, subtotal, amount_paid FROM invoices WHERE id = $1 FOR UPDATE`,
+    `SELECT id, practice_id, status, subtotal, amount_paid, tax_amount, paid_date FROM invoices WHERE id = $1 FOR UPDATE`,
     [invoiceId]
   );
   const invoice = invoiceRow.rows[0];
@@ -293,10 +300,20 @@ async function applyPayment(client, { invoiceId, amount, method, referenceNote, 
   // subtotal.
   const newStatus = newAmountPaid >= subtotal ? 'Paid' : 'Partially Paid';
 
+  // paid_date is set once, only on the transition INTO Paid (not on every
+  // payment applied to an already-Paid invoice, e.g. a later overpayment
+  // adjustment) — mirrors the docx §8 field's own "distinct from individual
+  // payments.created_at rows" intent (see 0024's column comment).
+  const transitioningToPaid = newStatus === 'Paid' && invoice.status !== 'Paid';
+
   const updatedInvoiceRow = await client.query(
-    `UPDATE invoices SET amount_paid = $1, status = $2 WHERE id = $3
-     RETURNING id, invoice_number, practice_id, status, subtotal, amount_paid, updated_at`,
-    [newAmountPaid.toFixed(2), newStatus, invoiceId]
+    `UPDATE invoices
+     SET amount_paid = $1,
+         status = $2,
+         paid_date = CASE WHEN $4 THEN CURRENT_DATE ELSE paid_date END
+     WHERE id = $3
+     RETURNING id, invoice_number, practice_id, status, subtotal, amount_paid, due_date, tax_amount, paid_date, updated_at`,
+    [newAmountPaid.toFixed(2), newStatus, invoiceId, transitioningToPaid]
   );
 
   return { payment: paymentRow.rows[0], invoice: updatedInvoiceRow.rows[0] };

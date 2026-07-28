@@ -47,7 +47,7 @@ someone real time re-verifying something that's already fine.
 | 3.5 | ✅ COMPLETE (repo reorg only, no new features) | — | — |
 | 4 | ✅ COMPLETE (69/69 tests) | ✅ BUILT — pending browser click-through (see FRONTEND_LOG.md Session 4) | — |
 | 5 | ✅ COMPLETE (100/100 tests) | ✅ COMPLETE (Messages/notes, progress photos, shipments, warranty claims — tabs in `CaseDetailPage.tsx`, see `frontend/FRONTEND_LOG.md`) | — |
-| 5.5 | ✅ COMPLETE (118/118 tests, commit `0efddfa`) | ⬜ NOT STARTED | **✅ YES — ready now** |
+| 5.5 | ✅ COMPLETE (118/118 tests, commit `0efddfa`) — **+ backend fix addendum 2026-07-28: `due_date`/`tax_amount`/`paid_date`/`patient_id` are now actually selected/accepted, not just migrated columns (see BUILD_LOG.md's 2026-07-28 addendum). 204/204 tests, fresh DB.** | ⬜ NOT STARTED | **✅ YES — ready now, including the invoice-fields half (§2), since the backend fix has landed and is test-verified** |
 | 6 | ✅ COMPLETE (144/144 tests — see §9) | ✅ COMPLETE (Materials/inventory, procurement vendors+POs, practice CRM contracts+notes — see `frontend/FRONTEND_LOG.md`'s Session 6 entry; delivered as two zips, then click-tested live post-delivery: creates confirmed persisted (practice contract, PO status transitions), role-gating confirmed for Owner vs. Assistant Technician (nav items + Adjust button correctly hidden)) | — |
 | 7 | ✅ COMPLETE (174/174 tests, commit `a32fd77` — table was stale, corrected here per this doc's own §1 precedent: verify against `git log`, not prior table state) | ⚠️ PARTIAL — all 3 chunks delivered (Chunk 1: Dashboard retrofit §0.1/§0.2; Chunk 2: Saved reports + 3 charts §1.1; Chunk 3: Equipment + technician scheduling §1.2). All three build-clean (`tsc -b` + `npm run build` + `oxlint` all pass) but **not yet click-tested against a live backend** — no runnable Postgres in this environment. Chunk 3 flags one real open backend item: no `GET /api/technicians` endpoint exists to pair `technicians.id` with a display name, so the new-shift form takes a raw technician ID — worth a small follow-up backend endpoint. | — |
 | 8 | ✅ COMPLETE (192/192 tests, commit `c787e86`) | ⬜ NOT STARTED | **✅ YES — ready now** |
@@ -119,6 +119,21 @@ directly to confirm `dueDate`/`taxAmount`/`paidDate` casing before
 wiring a frontend screen to them. But there is no longer a known open
 item blocking this — Sessions 3/4/5/5.5 are all backend-complete and
 safe to build against.
+
+### Addendum (2026-07-28) — the paragraph above was itself incomplete
+
+A gap audit the same day found that "safe to build against" above was
+premature for the invoice-fields half specifically: `due_date`,
+`tax_amount`, `paid_date` (migration `0024`) and `patient_id` (migration
+`0023`/`0025`) existed as columns but were never selected, accepted, or
+set anywhere in `billing.controller.js`/`cases.controller.js` — confirmed
+by grep returning zero matches for all of them, not just inferred from a
+stale doc. See `SESSION_5_5_BACKEND_FIX_PROMPT.md` and `BUILD_LOG.md`'s
+2026-07-28 addendum for the full fix. That gap is now closed and
+test-verified (204/204, fresh DB, plus a live curl check against a
+running server) — Session 5.5 is now genuinely fully resolved, including
+the invoice-fields half. The frontend prompt's §2 (`InvoiceDetailPage.tsx`
+etc.) is unblocked as of this addendum.
 
 ---
 

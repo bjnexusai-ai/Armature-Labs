@@ -637,6 +637,76 @@ backfills `cases.patient_id` from the legacy flat field. Full suite:
 118/118 passing, 10/10 suites. Session 5.5 is fully closed — no open
 items remain.
 
+### Addendum (2026-07-28) — the close-out claim above was incomplete
+
+A full gap audit on 2026-07-28 found that the "no open items remain" line
+above was wrong: `0024_invoice_client_fields.js` added `due_date`,
+`tax_amount`, `paid_date` to `invoices`, and `0025_backfill_case_patient_id.js`
+added/backfilled `cases.patient_id` — but nothing in `billing.controller.js`
+or `cases.controller.js` ever selected, accepted, or set any of the four
+fields. Confirmed empty before this addendum:
+`grep -n "due_date\|tax_amount\|paid_date" backend/src/controllers/billing.controller.js`
+and `grep -n "patient_id" backend/src/controllers/cases.controller.js` both
+returned nothing. Columns existed; nothing read or wrote them. This addendum
+closes that gap (scoped patch, see `SESSION_5_5_BACKEND_FIX_PROMPT.md`):
+
+- **`billing.controller.js`**: `createInvoiceSchema` gains optional `dueDate`
+  (ISO date string) and `taxAmount` (numeric, default 0). `paidDate` is
+  deliberately **not** client-accepted — server-set only. All three fields
+  now appear in every invoice SELECT: `listInvoices` (both the internal and
+  `dentist_client` branches), `getInvoice`, and the `FOR UPDATE` row-lock
+  select inside `applyPayment`.
+- **`applyPayment()`**: now sets `paid_date = CURRENT_DATE` via a `CASE WHEN`
+  in the same UPDATE, but only on the transition INTO `Paid`
+  (`newStatus === 'Paid' && invoice.status !== 'Paid'`) — a later payment
+  applied to an invoice that's already `Paid` (e.g. a correction/overpayment)
+  does not overwrite the original `paid_date`. Verified with a new test that
+  applies a third payment after the Paid transition and asserts `paid_date`
+  is unchanged.
+- **Decision (documented, not silently picked):** existing invoices with
+  `due_date = NULL` are NOT backfilled. The frontend renders "No due date"
+  for nulls instead — a backfilled due date would be fabricated data no one
+  ever actually set. No new migration needed.
+- **Known, pre-existing (not introduced by this addendum):** `tax_amount`
+  is now selectable and settable, but `applyPayment`'s Paid-status threshold
+  still compares `amount_paid` to `subtotal` only, not `subtotal + tax_amount`.
+  Whether "Paid" should mean "subtotal covered" or "subtotal + tax covered"
+  is a business-logic decision the original fix prompt scoped out ("don't
+  scope-creep into Session 6/7/8 territory") — flagging here for whoever
+  makes that call, rather than silently picking one.
+- **`cases.controller.js`**: `CASE_SELECT_FIELDS` gains `c.patient_id`,
+  additive alongside (not replacing) the legacy `patient_name`/
+  `patient_reference_id` flat fields. `createCaseSchema` and
+  `updateCaseSchema` both gain optional `patientId`, validated against the
+  patient existing **and** belonging to the same practice as the case
+  (mirrors `assertPracticeAccess`'s own reasoning, applied here as a direct
+  row check since it's a data-integrity check between two sibling rows, not
+  a request-user access check). `updateCaseSchema`'s `patientId` is
+  nullable, so an existing link can be cleared, matching `assignedStaffId`'s
+  own pattern.
+- **Tests:** 10 new integration tests added (`billing.integration.test.js`,
+  `cases.integration.test.js`) covering: optional dueDate/taxAmount on
+  create, defaults when omitted, rejection of client-supplied `paidDate`,
+  the paid_date transition timing (including the no-overwrite-after-Paid
+  case), list/get field presence for both internal and portal users, and
+  patientId create/update/cross-practice-rejection/nonexistent-rejection.
+- **Verification, not just build-check:** ran against a real local Postgres
+  16 instance (migrations + seed applied fresh). True baseline confirmed
+  as **194/194** passing (18/19 suites clean the first run — the two extra
+  failures were a pre-existing test-isolation artifact from re-running the
+  suite against a non-reset DB, not anything in this fix; a fresh-DB rerun
+  confirmed 0 regressions at baseline). After this addendum's changes +
+  new tests: **204/204 passing, 19/19 suites, on a fresh DB.** Also manually
+  curl-verified against a live running server (not just supertest) — real
+  response casing confirmed, e.g.
+  `{"due_date":"2026-09-15T00:00:00.000Z","tax_amount":"9.99","paid_date":null}`.
+  Note for whoever builds the frontend half: `date` columns serialize as
+  full ISO datetime strings via pg/Express (same as `cases.due_date` already
+  does), not bare `YYYY-MM-DD` — use `parseFlexibleDate()`, don't assume the
+  bare-date format.
+- Session 5.5 is now **actually** fully closed. `PARALLEL_BUILD_PROTOCOL.md`
+  §4 updated to reflect this addendum, not just the original close-out.
+
 ---
 
 ## Session 6 — Phase 3 Inventory & Procurement + Practice CRM

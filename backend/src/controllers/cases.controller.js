@@ -5,8 +5,15 @@ const { ALL_STATUSES, STATUS_TO_STAGE_NAME } = require('../utils/caseStatus');
 const { applyCaseStatusTransition } = require('../services/caseStatusTransition');
 const notifications = require('../services/notifications');
 
+// patient_id added alongside the legacy patient_name/patient_reference_id
+// flat fields, not in place of them — 0023_patients.js/0025_backfill_case_
+// patient_id.js added the column and backfill, but nothing selected it
+// until now. Frontend still renders the flat fields; this only makes the
+// link reachable for screens that want it (e.g. linking a case to its
+// Patients-tab record). Migrating off patient_name/patient_reference_id
+// entirely is a separate, larger decision this fix deliberately doesn't make.
 const CASE_SELECT_FIELDS = `
-  c.id, c.case_number, c.practice_id, c.dentist_id, c.case_type_id,
+  c.id, c.case_number, c.practice_id, c.dentist_id, c.case_type_id, c.patient_id,
   c.patient_name, c.patient_reference_id, c.rx_instructions, c.priority,
   c.due_date, c.current_status, c.prior_status, c.assigned_staff_id, c.notes,
   c.created_at, c.updated_at
@@ -23,6 +30,10 @@ const createCaseSchema = z
     caseTypeId: z.coerce.number().int().positive(),
     patientName: z.string().max(150).optional(),
     patientReferenceId: z.string().max(50).optional(),
+    // Optional, additive alongside the legacy flat fields above (see
+    // CASE_SELECT_FIELDS comment) — not required, since not every case has
+    // a linked patients-table record yet.
+    patientId: z.coerce.number().int().positive().optional(),
     rxInstructions: z.string().optional(),
     priority: z.enum(['Standard', 'Rush', 'Urgent']).optional().default('Standard'),
     dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'dueDate must be an ISO date (YYYY-MM-DD).'),
@@ -74,18 +85,37 @@ async function createCase(req, res) {
       throw err;
     }
 
+    // patientId, if given, must reference an existing patient at the SAME
+    // practice as the case — mirrors assertPracticeAccess's own reasoning,
+    // applied here as a direct row check since this isn't a request-user
+    // access check but a data-integrity one between two sibling rows.
+    if (input.patientId) {
+      const patientRow = await client.query('SELECT id, practice_id FROM patients WHERE id = $1', [input.patientId]);
+      if (!patientRow.rows[0]) {
+        const err = new Error('patientId does not reference an existing patient.');
+        err.status = 400;
+        throw err;
+      }
+      if (String(patientRow.rows[0].practice_id) !== String(input.practiceId)) {
+        const err = new Error('patientId does not belong to the specified practiceId.');
+        err.status = 400;
+        throw err;
+      }
+    }
+
     // case_number and current_status are NOT set here — DB trigger / column
     // default own them, per the build prompt's explicit instruction.
     const caseRow = await client.query(
       `INSERT INTO cases
-         (practice_id, dentist_id, case_type_id, patient_name, patient_reference_id,
+         (practice_id, dentist_id, case_type_id, patient_id, patient_name, patient_reference_id,
           rx_instructions, priority, due_date, notes)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
        RETURNING ${CASE_SELECT_FIELDS.replace(/c\./g, '')}`,
       [
         input.practiceId,
         input.dentistId,
         input.caseTypeId,
+        input.patientId || null,
         input.patientName || null,
         input.patientReferenceId || null,
         input.rxInstructions || null,
@@ -257,6 +287,9 @@ const updateCaseSchema = z
   .object({
     patientName: z.string().max(150).optional(),
     patientReferenceId: z.string().max(50).optional(),
+    // Nullable so an existing link can be cleared, not just set — mirrors
+    // assignedStaffId's own nullable().optional() pattern below.
+    patientId: z.coerce.number().int().positive().nullable().optional(),
     rxInstructions: z.string().optional(),
     priority: z.enum(['Standard', 'Rush', 'Urgent']).optional(),
     dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'dueDate must be an ISO date (YYYY-MM-DD).').optional(),
@@ -270,6 +303,7 @@ const updateCaseSchema = z
 const COLUMN_BY_FIELD = {
   patientName: 'patient_name',
   patientReferenceId: 'patient_reference_id',
+  patientId: 'patient_id',
   rxInstructions: 'rx_instructions',
   priority: 'priority',
   dueDate: 'due_date',
@@ -288,9 +322,23 @@ async function updateCase(req, res) {
     throw err;
   }
 
-  const existing = await query('SELECT id FROM cases WHERE id = $1', [caseId]);
+  const existing = await query('SELECT id, practice_id FROM cases WHERE id = $1', [caseId]);
   if (!existing.rows[0]) {
     return res.status(404).json({ error: 'Case not found.' });
+  }
+
+  if (input.patientId) {
+    const patientRow = await query('SELECT id, practice_id FROM patients WHERE id = $1', [input.patientId]);
+    if (!patientRow.rows[0]) {
+      const err = new Error('patientId does not reference an existing patient.');
+      err.status = 400;
+      throw err;
+    }
+    if (String(patientRow.rows[0].practice_id) !== String(existing.rows[0].practice_id)) {
+      const err = new Error('patientId does not belong to this case\'s practice.');
+      err.status = 400;
+      throw err;
+    }
   }
 
   const setClauses = [];

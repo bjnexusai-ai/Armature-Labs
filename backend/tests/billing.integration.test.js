@@ -152,3 +152,124 @@ describe('Billing — invoices and payments', () => {
     expect(payRes.status).toBe(409);
   });
 });
+
+// Session 5.5 backend fix — due_date/tax_amount/paid_date wiring. Migration
+// 0024 added these columns; this closes the gap where nothing selected or
+// accepted them (see SESSION_5_5_BACKEND_FIX_PROMPT.md).
+describe('Billing — invoice due date, tax amount, paid date (Session 5.5 fix)', () => {
+  it('accepts optional dueDate/taxAmount on create and returns null paid_date until paid', async () => {
+    const ownerToken = await loginAs('owner@dentallab.test');
+    const { practiceId } = await getIds();
+
+    const res = await request(app)
+      .post('/api/billing/invoices')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        practiceId,
+        dueDate: '2026-09-01',
+        taxAmount: 12.5,
+        lineItems: [{ description: 'Crown', quantity: 1, unitPrice: 200 }],
+      });
+
+    expect(res.status).toBe(201);
+    // `date` columns come back from pg/Express as full ISO datetime strings
+    // (e.g. "2026-09-01T00:00:00.000Z"), same as cases.due_date already
+    // does — this is exactly the ambiguity parseFlexibleDate() on the
+    // frontend was built to absorb, not a regression introduced here.
+    expect(res.body.invoice.due_date).toMatch(/^2026-09-01T00:00:00/);
+    expect(res.body.invoice.tax_amount).toBe('12.50');
+    expect(res.body.invoice.paid_date).toBeNull();
+  });
+
+  it('defaults tax_amount to 0.00 and due_date to null when omitted', async () => {
+    const ownerToken = await loginAs('owner@dentallab.test');
+    const { practiceId } = await getIds();
+
+    const res = await request(app)
+      .post('/api/billing/invoices')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ practiceId, lineItems: [{ description: 'Bridge', quantity: 1, unitPrice: 80 }] });
+
+    expect(res.status).toBe(201);
+    expect(res.body.invoice.due_date).toBeNull();
+    expect(res.body.invoice.tax_amount).toBe('0.00');
+  });
+
+  it('rejects a client-supplied paidDate on create (server-set only)', async () => {
+    const ownerToken = await loginAs('owner@dentallab.test');
+    const { practiceId } = await getIds();
+
+    const res = await request(app)
+      .post('/api/billing/invoices')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        practiceId,
+        paidDate: '2026-01-01',
+        lineItems: [{ description: 'Bridge', quantity: 1, unitPrice: 80 }],
+      });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('sets paid_date only on the transition into Paid, and GET reflects it', async () => {
+    const ownerToken = await loginAs('owner@dentallab.test');
+    const { practiceId } = await getIds();
+
+    const invoiceRes = await request(app)
+      .post('/api/billing/invoices')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ practiceId, lineItems: [{ description: 'Bridge', quantity: 1, unitPrice: 100 }] });
+    const invoiceId = invoiceRes.body.invoice.id;
+    expect(invoiceRes.body.invoice.paid_date).toBeNull();
+
+    const partialRes = await request(app)
+      .post(`/api/billing/invoices/${invoiceId}/payments`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ amount: 40, method: 'Check' });
+    expect(partialRes.body.invoice.paid_date).toBeNull();
+
+    const finalRes = await request(app)
+      .post(`/api/billing/invoices/${invoiceId}/payments`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ amount: 60, method: 'Bank Transfer' });
+    expect(finalRes.body.invoice.status).toBe('Paid');
+    expect(finalRes.body.invoice.paid_date).not.toBeNull();
+
+    const firstPaidDate = finalRes.body.invoice.paid_date;
+
+    // An additional (over)payment applied after Paid must not overwrite the
+    // original paid_date.
+    const extraRes = await request(app)
+      .post(`/api/billing/invoices/${invoiceId}/payments`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ amount: 5, method: 'Check' });
+    expect(extraRes.body.invoice.paid_date).toBe(firstPaidDate);
+
+    const getRes = await request(app)
+      .get(`/api/billing/invoices/${invoiceId}`)
+      .set('Authorization', `Bearer ${ownerToken}`);
+    expect(getRes.status).toBe(200);
+    expect(getRes.body.invoice.paid_date).toBe(firstPaidDate);
+    expect(getRes.body.invoice.due_date).toBeNull();
+    expect(getRes.body.invoice.tax_amount).toBe('0.00');
+  });
+
+  it('list endpoints include due_date/tax_amount/paid_date for both internal and portal users', async () => {
+    const ownerToken = await loginAs('owner@dentallab.test');
+    const dentistToken = await loginAs('dentist@brightsmile.test');
+
+    const internalRes = await request(app).get('/api/billing/invoices').set('Authorization', `Bearer ${ownerToken}`);
+    expect(internalRes.status).toBe(200);
+    expect(internalRes.body.invoices[0]).toHaveProperty('due_date');
+    expect(internalRes.body.invoices[0]).toHaveProperty('tax_amount');
+    expect(internalRes.body.invoices[0]).toHaveProperty('paid_date');
+
+    const portalRes = await request(app).get('/api/billing/invoices').set('Authorization', `Bearer ${dentistToken}`);
+    expect(portalRes.status).toBe(200);
+    if (portalRes.body.invoices.length) {
+      expect(portalRes.body.invoices[0]).toHaveProperty('due_date');
+      expect(portalRes.body.invoices[0]).toHaveProperty('tax_amount');
+      expect(portalRes.body.invoices[0]).toHaveProperty('paid_date');
+    }
+  });
+});
