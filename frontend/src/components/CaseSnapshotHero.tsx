@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import type { CaseRecord } from '../lib/caseTypes';
 import { stagePercent } from '../lib/dashboardMetrics';
+import { parseFlexibleDate } from '../lib/dateUtils';
 
 interface CaseSnapshotHeroProps {
   caseRecord: CaseRecord | null;
@@ -124,9 +125,10 @@ export function CaseSnapshotHero({ caseRecord, caseTypeName, loading }: CaseSnap
 }
 
 function formatDueLabel(dueDate: string): string {
+  const due = parseFlexibleDate(dueDate);
+  if (!due) return 'No due date';
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const due = new Date(`${dueDate}T00:00:00`);
   const diffDays = Math.round((due.getTime() - today.getTime()) / 86_400_000);
   if (diffDays < 0) return 'Overdue';
   if (diffDays === 0) return 'Today';

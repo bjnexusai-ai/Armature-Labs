@@ -1175,3 +1175,68 @@ Session 7 close-out per the prompt's definition-of-done §4 still needs
 the live click-through pass across all three chunks together — that's
 the one item every chunk in this sandbox has consistently deferred to
 whoever runs it against the real, running stack next.
+
+## Session 7 Hotfix — Dashboard metric cards stuck at 0, "Invalid Date" on hero card
+
+Found via live click-through against the real deployed Codespace (not
+this sandbox's build-only checks) — two real, confirmed bugs, both fixed.
+
+**Bug 1 — all four MetricCards showed 0 despite real non-zero data.**
+Confirmed root cause: `lib/useCountUp.ts`'s animation effect had a
+`startedRef` one-shot guard that made it run exactly once, at whichever
+`target` the component *first* mounted with. `DashboardPage` mounts with
+`metrics` at its `{0,0,0,0}` initial state while the real fetch is still
+in flight; once the fetch resolves and `target` changes to the real
+number, the guard skipped re-running the effect, so the displayed value
+froze at 0 permanently. This was invisible with Session 1's old hardcoded
+constants (14/3/5/1 never changed after mount, so the bug never
+triggered) — Chunk 1's real async-loaded data exposed it for the first
+time. Fixed by removing the one-shot guard so the effect re-runs (and
+re-animates) whenever `target` actually changes.
+
+**Bug 2 — hero card's "Due" field showed "Invalid Date".** Confirmed root
+cause against the backend, not guessed: `backend/migrations/0006_cases.js`
+defines `due_date` as a `date` column, but `cases.controller.js`'s SELECT
+never casts it `::text` the way `equipment.controller.js` does for its
+own date columns — that controller's own header comment already flags
+this exact bug class and names `accounts.controller.js`'s
+`contract_start_date` as one instance; `cases.controller.js`'s `due_date`
+is a second, previously uncaught one. Without the cast, it serializes as
+a full ISO timestamp (`"2026-08-06T00:00:00.000Z"`), not the bare
+`YYYY-MM-DD` `caseTypes.ts`'s own comment and every consumer assumed.
+`${dueDate}T00:00:00` on an already-full-ISO string produces an
+unparseable string → `Invalid Date`.
+
+This is a backend Session 2 bug, out of Session 7's scope to fix
+server-side (documented here, not silently patched in `cases.controller.js`
+without being asked) — but every frontend consumer of `due_date` is now
+robust to either shape via a new `lib/dateUtils.ts::parseFlexibleDate()`
+helper:
+- `CaseSnapshotHero.tsx`'s `formatDueLabel` — no more "Invalid Date";
+  falls back to "No due date" only if parsing genuinely fails.
+- `dashboardMetrics.ts`'s `dueThisWeek` calculation — was silently
+  under-counting to 0 for every case with a full-ISO `due_date` for the
+  same reason.
+- `pages/CaseQueuePage.tsx`'s Due column — opportunistic fix, found while
+  investigating the hero card bug: it was rendering the raw ISO timestamp
+  string unformatted (visible directly in the live screenshot). Session 2
+  pre-existing issue, not introduced this session, fixed here rather than
+  left broken now that the root cause was already diagnosed.
+- `caseTypes.ts`'s `due_date` field comment corrected to reflect the
+  confirmed real shape.
+
+**Recommended backend follow-up (not done here, flagged only):** add
+`due_date::text AS due_date` to `cases.controller.js`'s SELECT, matching
+`equipment.controller.js`'s own established pattern for this exact
+problem. Once that lands, `parseFlexibleDate`'s ISO-timestamp branch
+becomes dead code for this field specifically (harmless to leave — it's
+a defensive parse, not a footgun) but the frontend doesn't need to change
+either way.
+
+**Verified:** `npx tsc -b`, `npm run build`, `npx oxlint` all clean.
+`parseFlexibleDate` confirmed imported and used in all 4 real consumer
+files. Not yet re-verified against the live Codespace by me directly —
+next click-through should confirm both fixes (metric cards animate to
+real non-zero numbers; hero card's Due field shows a real relative label
+or date instead of "Invalid Date"; Case Queue's Due column shows a
+formatted date).

@@ -1,6 +1,7 @@
 import type { CaseRecord, CaseStatus } from './caseTypes';
 import { LINEAR_STATUSES } from './caseTypes';
 import { listCases } from './api';
+import { parseFlexibleDate } from './dateUtils';
 
 /**
  * Session 7 §0.2 retrofit — aggregation helpers backing the Dashboard hero
@@ -51,8 +52,8 @@ export function computeDashboardMetrics(cases: CaseRecord[], pendingApprovalCoun
 
   const dueThisWeek = cases.filter((c) => {
     if (c.current_status === 'Delivered') return false;
-    const due = new Date(`${c.due_date}T00:00:00`);
-    return due >= today && due < weekOut;
+    const due = parseFlexibleDate(c.due_date);
+    return due != null && due >= today && due < weekOut;
   }).length;
 
   const onHold = cases.filter((c) => c.current_status === 'Case on Hold' || c.current_status === 'Delayed').length;
@@ -86,6 +87,7 @@ export function stagePercent(status: CaseStatus): number | null {
   if (idx === -1) return null;
   return Math.round((idx / (LINEAR_STATUSES.length - 1)) * 100);
 }
+
 
 export interface WorkflowStepData {
   label: string;
@@ -132,9 +134,18 @@ export function computeTodaysWorkflow(cases: CaseRecord[]): WorkflowStepData[] {
     { label: 'Shipping', count: countBy(['Shipped Out']), suffix: 'today', emptyLabel: 'None today' },
   ];
 
+  // Only the furthest-along stage that currently has cases is "active"
+  // (pulsing dot, no checkmark) — every stage before it is "completed"
+  // (checkmark) since cases have already flowed past it, even if that
+  // stage also happens to have cases sitting in it right now. Without
+  // this, every non-empty stage rendered identically as "active" with no
+  // checkmark distinction, since a lab this size normally has cases in
+  // most stages simultaneously.
+  const lastActiveIndex = raw.reduce((last, s, i) => (s.count > 0 ? i : last), -1);
+
   return raw.map((step, i) => {
-    const laterHasWork = raw.slice(i + 1).some((s) => s.count > 0);
-    const status: WorkflowStepData['status'] = step.count > 0 ? 'active' : laterHasWork ? 'completed' : 'pending';
+    const status: WorkflowStepData['status'] =
+      i < lastActiveIndex ? 'completed' : i === lastActiveIndex ? 'active' : 'pending';
     let sub: string;
     if (step.count === 0) {
       sub = step.emptyLabel;

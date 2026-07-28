@@ -35,7 +35,13 @@ export interface CaseRecord {
   patient_reference_id: string | null;
   rx_instructions: string | null;
   priority: CasePriority;
-  due_date: string; // ISO date (YYYY-MM-DD)
+  // Confirmed live (Session 7 click-through) this is NOT reliably a bare
+  // YYYY-MM-DD string despite the DB column being `date` — cases.controller.js
+  // doesn't ::text-cast it (unlike equipment.controller.js's date columns),
+  // so pg returns a JS Date and it serializes as a full ISO timestamp
+  // (e.g. "2026-08-06T00:00:00.000Z"). Use parseFlexibleDate() from
+  // lib/dateUtils.ts rather than assuming either shape.
+  due_date: string;
   current_status: CaseStatus;
   prior_status: CaseStatus | null;
   assigned_staff_id: number | null;

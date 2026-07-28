@@ -5,6 +5,7 @@ import type { CaseRecord, CaseStatus, Pagination, Practice } from '../lib/caseTy
 import { ALL_STATUSES } from '../lib/caseTypes';
 import { StatusPill } from '../components/StatusPill';
 import { NewCaseModal } from '../components/NewCaseModal';
+import { parseFlexibleDate } from '../lib/dateUtils';
 
 export function CaseQueuePage() {
   const navigate = useNavigate();
@@ -169,7 +170,9 @@ export function CaseQueuePage() {
                   <td className="p-3 border-b border-border">
                     <StatusPill status={c.current_status} />
                   </td>
-                  <td className="p-3 border-b border-border text-[13px]">{c.due_date}</td>
+                  <td className="p-3 border-b border-border text-[13px]">
+                    {parseFlexibleDate(c.due_date)?.toLocaleDateString() ?? c.due_date}
+                  </td>
                 </tr>
               ))}
             </tbody>
