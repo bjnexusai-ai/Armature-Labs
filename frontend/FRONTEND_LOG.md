@@ -1067,3 +1067,111 @@ again to un-isolate), toggle the line chart's three ranges, confirm the
 bar chart against a few real cases' `created_at` dates. Then proceed to
 Chunk 3 (equipment + technician scheduling, §1.2) — separate delivery,
 independent of this chunk per `SESSION_7_PROMPT.md` §3.
+
+## Session 7 (Chunk 3 of 3) — Equipment + technician scheduling (§1.2)
+
+Final chunk of Session 7 per `SESSION_7_PROMPT.md` §3. Independent of
+Chunk 2 (built regardless of chunk order, per the prompt's own note).
+With this chunk, all three Session 7 chunks (§0.1/§0.2 dashboard retrofit,
+§1.1 reports/charts, §1.2 equipment/scheduling) are code-complete.
+
+**Confirmed before writing any code:**
+
+- `equipment.controller.js` — catalog create/status-update is
+  `requireManagerRole`; reads and maintenance-log creation are open to any
+  internal staff (route file's own comment: a technician servicing a
+  machine shouldn't need a manager to log it). Gated the UI to match
+  exactly — status dropdown only rendered for Owner/Office Manager on the
+  detail page, "Log maintenance" open to all.
+- `planning.controller.js` — both shifts and bookings do real
+  check-then-insert-in-a-transaction overlap prevention and return a real
+  `409` on conflict (not a generic 500) — verified the message is
+  surfaced as-is in both new-shift/new-booking modals' error banner, not
+  swallowed into a raw error.
+- `planning.routes.js` — both routes sit at `requireInternal` only, no
+  extra manager gate ("closer to day-to-day scheduling... kept at that
+  floor"). Nav item and create actions gated accordingly — any internal
+  role can create shifts/bookings, not just managers.
+- `listShifts`/`listBookings` return a flat array ordered by `starts_at`,
+  no date-range query params. Per the prompt's own instruction to confirm
+  calendar-vs-list before committing to a UI: built as a simple
+  upcoming/past list, not a calendar grid — a calendar would need
+  date-bucketing invented client-side with no backend signal for it.
+
+**Confirmed gap, flagged rather than guessed around:** no backend route
+returns `technicians.id` paired with a technician's display name.
+`GET /api/users` (manager-only) returns `users.id` + `full_name`, but
+`technician_shifts.technician_id` is a foreign key into the separate
+`technicians` table, and no `GET /api/technicians` (or equivalent) exists
+anywhere in `backend/src/routes/`. Rather than invent a new backend
+endpoint (against this project's own standing rule) or silently assume a
+1:1 `users.id === technicians.id` mapping (it isn't — `technicians.id` is
+its own serial column), the new-shift form takes a plain numeric
+technician ID with an explicit note explaining why. **This is a real
+open item for a future backend session, not a frontend shortcut** — a
+`GET /api/technicians` endpoint joining to the user's name would close
+it cleanly.
+
+**New files:**
+
+- `lib/equipmentTypes.ts` — `Equipment`, `MaintenanceLog`,
+  `TechnicianShift`, `EquipmentBooking` types + all six response shapes.
+  Kept separate from `caseTypes.ts`, same reasoning as Chunk 2's
+  `reportTypes.ts`.
+- `lib/api.ts` — added `listEquipment` / `getEquipmentItem` /
+  `createEquipmentItem` / `updateEquipmentStatus` / `listMaintenanceLogs`
+  / `createMaintenanceLog` / `listShifts` / `createShift` /
+  `listBookings` / `createBooking`.
+- `lib/statusColors.ts` — `EQUIPMENT_STATUS_COLORS` (Active → green,
+  Under Maintenance → amber, Retired → tan), reusing the existing tone
+  families rather than inventing new ones.
+- `components/EquipmentStatusPill.tsx` — copied `POStatusPill.tsx`'s
+  exact pattern.
+- `components/NewEquipmentModal.tsx` — manager-only catalog creation.
+- `components/MaintenanceLogModal.tsx` — open to all internal staff;
+  `nextDueDate` left optional/blank-safe per the controller's own
+  documented bugfix (an empty value must NOT overwrite an existing future
+  due date).
+- `components/NewShiftModal.tsx` / `NewBookingModal.tsx` — create forms
+  with real 409-conflict surfacing. Booking's case picker is a real
+  `GET /api/cases` page (fully resolvable, unlike the technician-ID gap
+  above); equipment picker reuses `SchedulingPage`'s already-loaded
+  equipment list.
+- `pages/EquipmentPage.tsx` — list + status filter, mirrors
+  `MaterialsPage.tsx`'s structure exactly.
+- `pages/EquipmentDetailPage.tsx` — status change (manager-gated) +
+  maintenance log history, mirrors `MaterialDetailPage.tsx`.
+- `pages/SchedulingPage.tsx` — tabbed shifts/bookings, each split into
+  upcoming/past (client-side only, not re-sorted — both lists are already
+  ordered `starts_at ASC` server-side).
+
+**Wiring:** `App.tsx` gets real `/equipment`, `/equipment/:id`,
+`/scheduling` routes. `navConfig.ts`'s `equipment` entry flipped to
+`live: true`; new `scheduling` nav item added (new `NavIconKey` +
+matching stroke-icon in `AppShell.tsx`, same viewBox/stroke-width
+convention as every other nav icon). Neither path is reachable via the
+generic `ComingSoon` stub route anymore.
+
+**Verified this chunk:** `npx tsc -b`, `npm run build`, and `npx oxlint`
+all clean (same two pre-existing, unrelated context-file warnings as
+every prior chunk). Every new file grepped for at least one import
+outside itself — all wired.
+
+**Not yet done — same standing item as every chunk built in this
+sandbox:** no live Postgres/browser here, build-verified only. Real
+click-through still needed: create equipment, log maintenance, confirm
+it appears and (if a `nextDueDate` was given) the equipment's own due
+date updates; change equipment status as a manager and confirm a
+non-manager can't; create a technician shift and confirm a genuinely
+overlapping second shift for the same technician surfaces the real 409
+message, not a raw error; same for equipment bookings; confirm a
+non-manager can still create equipment/scheduling records (creation
+isn't manager-gated) but cannot create/edit the equipment catalog itself
+or change an equipment's status.
+
+**Session 7 status:** all three chunks (dashboard retrofit, reports/
+charts, equipment/scheduling) are code-complete and build-verified. Full
+Session 7 close-out per the prompt's definition-of-done §4 still needs
+the live click-through pass across all three chunks together — that's
+the one item every chunk in this sandbox has consistently deferred to
+whoever runs it against the real, running stack next.

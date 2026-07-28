@@ -132,3 +132,17 @@ export const PO_STATUS_COLORS: Record<
   Received: { bg: 'var(--color-pill-green-bg)', text: 'var(--color-pill-green-text)' },
   Cancelled: { bg: 'var(--color-pill-red-bg)', text: 'var(--color-pill-red-text)' },
 };
+
+// Equipment status pill (Frontend Session 7 Chunk 3) — Active reuses the
+// green "fine/ready" tone (same family as OK/Received above), Under
+// Maintenance reuses the amber "needs attention" tone (same as Low Stock/
+// Partially Paid), Retired reuses the neutral tan tone (same as Draft/Void
+// — a settled, non-error terminal state, not a red exception path).
+export const EQUIPMENT_STATUS_COLORS: Record<
+  'Active' | 'Under Maintenance' | 'Retired',
+  { bg: string; text: string }
+> = {
+  Active: { bg: 'var(--color-pill-green-bg)', text: 'var(--color-pill-green-text)' },
+  'Under Maintenance': { bg: 'var(--color-badge-amber-bg)', text: 'var(--color-badge-amber)' },
+  Retired: { bg: 'var(--color-badge-tan-bg)', text: 'var(--color-badge-tan)' },
+};

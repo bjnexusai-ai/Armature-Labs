@@ -17,6 +17,7 @@ export type NavIconKey =
   | 'procurement'
   | 'practices'
   | 'equipment'
+  | 'scheduling'
   | 'invoices'
   | 'reports'
   | 'messages'
@@ -105,6 +106,19 @@ export const NAV_ITEMS: NavItem[] = [
     icon: 'equipment',
     roles: ['owner', 'office_manager', 'assistant_technician', 'designer'],
     session: 7,
+    live: true,
+  },
+  {
+    key: 'scheduling',
+    label: 'Scheduling',
+    path: '/scheduling',
+    section: 'Operations',
+    icon: 'scheduling',
+    // planning.routes.js is requireInternal only, no extra manager gate —
+    // kept at that floor, matching the route file's own comment.
+    roles: ['owner', 'office_manager', 'assistant_technician', 'designer'],
+    session: 7,
+    live: true,
   },
   {
     key: 'qc',

@@ -18,6 +18,9 @@ import { PurchaseOrderDetailPage } from './pages/PurchaseOrderDetailPage';
 import { PracticesPage } from './pages/PracticesPage';
 import { PracticeDetailPage } from './pages/PracticeDetailPage';
 import { ReportsPage } from './pages/ReportsPage';
+import { EquipmentPage } from './pages/EquipmentPage';
+import { EquipmentDetailPage } from './pages/EquipmentDetailPage';
+import { SchedulingPage } from './pages/SchedulingPage';
 import { ComingSoon } from './pages/stubs/ComingSoon';
 import { NAV_ITEMS } from './lib/navConfig';
 
@@ -189,6 +192,42 @@ export default function App() {
             <ProtectedRoute>
               <AppShell>
                 <ReportsPage />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Session 7 Chunk 3 — equipment catalog/maintenance + technician
+            scheduling, real endpoints (GET/POST /api/equipment,
+            /api/equipment/:id/maintenance-logs, /api/planning/shifts,
+            /api/planning/bookings) confirmed against their controllers
+            before building. */}
+        <Route
+          path="/equipment"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <EquipmentPage />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/equipment/:id"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <EquipmentDetailPage />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/scheduling"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <SchedulingPage />
               </AppShell>
             </ProtectedRoute>
           }

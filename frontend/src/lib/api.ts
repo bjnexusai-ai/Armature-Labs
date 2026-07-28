@@ -577,3 +577,91 @@ export function createPracticeNote(
     body: JSON.stringify(payload),
   });
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Session 7 Chunk 3 — equipment + technician scheduling. Confirmed against
+// equipment.controller.js / planning.controller.js directly. Types kept in
+// ./equipmentTypes (same reasoning as ./reportTypes in Chunk 2 — unrelated
+// resource, keeps caseTypes.ts's already-large import block from growing
+// further).
+// ─────────────────────────────────────────────────────────────────────────
+import type {
+  ListEquipmentResponse,
+  GetEquipmentResponse,
+  CreateEquipmentPayload,
+  CreateEquipmentResponse,
+  UpdateEquipmentStatusPayload,
+  ListMaintenanceLogsResponse,
+  CreateMaintenanceLogPayload,
+  CreateMaintenanceLogResponse,
+  ListShiftsResponse,
+  CreateShiftPayload,
+  CreateShiftResponse,
+  ListBookingsResponse,
+  CreateBookingPayload,
+  CreateBookingResponse,
+} from './equipmentTypes';
+
+export function listEquipment(status?: string): Promise<ListEquipmentResponse> {
+  const qs = status ? `?status=${encodeURIComponent(status)}` : '';
+  return apiFetch<ListEquipmentResponse>(`/api/equipment${qs}`);
+}
+
+export function getEquipmentItem(id: string | number): Promise<GetEquipmentResponse> {
+  return apiFetch<GetEquipmentResponse>(`/api/equipment/${id}`);
+}
+
+export function createEquipmentItem(payload: CreateEquipmentPayload): Promise<CreateEquipmentResponse> {
+  return apiFetch<CreateEquipmentResponse>('/api/equipment', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateEquipmentStatus(
+  id: string | number,
+  payload: UpdateEquipmentStatusPayload
+): Promise<GetEquipmentResponse> {
+  return apiFetch<GetEquipmentResponse>(`/api/equipment/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function listMaintenanceLogs(equipmentId: string | number): Promise<ListMaintenanceLogsResponse> {
+  return apiFetch<ListMaintenanceLogsResponse>(`/api/equipment/${equipmentId}/maintenance-logs`);
+}
+
+export function createMaintenanceLog(
+  equipmentId: string | number,
+  payload: CreateMaintenanceLogPayload
+): Promise<CreateMaintenanceLogResponse> {
+  return apiFetch<CreateMaintenanceLogResponse>(`/api/equipment/${equipmentId}/maintenance-logs`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function listShifts(technicianId?: number): Promise<ListShiftsResponse> {
+  const qs = technicianId != null ? `?technicianId=${technicianId}` : '';
+  return apiFetch<ListShiftsResponse>(`/api/planning/shifts${qs}`);
+}
+
+export function createShift(payload: CreateShiftPayload): Promise<CreateShiftResponse> {
+  return apiFetch<CreateShiftResponse>('/api/planning/shifts', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function listBookings(equipmentId?: number): Promise<ListBookingsResponse> {
+  const qs = equipmentId != null ? `?equipmentId=${equipmentId}` : '';
+  return apiFetch<ListBookingsResponse>(`/api/planning/bookings${qs}`);
+}
+
+export function createBooking(payload: CreateBookingPayload): Promise<CreateBookingResponse> {
+  return apiFetch<CreateBookingResponse>('/api/planning/bookings', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}

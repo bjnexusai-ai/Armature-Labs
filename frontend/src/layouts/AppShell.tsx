@@ -72,6 +72,14 @@ const NAV_ICON_PATHS: Record<NavIconKey, ReactNode> = {
   messages: (
     <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7A2.5 2.5 0 0 1 17.5 16H10l-4.5 4V16H6.5A2.5 2.5 0 0 1 4 13.5v-7Z" />
   ),
+  scheduling: (
+    <>
+      <rect x="3.5" y="4.5" width="17" height="16" rx="2" />
+      <path d="M3.5 9.5h17" />
+      <path d="M8 3v3M16 3v3" />
+      <path d="M12 13v3.2l2 1.3" />
+    </>
+  ),
   qc: (
     <>
       <rect x="4.5" y="3.5" width="15" height="17" rx="2" />
