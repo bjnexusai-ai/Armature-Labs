@@ -21,6 +21,8 @@ import { ReportsPage } from './pages/ReportsPage';
 import { EquipmentPage } from './pages/EquipmentPage';
 import { EquipmentDetailPage } from './pages/EquipmentDetailPage';
 import { SchedulingPage } from './pages/SchedulingPage';
+import { ManufacturersPage } from './pages/ManufacturersPage';
+import { ManufacturerDetailPage } from './pages/ManufacturerDetailPage';
 import { ComingSoon } from './pages/stubs/ComingSoon';
 import { NAV_ITEMS } from './lib/navConfig';
 
@@ -228,6 +230,32 @@ export default function App() {
             <ProtectedRoute>
               <AppShell>
                 <SchedulingPage />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Session 8 — Stripe Checkout UI (invoice Pay Now, dental office ->
+            lab, wired into InvoiceDetailPage directly rather than a new
+            route) + manufacturers/payouts (lab -> manufacturer), confirmed
+            live against stripe.controller.js / manufacturers.controller.js /
+            payouts.controller.js before building. */}
+        <Route
+          path="/manufacturers"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <ManufacturersPage />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/manufacturers/:id"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <ManufacturerDetailPage />
               </AppShell>
             </ProtectedRoute>
           }

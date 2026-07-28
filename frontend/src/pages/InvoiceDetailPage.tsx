@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { ApiError, getInvoice } from '../lib/api';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { ApiError, createCheckoutSession, getInvoice } from '../lib/api';
 import type { InvoiceDetail } from '../lib/caseTypes';
 import { useAuth } from '../context/AuthContext';
 import { InvoiceStatusPill } from '../components/InvoiceStatusPill';
@@ -10,17 +10,36 @@ import { parseFlexibleDate } from '../lib/dateUtils';
 export function InvoiceDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
 
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   // Recording a payment is Owner/Office Manager only server-side
   // (requireBillingAccess on POST /invoices/:id/payments) — hides the
   // action for portal viewers, who'd otherwise get a 403.
   const canRecordPayment = user?.role === 'owner' || user?.role === 'office_manager';
+
+  // Mirrors stripe.routes.js's requireCheckoutAccess exactly: internal
+  // Owner/Office Manager, or a dentist_client with can_view_invoices=true.
+  // Kept as a separate flag from canRecordPayment above (rather than
+  // reusing it) because the server-side gate genuinely differs — a portal
+  // user can pay their own invoice via Stripe but can never hit the manual
+  // mark-paid endpoint.
+  const canPayViaStripe =
+    canRecordPayment || (user?.role === 'dentist_client' && user.canViewInvoices);
+
+  // ?payment=success / ?payment=cancelled — Stripe's own redirect back from
+  // success_url/cancel_url (see createCheckoutSession in
+  // stripe.controller.js). The webhook that actually applies the payment is
+  // async and may land a moment after this redirect, so "success" here
+  // means Checkout was completed, not that amount_paid has updated yet.
+  const paymentRedirect = searchParams.get('payment');
 
   const load = useCallback(() => {
     if (!id) return;
@@ -37,6 +56,25 @@ export function InvoiceDetailPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  async function handlePayNow() {
+    if (!id) return;
+    setCheckoutError(null);
+    setCheckoutLoading(true);
+    try {
+      const res = await createCheckoutSession(id);
+      window.location.href = res.checkoutSession.url;
+    } catch (err) {
+      setCheckoutError(err instanceof ApiError ? err.message : 'Could not start checkout.');
+      setCheckoutLoading(false);
+    }
+  }
+
+  function dismissPaymentBanner() {
+    const next = new URLSearchParams(searchParams);
+    next.delete('payment');
+    setSearchParams(next, { replace: true });
+  }
 
   if (loading) {
     return (
@@ -75,6 +113,30 @@ export function InvoiceDetailPage() {
         ← Back to invoices
       </button>
 
+      {paymentRedirect === 'success' && (
+        <div className="flex items-center justify-between text-[12.5px] text-[#1C6B4A] bg-[#E9F7F0] border border-[#C6E9D8] rounded-xl px-3.5 py-2.5 mb-4">
+          <span>
+            Payment submitted. It can take a few moments for the balance below to update once Stripe's webhook lands.
+          </span>
+          <button onClick={dismissPaymentBanner} className="font-semibold hover:underline shrink-0 ml-3">
+            Dismiss
+          </button>
+        </div>
+      )}
+      {paymentRedirect === 'cancelled' && (
+        <div className="flex items-center justify-between text-[12.5px] text-ink-soft bg-page-bg-top border border-border rounded-xl px-3.5 py-2.5 mb-4">
+          <span>Checkout was cancelled — no payment was made.</span>
+          <button onClick={dismissPaymentBanner} className="font-semibold hover:underline shrink-0 ml-3">
+            Dismiss
+          </button>
+        </div>
+      )}
+      {checkoutError && (
+        <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
+          {checkoutError}
+        </div>
+      )}
+
       <div className="flex items-start justify-between mb-5">
         <div>
           <h2 className="font-display text-lg font-bold text-ink mb-1 font-mono">{invoice.invoice_number}</h2>
@@ -90,14 +152,28 @@ export function InvoiceDetailPage() {
             )}
           </div>
         </div>
-        {canRecordPayment && invoice.status !== 'Void' && invoice.status !== 'Paid' && (
-          <button
-            onClick={() => setPaymentModalOpen(true)}
-            className="px-4 py-2.5 rounded-[10px] text-white text-[13px] font-semibold"
-            style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)' }}
-          >
-            Mark as paid
-          </button>
+        {invoice.status !== 'Void' && invoice.status !== 'Paid' && (
+          <div className="flex items-center gap-2">
+            {canPayViaStripe && (
+              <button
+                onClick={handlePayNow}
+                disabled={checkoutLoading}
+                className="px-4 py-2.5 rounded-[10px] text-white text-[13px] font-semibold disabled:opacity-60"
+                style={{ background: 'linear-gradient(135deg,#5B4CC4,#7A6CE0)' }}
+              >
+                {checkoutLoading ? 'Redirecting…' : 'Pay with card'}
+              </button>
+            )}
+            {canRecordPayment && (
+              <button
+                onClick={() => setPaymentModalOpen(true)}
+                className="px-4 py-2.5 rounded-[10px] text-white text-[13px] font-semibold"
+                style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)' }}
+              >
+                Mark as paid
+              </button>
+            )}
+          </div>
         )}
       </div>
 

@@ -345,6 +345,108 @@ export interface RecordPaymentResponse {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// Stripe checkout + Manufacturers/Payouts (Frontend Session 8) — confirmed
+// directly against backend/src/controllers/stripe.controller.js,
+// manufacturers.controller.js, and payouts.controller.js. Manufacturer rows
+// are snake_case (straight off `manufacturers`, no aliasing) under a
+// camelCase `manufacturer`/`manufacturers` wrapper key, same convention as
+// everywhere else in this codebase. `createCheckoutSession` is mounted at
+// POST /api/billing/invoices/:id/checkout-session (not a top-level
+// /api/stripe path) — see stripe.routes.js's own comment on why.
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface CreateCheckoutSessionResponse {
+  checkoutSession: {
+    id: string;
+    url: string;
+  };
+}
+
+export interface Manufacturer {
+  id: number;
+  name: string;
+  contact_name: string | null;
+  email: string | null;
+  phone: string | null;
+  country: string;
+  stripe_connected_account_id: string | null;
+  connect_status: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface ListManufacturersResponse {
+  manufacturers: Manufacturer[];
+}
+
+export interface GetManufacturerResponse {
+  manufacturer: Manufacturer;
+}
+
+export interface CreateManufacturerPayload {
+  name: string;
+  contactName?: string;
+  email?: string;
+  phone?: string;
+  country: string;
+}
+
+export interface CreateManufacturerResponse {
+  manufacturer: Manufacturer;
+}
+
+export interface UpdateManufacturerPayload {
+  name?: string;
+  contactName?: string;
+  email?: string;
+  phone?: string;
+  country?: string;
+}
+
+export interface UpdateManufacturerResponse {
+  manufacturer: Manufacturer;
+}
+
+export interface CreateConnectOnboardingLinkResponse {
+  onboardingLink: {
+    url: string;
+    expiresAt: number;
+  };
+}
+
+export type PayoutStatus = 'Pending' | 'Paid' | 'Failed';
+
+export interface ManufacturerPayout {
+  id: number;
+  manufacturer_id: number;
+  case_id: number | null;
+  amount: string;
+  currency: string;
+  stripe_transfer_id: string | null;
+  status: PayoutStatus;
+  initiated_by?: number;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface ListPayoutsResponse {
+  payouts: ManufacturerPayout[];
+}
+
+export interface CreatePayoutPayload {
+  caseId?: number;
+  amount: number;
+  currency?: string;
+}
+
+// 402 on Stripe transfer failure still returns a `payout` (status Failed) —
+// callers should read err.body?.payout on ApiError to show the failed row
+// rather than just an error toast, per payouts.controller.js's own comment.
+export interface CreatePayoutResponse {
+  payout: ManufacturerPayout;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // QC (Frontend Session 4) — confirmed directly against
 // backend/src/controllers/qc.controller.js and qc.routes.js. This session
 // only covers the three routes actually mounted on qc.routes.js

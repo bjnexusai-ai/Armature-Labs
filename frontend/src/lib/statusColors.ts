@@ -146,3 +146,23 @@ export const EQUIPMENT_STATUS_COLORS: Record<
   'Under Maintenance': { bg: 'var(--color-badge-amber-bg)', text: 'var(--color-badge-amber)' },
   Retired: { bg: 'var(--color-badge-tan-bg)', text: 'var(--color-badge-tan)' },
 };
+
+// Manufacturer payout status pill (Frontend Session 8) — Pending reuses the
+// mustard "awaiting action" tone (same family as Ordered/Open above), Paid
+// reuses green "done" (same as Received/Resolved), Failed reuses red (same
+// as Cancelled/Denied), matching this file's established reasoning.
+export const PAYOUT_STATUS_COLORS: Record<'Pending' | 'Paid' | 'Failed', { bg: string; text: string }> = {
+  Pending: { bg: 'var(--color-pill-mustard-bg)', text: 'var(--color-pill-mustard-text)' },
+  Paid: { bg: 'var(--color-pill-green-bg)', text: 'var(--color-pill-green-text)' },
+  Failed: { bg: 'var(--color-pill-red-bg)', text: 'var(--color-pill-red-text)' },
+};
+
+// Manufacturer Stripe Connect onboarding status pill (Frontend Session 8) —
+// backend's `connect_status` column only ever writes 'Onboarding' (see
+// manufacturers.controller.js's createConnectOnboardingLink), so the neutral
+// tan "not started yet" tone covers everything else (default/null included)
+// as a fallback in the component itself, not enumerated here as a fixed
+// union — same open-ended style as MATERIAL_STATUS_COLORS above.
+export const CONNECT_STATUS_COLORS: Record<string, { bg: string; text: string }> = {
+  Onboarding: { bg: 'var(--color-badge-amber-bg)', text: 'var(--color-badge-amber)' },
+};

@@ -22,6 +22,7 @@ const reportsRoutes = require('./routes/reports.routes');
 const equipmentRoutes = require('./routes/equipment.routes');
 const planningRoutes = require('./routes/planning.routes');
 const manufacturersRoutes = require('./routes/manufacturers.routes');
+const deviceTokensRoutes = require('./routes/devicePushTokens.routes');
 const { checkoutRouter: stripeCheckoutRoutes, webhookRouter: stripeWebhookRoutes } = require('./routes/stripe.routes');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 const { webhookRateLimiter } = require('./middleware/rateLimiter');
@@ -98,6 +99,7 @@ app.use('/api/reports', reportsRoutes);
 app.use('/api/equipment', equipmentRoutes);
 app.use('/api/planning', planningRoutes);
 app.use('/api/manufacturers', manufacturersRoutes);
+app.use('/api/device-push-tokens', deviceTokensRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

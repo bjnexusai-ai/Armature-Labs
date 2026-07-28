@@ -21,7 +21,8 @@ export type NavIconKey =
   | 'invoices'
   | 'reports'
   | 'messages'
-  | 'qc';
+  | 'qc'
+  | 'manufacturers';
 
 export interface NavItem {
   key: string;
@@ -151,6 +152,19 @@ export const NAV_ITEMS: NavItem[] = [
     icon: 'reports',
     roles: ['owner', 'office_manager'],
     session: 7,
+    live: true,
+  },
+  {
+    key: 'manufacturers',
+    label: 'Manufacturers',
+    path: '/manufacturers',
+    section: 'Finance',
+    icon: 'manufacturers',
+    // manufacturers.routes.js applies requireManagerRole once at the router
+    // level to every route, including reads — no dentist_client or other
+    // internal-role access at all, gated to match.
+    roles: ['owner', 'office_manager'],
+    session: 8,
     live: true,
   },
 ];

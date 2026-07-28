@@ -50,7 +50,7 @@ someone real time re-verifying something that's already fine.
 | 5.5 | ✅ COMPLETE (118/118 tests, commit `0efddfa`) — **+ backend fix addendum 2026-07-28: `due_date`/`tax_amount`/`paid_date`/`patient_id` are now actually selected/accepted, not just migrated columns (see BUILD_LOG.md's 2026-07-28 addendum). 204/204 tests, fresh DB.** | ✅ COMPLETE (Patients tab in `PracticeDetailPage.tsx` + invoice due/tax/paid display — see `frontend/FRONTEND_LOG.md`'s Session 5.5 entry. `tsc -b`/`build`/`oxlint` all clean. One documented exception to the "every api.ts function called somewhere" rule: `getPatient` has no call site, added for shape-parity only — see log. Not yet live click-tested, same caveat as Sessions 3/4/7/8.) | — |
 | 6 | ✅ COMPLETE (144/144 tests — see §9) | ✅ COMPLETE (Materials/inventory, procurement vendors+POs, practice CRM contracts+notes — see `frontend/FRONTEND_LOG.md`'s Session 6 entry; delivered as two zips, then click-tested live post-delivery: creates confirmed persisted (practice contract, PO status transitions), role-gating confirmed for Owner vs. Assistant Technician (nav items + Adjust button correctly hidden)) | — |
 | 7 | ✅ COMPLETE (174/174 tests, commit `a32fd77` — table was stale, corrected here per this doc's own §1 precedent: verify against `git log`, not prior table state) | ⚠️ PARTIAL — all 3 chunks delivered (Chunk 1: Dashboard retrofit §0.1/§0.2; Chunk 2: Saved reports + 3 charts §1.1; Chunk 3: Equipment + technician scheduling §1.2). All three build-clean (`tsc -b` + `npm run build` + `oxlint` all pass) but **not yet click-tested against a live backend** — no runnable Postgres in this environment. Chunk 3 flags one real open backend item: no `GET /api/technicians` endpoint exists to pair `technicians.id` with a display name, so the new-shift form takes a raw technician ID — worth a small follow-up backend endpoint. | — |
-| 8 | ✅ COMPLETE (192/192 tests, commit `c787e86`) | ⬜ NOT STARTED | **✅ YES — ready now** |
+| 8 | ✅ COMPLETE (192/192 tests, commit `c787e86`) | ✅ BUILT — Stripe Pay Now wired into InvoiceDetailPage, Manufacturers/Payouts screens added (`tsc -b`/`npm run build`/`oxlint` all clean); pending live click-through, no runnable Postgres in this sandbox — see `frontend/FRONTEND_LOG.md`'s Session 8 entry | — |
 | 9 | ✅ COMPLETE — **last session of the 9-session backend plan** (integration pass + security hardening review, 193/193 tests — see `BUILD_LOG.md`'s Session 9 entry) | ⬜ NOT STARTED | **✅ YES — ready now** |
 
 **Backend plan closed as of Session 9.** There is no Session 10 in this
@@ -192,25 +192,31 @@ push. One addition specific to parallel-build coordination:
 
 ## 8. Immediate Recommended Next Actions
 
-**Backend:** Session 6 (Phase 3 inventory/procurement/practice-CRM) is
-now complete — see §9 below and `BUILD_LOG.md`'s Session 6 entry. Next up
-per the 9-session plan: Session 7.
+**Backend:** closed as of Session 9 — see §2's note. No further numbered
+sessions in this plan; any new backend work (due-date alerts, live
+reports, rate limiting/CORS follow-ups) is its own separately-scoped
+session, not a slot here.
 
-**Frontend:** Session 3 (Approvals UI) is next in sequence and has
-zero blockers — Backend Session 3 is complete, tested (part of the
-100/100 passing suite), committed, and pushed. Before starting: confirm
-the `approvals` endpoint shapes directly against
-`backend/src/controllers/approvals.controller.js` and
-`backend/src/routes/cases.routes.js`'s `/media` mount (Session 3 built
-media upload as `POST /api/cases/:id/media`, not a separate approvals
-upload route — confirm this against the source, not this summary, per
-§5 rule 2).
+**Frontend:** all 9 sessions are now code-complete (Session 8 — Stripe
+Checkout + Manufacturers/Payouts — added this pass; see
+`frontend/FRONTEND_LOG.md`'s Session 8 entry). The remaining gap across
+the whole frontend plan is the same one flagged repeatedly in the log:
+**no live click-through against a running backend**, since this sandbox
+has no runnable Postgres. `tsc -b`/`npm run build`/`oxlint` are clean for
+every session including 8, but per §6 of this protocol a session isn't
+genuinely done until someone actually logs in and clicks through it
+against the real deployed stack — not just build-checked.
 
-Frontend Sessions 4, 5, and 6 are also unblocked and can follow
-immediately after — the backend for all four is already done. This is
-the real parallel-work opportunity: four frontend sessions' worth of
-already-finished backend to build against, no need to wait on the
-backend side at all for that stretch.
+**Next concrete action, in order:** pull this branch in an environment
+with a runnable backend (`npm install`, `npm run migrate:up`, `npm run
+seed`, `npm run dev` both sides) and click-test, starting with Session 8
+since it's newest and touches money movement (Stripe Checkout redirect,
+webhook applying the payment, Connect onboarding, a real payout send —
+including a deliberately-forced failure to confirm the 402/Failed-row
+path actually surfaces in the UI). Confirm `STRIPE_WEBHOOK_SECRET` is
+populated before testing the webhook path specifically. Once 8 is
+click-verified, work backward through any earlier session still marked
+"pending click-through" in the status board above.
 
 ---
 

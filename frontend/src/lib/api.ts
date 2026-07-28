@@ -141,6 +141,17 @@ import type {
   ListPracticeNotesResponse,
   CreatePracticeNotePayload,
   CreatePracticeNoteResponse,
+  CreateCheckoutSessionResponse,
+  ListManufacturersResponse,
+  GetManufacturerResponse,
+  CreateManufacturerPayload,
+  CreateManufacturerResponse,
+  UpdateManufacturerPayload,
+  UpdateManufacturerResponse,
+  CreateConnectOnboardingLinkResponse,
+  ListPayoutsResponse,
+  CreatePayoutPayload,
+  CreatePayoutResponse,
   ListPatientsQuery,
   ListPatientsResponse,
   GetPatientResponse,
@@ -276,14 +287,90 @@ export function createInvoice(payload: CreateInvoicePayload): Promise<CreateInvo
   });
 }
 
-// Manual mark-paid only this session — real Stripe/ACH is backend Session 8,
-// per billing.controller.js's own comment. Don't build a "Pay Now" click
-// handler; this records a payment someone already collected offline.
+// Manual mark-paid only — records a payment someone already collected
+// offline (Check/Cash/Bank Transfer). Real Stripe is createCheckoutSession
+// below (backend Session 8); that path sets method: 'Stripe' itself via the
+// webhook, this one is unaffected by Session 8 landing.
 export function recordPayment(
   invoiceId: string | number,
   payload: RecordPaymentPayload
 ): Promise<RecordPaymentResponse> {
   return apiFetch<RecordPaymentResponse>(`/api/billing/invoices/${invoiceId}/payments`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+// Confirmed against backend/src/controllers/stripe.controller.js — mounted
+// at POST /api/billing/invoices/:id/checkout-session (stripe.routes.js's
+// checkoutRouter, kept under the existing /api/billing namespace rather
+// than a separate top-level path — see that file's own comment). Amount is
+// always derived server-side from the invoice balance; no amount is sent
+// from here. Caller should redirect to the returned url.
+export function createCheckoutSession(invoiceId: string | number): Promise<CreateCheckoutSessionResponse> {
+  return apiFetch<CreateCheckoutSessionResponse>(`/api/billing/invoices/${invoiceId}/checkout-session`, {
+    method: 'POST',
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Manufacturers + Payouts (Frontend Session 8) — confirmed directly against
+// backend/src/controllers/manufacturers.controller.js,
+// backend/src/controllers/payouts.controller.js, and
+// backend/src/routes/manufacturers.routes.js. Entire router is
+// requireManagerRole (Owner/Office Manager only) — no dentist_client or
+// other internal-role access anywhere here, applied once at the router
+// level in the backend so there's nothing finer-grained to branch on
+// client-side.
+// ─────────────────────────────────────────────────────────────────────────
+
+export function listManufacturers(): Promise<ListManufacturersResponse> {
+  return apiFetch<ListManufacturersResponse>('/api/manufacturers');
+}
+
+export function getManufacturer(id: string | number): Promise<GetManufacturerResponse> {
+  return apiFetch<GetManufacturerResponse>(`/api/manufacturers/${id}`);
+}
+
+export function createManufacturer(payload: CreateManufacturerPayload): Promise<CreateManufacturerResponse> {
+  return apiFetch<CreateManufacturerResponse>('/api/manufacturers', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateManufacturer(
+  id: string | number,
+  payload: UpdateManufacturerPayload
+): Promise<UpdateManufacturerResponse> {
+  return apiFetch<UpdateManufacturerResponse>(`/api/manufacturers/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+// Creates the manufacturer's Stripe Connect account on first call (idempotent
+// after that — reuses the stored account id), then always returns a fresh
+// onboarding-link URL. Caller should redirect to the returned url.
+export function createConnectOnboardingLink(id: string | number): Promise<CreateConnectOnboardingLinkResponse> {
+  return apiFetch<CreateConnectOnboardingLinkResponse>(`/api/manufacturers/${id}/connect-onboarding-link`, {
+    method: 'POST',
+  });
+}
+
+export function listPayouts(manufacturerId: string | number): Promise<ListPayoutsResponse> {
+  return apiFetch<ListPayoutsResponse>(`/api/manufacturers/${manufacturerId}/payouts`);
+}
+
+// A 402 response still carries a `payout` (status Failed) in its body —
+// per payouts.controller.js, this is deliberate so the failed attempt is
+// visible, not just an error toast. Callers catching ApiError should check
+// `err.body?.payout` and merge it into the payout list even on failure.
+export function createPayout(
+  manufacturerId: string | number,
+  payload: CreatePayoutPayload
+): Promise<CreatePayoutResponse> {
+  return apiFetch<CreatePayoutResponse>(`/api/manufacturers/${manufacturerId}/payouts`, {
     method: 'POST',
     body: JSON.stringify(payload),
   });

@@ -86,6 +86,15 @@ const NAV_ICON_PATHS: Record<NavIconKey, ReactNode> = {
       <path d="M8.5 8.5h7M8.5 12l1.5 1.5L13 10" />
     </>
   ),
+  // Not in the reference demo (Session 8 is new this project) — drawn in
+  // the same stroke-icon style as the rest, factory/building motif.
+  manufacturers: (
+    <>
+      <path d="M3.5 20.5V10l5-3v3l5-3v3l5-3v13.5Z" />
+      <path d="M3.5 20.5h17" />
+      <path d="M7 20.5v-3M11.5 20.5v-3M16 20.5v-3" />
+    </>
+  ),
 };
 
 function NavIcon({ icon }: { icon: NavIconKey }) {

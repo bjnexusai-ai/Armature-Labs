@@ -1336,3 +1336,112 @@ convenience function.
   itself is build-verified only; next session with browser access should
   confirm the Patients tab and the four invoice-field changes render and
   submit correctly against a live login.
+
+## Session 8 — Stripe Checkout UI (dental office → lab) + Manufacturers/Payouts (lab → manufacturer)
+
+Backend Session 8 confirmed complete before starting (per §5 of
+`PARALLEL_BUILD_PROTOCOL.md`): 192/192 tests, commit `c787e86`. Endpoint
+shapes confirmed directly against the real source, not a spec doc —
+`backend/src/controllers/stripe.controller.js`,
+`backend/src/controllers/manufacturers.controller.js`,
+`backend/src/controllers/payouts.controller.js`, and their route files —
+before writing any frontend code, same discipline as every prior session.
+
+**Direction 1 — dental office → lab (invoice Pay Now).** Not a new route;
+wired directly into the existing `InvoiceDetailPage.tsx` next to "Mark as
+paid". `createCheckoutSession(invoiceId)` hits
+`POST /api/billing/invoices/:id/checkout-session` (confirmed mounted under
+the existing `/api/billing` namespace, not a separate `/api/stripe` path —
+`stripe.routes.js`'s own comment explains why) and redirects to the
+returned `checkoutSession.url`. Gated on a new `canPayViaStripe` flag, kept
+deliberately separate from the existing `canRecordPayment` flag because the
+server-side gate genuinely differs (`requireCheckoutAccess` in
+`stripe.routes.js`): internal Owner/Office Manager, **or** a
+`dentist_client` with `canViewInvoices=true` — a portal user can pay their
+own invoice via Stripe but can never hit the manual mark-paid endpoint.
+Added `?payment=success` / `?payment=cancelled` banner handling for
+Stripe's redirect back (`success_url`/`cancel_url` are set server-side) —
+success banner explicitly notes the webhook is async and the balance may
+not have updated yet, rather than implying it's instant.
+
+**Direction 2 — lab → manufacturer (Connect + payouts).** New `Manufacturers`
+nav item (Finance section, session 8, `live: true`), gated
+`['owner', 'office_manager']` client-side to match `manufacturers.routes.js`
+applying `requireManagerRole` once at the router level to every route
+including reads — no dentist_client or other internal-role access exists
+server-side, so there's nothing finer-grained to branch on here.
+
+- `ManufacturersPage.tsx` — list + "New manufacturer" modal
+  (`NewManufacturerModal.tsx`, name/contact/email/phone/country only; no
+  Stripe fields in the create form since Connect account creation is lazy,
+  first-onboarding-click only, per `manufacturers.controller.js`).
+- `ManufacturerDetailPage.tsx` — inline edit (name/contact/email/phone;
+  country intentionally not editable from this form once set, matching the
+  backend's own account-country-is-fixed-once-Connect-starts reality),
+  Start/Resume Stripe Connect onboarding (redirects to the returned
+  `onboardingLink.url`), a payout-send form, and payout history table.
+  Send-payout form is disabled entirely until
+  `stripe_connected_account_id` is present, mirroring
+  `payouts.controller.js`'s own 400 guard ("has not completed Stripe
+  Connect onboarding yet") rather than letting the user hit that error.
+- Payout failure handling: `payouts.controller.js` returns **402 with a
+  `payout` object in the body** (status `Failed`) on a failed Stripe
+  transfer, by design, so the failed attempt is visible rather than just an
+  error toast. `ManufacturerDetailPage.tsx`'s catch block reads
+  `err.body?.payout` off the `ApiError` and prepends it into the payouts
+  list live, not just showing the error message.
+
+**New status/color conventions** (`statusColors.ts`, following the file's
+own established reasoning rather than inventing a new pattern):
+`PAYOUT_STATUS_COLORS` (Pending→mustard, Paid→green, Failed→red, same
+families as Ordered/Received/Cancelled) and `CONNECT_STATUS_COLORS`
+(open-ended `Record<string, ...>` like `MATERIAL_STATUS_COLORS`, since the
+backend only ever writes `'Onboarding'` — "Not started" is rendered as a
+neutral tan fallback in the components themselves, not enumerated as a
+fixed union here).
+
+**Types/API** — added to the existing `caseTypes.ts` / `api.ts` (not new
+files) since this is the same billing/manufacturer domain other sessions
+already extended in place: `CreateCheckoutSessionResponse`, `Manufacturer`,
+`ManufacturerPayout`, `PayoutStatus`, and the full set of list/get/create/
+update/onboarding-link/payout request+response types, plus
+`createCheckoutSession`, `listManufacturers`, `getManufacturer`,
+`createManufacturer`, `updateManufacturer`, `createConnectOnboardingLink`,
+`listPayouts`, `createPayout` in `api.ts`. Manufacturer/payout rows are
+snake_case under a camelCase wrapper key (`manufacturer`/`manufacturers`,
+`payout`/`payouts`) — confirmed against the real SELECT lists in both
+controllers, same convention as every other resource in this codebase, no
+casing surprises this session.
+
+**Routing** — `App.tsx` gained `/manufacturers` and `/manufacturers/:id`,
+both wired directly (not left in the `!item.live` auto-stub loop) since
+`navConfig.ts`'s new `manufacturers` entry has `live: true` from the start
+— this session doesn't repeat the Session 2 mistake of shipping a stub
+flag unflipped. Confirmed via grep: `ManufacturersPage`/
+`ManufacturerDetailPage` are imported and routed in `App.tsx` (not just
+sitting as unreferenced files), `NewManufacturerModal` is imported and
+rendered in `ManufacturersPage.tsx`, and the new `manufacturers` nav item
+resolves through `visibleNavItems()`/`NavIcon` with no missing icon-key
+crash.
+
+**Verified:** `npx tsc -b` clean, `npm run build` clean (vite build
+succeeds, no errors), `npx oxlint` on every new/changed file clean (0
+warnings, 0 errors).
+
+**Not yet done — same open item as Sessions 3/4/7:** no live click-through
+against a running backend. This sandbox has no runnable Postgres, so
+none of the following has been confirmed against the real deployed stack
+yet: logging in as `dentist_client` and clicking "Pay with card" through
+to an actual Stripe Checkout redirect; completing a real Stripe Connect
+onboarding flow end-to-end for a manufacturer; sending a real payout and
+confirming both the success path (`Paid`, `stripe_transfer_id` populated)
+and a forced-failure path (`Failed`, 402 body's `payout` merges into the
+list live); confirming the `?payment=success` banner actually appears
+after a real Checkout redirect and that a webhook-applied payment updates
+`amount_paid` without requiring a manual page refresh. Also unconfirmed:
+whether `STRIPE_WEBHOOK_SECRET` is actually populated in this deployment's
+Secrets Manager/`.env` — worth a direct check against the real environment,
+not assumed either way.
+This is the next session's/whoever-runs-it's first step per §6 of
+`PARALLEL_BUILD_PROTOCOL.md` before this session can be marked genuinely
+done, not just code-complete.
