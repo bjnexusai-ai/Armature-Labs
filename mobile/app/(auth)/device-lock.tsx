@@ -29,7 +29,7 @@ export default function DeviceLockScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const userName = state.status === 'deviceLockPending' ? state.user.name : '';
+  const userName = state.status === 'deviceLockPending' ? state.user.fullName : '';
 
   return (
     <ScreenContainer style={styles.container}>

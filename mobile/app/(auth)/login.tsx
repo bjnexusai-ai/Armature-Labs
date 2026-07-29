@@ -28,13 +28,13 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       // AuthContext + expo-router's <Redirect> in index.tsx handle navigation
-      // once state flips (signedIn / mfaPending) — no explicit push here.
+      // once state flips (signedIn / deviceLockPending) — no explicit push here.
       await login(email.trim(), password);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setError('Incorrect email or password.');
       } else if (err instanceof ApiError && err.status === 429) {
-        // B10 adds rate limiting to /api/auth/login — this is that path.
+        // authRateLimiter on /api/auth/login — confirmed live on the backend.
         setError('Too many attempts. Please wait a moment and try again.');
       } else {
         setError('Something went wrong. Please try again.');

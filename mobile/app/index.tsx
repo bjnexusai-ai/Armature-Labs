@@ -22,8 +22,6 @@ export default function Index() {
       );
     case 'signedOut':
       return <Redirect href="/(auth)/login" />;
-    case 'mfaPending':
-      return <Redirect href="/(auth)/mfa" />;
     case 'deviceLockPending':
       return <Redirect href="/(auth)/device-lock" />;
     case 'signedIn':

@@ -6,3 +6,4 @@ repo_dump.txt
 *.zip
 *.patch
 aws/
+/package-lock.json

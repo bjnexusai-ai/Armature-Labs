@@ -1,21 +1,15 @@
 /**
- * Role model shared with the backend/web portal. Mobile is dental-office-
- * facing only (plan §5) — lab-internal roles are included here for
- * completeness of the auth response type, but the nav in (app)/_layout.tsx
- * only builds tabs for the office-facing roles. If a lab-internal role
- * somehow logs into mobile, they see a "not available on mobile" screen
- * rather than a broken/empty tab bar.
+ * Role model — confirmed against the live backend
+ * (migrations/0001_roles.js + auth.controller.js), not assumed. Real
+ * roles: owner, office_manager, assistant_technician, designer,
+ * dentist_client. NOTE: 'office_manager' here is a LAB-internal role
+ * (full internal access incl. billing) — not a dental office role.
+ * Confusing name, but that's what the backend seeds. The only
+ * office-facing/portal role is 'dentist_client'.
  */
-export type Role =
-  | 'dentist'
-  | 'office_manager'
-  | 'office_staff'
-  // Lab-internal — not part of mobile's tab set, see note above
-  | 'technician'
-  | 'admin'
-  | 'lab_manager';
+export type Role = 'owner' | 'office_manager' | 'assistant_technician' | 'designer' | 'dentist_client';
 
-export const OFFICE_FACING_ROLES: Role[] = ['dentist', 'office_manager', 'office_staff'];
+export const OFFICE_FACING_ROLES: Role[] = ['dentist_client'];
 
 export function isOfficeFacingRole(role: Role): boolean {
   return OFFICE_FACING_ROLES.includes(role);

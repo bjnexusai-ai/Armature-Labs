@@ -28,6 +28,7 @@
         "USE_BIOMETRIC",
         "USE_FINGERPRINT",
         "CAMERA",
+        "READ_MEDIA_IMAGES",
         "POST_NOTIFICATIONS"
       ]
     },
@@ -39,6 +40,13 @@
       "expo-secure-store",
       "expo-local-authentication",
       "expo-notifications",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Armature Labs uses your camera to capture case photos.",
+          "photosPermission": "Armature Labs uses your photo library so you can attach a case photo."
+        }
+      ],
       [
         "expo-splash-screen",
         {

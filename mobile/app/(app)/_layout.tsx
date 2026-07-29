@@ -5,14 +5,23 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { ScreenContainer } from '../../src/components/ScreenContainer';
 import { isOfficeFacingRole } from '../../src/constants/roles';
+import { usePushNotifications } from '../../src/hooks/usePushNotifications';
 import { useAuth } from '../../src/lib/auth/AuthContext';
 import { colors, fontFamily, spacing, typeScale } from '../../src/theme/theme';
 
 export default function AppLayout() {
   const { state } = useAuth();
 
+  // Registers for push (permission + token; token *submission* is a stub —
+  // see src/lib/push.ts) and wires notification listeners. Placed here
+  // rather than root _layout.tsx so it only ever runs for a signed-in,
+  // office-facing session — never during signedOut/deviceLockPending, and
+  // never for a lab-internal role that has no mobile screens to deep-link
+  // into anyway.
+  usePushNotifications();
+
   if (state.status !== 'signedIn') {
-    // Covers signedOut/mfaPending/deviceLockPending/loading — bounce back
+    // Covers signedOut/deviceLockPending/loading — bounce back
     // through the root traffic director rather than duplicating the
     // redirect targets here.
     return <Redirect href="/" />;
@@ -65,15 +74,6 @@ export default function AppLayout() {
           title: 'Invoices',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="receipt-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="notes"
-        options={{
-          title: 'Notes',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubble-ellipses-outline" size={size} color={color} />
           ),
         }}
       />

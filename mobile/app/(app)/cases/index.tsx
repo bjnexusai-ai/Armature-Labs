@@ -1,38 +1,147 @@
+import { useRouter } from 'expo-router';
 import React from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
-import { ScreenContainer } from '../../../src/components/ScreenContainer';
+import { Card } from '../../../src/components/Card';
 import { LogoutButton } from '../../../src/components/LogoutButton';
+import { StatusBadge } from '../../../src/components/StatusBadge';
+import { STATUS_TONE } from '../../../src/constants/caseStatus';
+import { ENDPOINTS } from '../../../src/constants/endpoints';
+import { useApi } from '../../../src/lib/useApi';
 import { colors, fontFamily, spacing, typeScale } from '../../../src/theme/theme';
+import type { CasesListResponse, CaseSummary } from '../../../src/types/domain';
 
 /**
- * Placeholder — screen content ships in M2 (plan §1). M1's job here is
- * only the shell: this route exists, it's reachable from the right tab,
- * it's styled with the shared theme, and it's gated behind auth. No
- * fake/mock case data is rendered — an empty placeholder is more honest
- * than a hardcoded list that looks real but isn't wired to anything.
+ * GET /api/cases — for a dentist_client this is already tenant-scoped to
+ * their own practice(s) server-side (practiceScopeClause in the
+ * controller); no client-side practiceId filtering needed or allowed
+ * (the backend 400s if a portal user passes practiceId at all).
  */
-export default function CasesScreen() {
+export default function CasesListScreen() {
+  const router = useRouter();
+  const { data, loading, refreshing, error, refetch } = useApi<CasesListResponse>(
+    ENDPOINTS.cases
+  );
+
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.muted}>Loading cases…</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.error}>{error}</Text>
+        <Pressable onPress={refetch}>
+          <Text style={styles.retry}>Tap to retry</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  const cases = data?.cases ?? [];
+
   return (
-    <ScreenContainer>
-      <Text style={styles.title}>Cases</Text>
-      <Text style={styles.body}>Cases content ships in M2.</Text>
-      <LogoutButton />
-    </ScreenContainer>
+    <FlatList
+      data={cases}
+      keyExtractor={(item) => String(item.id)}
+      contentContainerStyle={styles.listContent}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refetch} />}
+      ListEmptyComponent={
+        <View style={styles.centered}>
+          <Text style={styles.muted}>No cases yet.</Text>
+        </View>
+      }
+      ListHeaderComponent={cases.length > 0 ? undefined : undefined}
+      ListFooterComponent={<LogoutButton />}
+      renderItem={({ item }) => <CaseRow caseItem={item} onPress={() => router.push(`/(app)/cases/${item.id}`)} />}
+    />
+  );
+}
+
+function CaseRow({ caseItem, onPress }: { caseItem: CaseSummary; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={styles.rowWrapper}>
+      <Card>
+        <View style={styles.rowTop}>
+          <Text style={styles.caseNumber}>{caseItem.case_number}</Text>
+          <StatusBadge label={caseItem.current_status} tone={STATUS_TONE[caseItem.current_status]} />
+        </View>
+        <Text style={styles.patientName}>
+          {caseItem.patient_name || 'Unnamed patient'}
+        </Text>
+        <View style={styles.rowBottom}>
+          <Text style={styles.meta}>Due {caseItem.due_date}</Text>
+          {caseItem.priority !== 'Standard' && (
+            <Text style={[styles.meta, styles.priority]}>{caseItem.priority}</Text>
+          )}
+        </View>
+      </Card>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  title: {
-    fontFamily: fontFamily.headingExtraBold,
-    fontSize: typeScale.h1,
-    color: colors.ink,
-    marginBottom: spacing.xs,
+  listContent: {
+    padding: spacing.lg,
+    gap: spacing.md,
+    flexGrow: 1,
   },
-  body: {
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xl,
+    gap: spacing.md,
+  },
+  muted: {
     fontFamily: fontFamily.bodyRegular,
     fontSize: typeScale.body,
     color: colors.inkSoft,
-    marginBottom: spacing.xl,
+  },
+  error: {
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: typeScale.body,
+    color: colors.danger,
+    textAlign: 'center',
+  },
+  retry: {
+    fontFamily: fontFamily.bodySemiBold,
+    fontSize: typeScale.bodySmall,
+    color: colors.buttonGreen,
+  },
+  rowWrapper: { marginBottom: spacing.sm },
+  rowTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  caseNumber: {
+    fontFamily: fontFamily.mono,
+    fontSize: typeScale.mono,
+    color: colors.inkSoft,
+  },
+  patientName: {
+    fontFamily: fontFamily.headingBold,
+    fontSize: typeScale.h3,
+    color: colors.ink,
+    marginBottom: spacing.xs,
+  },
+  rowBottom: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  meta: {
+    fontFamily: fontFamily.bodyRegular,
+    fontSize: typeScale.bodySmall,
+    color: colors.inkSoft,
+  },
+  priority: {
+    fontFamily: fontFamily.bodySemiBold,
+    color: colors.warning,
   },
 });

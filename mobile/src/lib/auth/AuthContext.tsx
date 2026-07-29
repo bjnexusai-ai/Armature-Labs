@@ -11,13 +11,13 @@ import { AppState, AppStateStatus } from 'react-native';
 import { ENDPOINTS } from '../../constants/endpoints';
 import { apiRequest, ApiError } from '../api';
 import { isDeviceLockAvailable, promptDeviceUnlock } from '../biometrics';
+import { removeDevicePushToken } from '../push';
 import { secureStorage } from '../secureStorage';
-import type { AuthState, LoginResponse, MfaVerifyResponse, UserProfile } from './types';
+import type { AuthState, LoginResponse, UserProfile } from './types';
 
 interface AuthContextValue {
   state: AuthState;
   login: (email: string, password: string) => Promise<void>;
-  verifyMfa: (code: string) => Promise<void>;
   unlockDevice: () => Promise<boolean>;
   logout: () => Promise<void>;
 }
@@ -25,18 +25,15 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 /**
- * Background re-lock window. Not from the plan doc (no number was given
- * for device-lock timeout, only for refresh-token idle timeout — open
- * item §6.1, proposed 7 days, still needs client confirmation). This is a
- * reasonable interim default for M1 so the gate is testable; surface it
- * as a settings toggle later rather than a hardcoded constant if the
- * client wants it configurable.
+ * Background re-lock window. Not specified anywhere in the plan or the
+ * backend (device-lock timing is a mobile-only UX decision, no server
+ * concept). Interim default so the gate is testable; make it a real
+ * setting later if the client wants it configurable.
  */
 const RELOCK_AFTER_BACKGROUND_MS = 60_000;
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>({ status: 'loading' });
-  const [mfaEmail, setMfaEmail] = useState<string>('');
   const backgroundedAtRef = React.useRef<number | null>(null);
 
   const finishSignIn = useCallback(async (user: UserProfile) => {
@@ -51,14 +48,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Bootstrap on cold start: restore session from secure storage if present.
+  // Bootstrap on cold start: restore session from secure storage if present
+  // and the refresh token hasn't already expired.
   useEffect(() => {
     (async () => {
-      const [accessToken, profileJson] = await Promise.all([
+      const [accessToken, profileJson, expiresAtMs] = await Promise.all([
         secureStorage.getItem(secureStorage.KEYS.accessToken),
         secureStorage.getItem(secureStorage.KEYS.userProfile),
+        secureStorage.getItem(secureStorage.KEYS.refreshTokenExpiresAtMs),
       ]);
       if (!accessToken || !profileJson) {
+        setState({ status: 'signedOut' });
+        return;
+      }
+      if (expiresAtMs && Number(expiresAtMs) < Date.now()) {
+        await secureStorage.clearSession();
         setState({ status: 'signedOut' });
         return;
       }
@@ -93,63 +97,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => sub.remove();
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const res = await apiRequest<LoginResponse>(ENDPOINTS.auth.login, {
-      method: 'POST',
-      skipAuth: true,
-      body: { email, password },
-    });
-
-    if (res.mfaRequired) {
-      if (!res.mfaChallengeToken) {
-        throw new Error('Server indicated MFA is required but sent no challenge token.');
-      }
-      setMfaEmail(email);
-      setState({
-        status: 'mfaPending',
-        mfaChallengeToken: res.mfaChallengeToken,
-        email,
-      });
-      return;
-    }
-
-    if (!res.accessToken || !res.refreshToken || !res.user) {
-      throw new Error('Login response missing tokens or user profile.');
-    }
-
-    await secureStorage.setItem(secureStorage.KEYS.accessToken, res.accessToken);
-    await secureStorage.setItem(secureStorage.KEYS.refreshToken, res.refreshToken);
-    if (res.refreshTokenExpiresAt) {
-      await secureStorage.setItem(
-        secureStorage.KEYS.refreshTokenExpiresAt,
-        res.refreshTokenExpiresAt
-      );
-    }
-    await secureStorage.setItem(secureStorage.KEYS.userProfile, JSON.stringify(res.user));
-    await finishSignIn(res.user);
-  }, [finishSignIn]);
-
-  const verifyMfa = useCallback(
-    async (code: string) => {
-      if (state.status !== 'mfaPending') {
-        throw new Error('No MFA challenge in progress.');
-      }
-      const res = await apiRequest<MfaVerifyResponse>(ENDPOINTS.auth.mfaVerify, {
+  const login = useCallback(
+    async (email: string, password: string) => {
+      // No MFA branching — the backend has no mfa.* routes yet (B11 not
+      // landed as of this check). login() always returns tokens directly.
+      // Reintroduce an mfaPending branch here once B11 ships its real
+      // response contract — don't guess it in the meantime.
+      const res = await apiRequest<LoginResponse>(ENDPOINTS.auth.login, {
         method: 'POST',
         skipAuth: true,
-        body: { code, challengeToken: state.mfaChallengeToken, email: mfaEmail },
+        body: { email, password },
       });
 
       await secureStorage.setItem(secureStorage.KEYS.accessToken, res.accessToken);
       await secureStorage.setItem(secureStorage.KEYS.refreshToken, res.refreshToken);
       await secureStorage.setItem(
-        secureStorage.KEYS.refreshTokenExpiresAt,
-        res.refreshTokenExpiresAt
+        secureStorage.KEYS.refreshTokenExpiresAtMs,
+        String(Date.now() + res.refreshExpiresIn * 1000)
       );
       await secureStorage.setItem(secureStorage.KEYS.userProfile, JSON.stringify(res.user));
       await finishSignIn(res.user);
     },
-    [state, mfaEmail, finishSignIn]
+    [finishSignIn]
   );
 
   const unlockDevice = useCallback(async () => {
@@ -163,22 +132,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
-      // B10: logout now also revokes the refresh token server-side.
       await apiRequest(ENDPOINTS.auth.logout, { method: 'POST' });
     } catch (err) {
       // Best-effort — a failed revoke call shouldn't trap the user signed in
-      // locally. Log for now; wire to real telemetry once it exists.
+      // locally.
       if (!(err instanceof ApiError)) {
         console.warn('Logout revoke call failed:', err);
       }
     }
+    // M5: also revoke the device's push token registration on explicit
+    // logout — best-effort, same reasoning as the auth revoke call above.
+    // See push.ts for why this is the one clearSession() caller that also
+    // hits the network for this.
+    await removeDevicePushToken();
     await secureStorage.clearSession();
     setState({ status: 'signedOut' });
   }, []);
 
   const value = useMemo(
-    () => ({ state, login, verifyMfa, unlockDevice, logout }),
-    [state, login, verifyMfa, unlockDevice, logout]
+    () => ({ state, login, unlockDevice, logout }),
+    [state, login, unlockDevice, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
