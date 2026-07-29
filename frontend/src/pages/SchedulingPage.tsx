@@ -65,12 +65,11 @@ export function SchedulingPage() {
     <div>
       <div className="flex items-start justify-between mb-5 flex-wrap gap-3">
         <div>
-          <h2 className="font-display text-lg font-bold text-ink mb-1">Scheduling</h2>
           <p className="text-sm text-ink-soft">Technician shifts and equipment bookings.</p>
         </div>
         <button
           onClick={() => (tab === 'shifts' ? setShiftModalOpen(true) : setBookingModalOpen(true))}
-          className="px-4 py-2.5 rounded-[10px] text-white text-[13px] font-semibold shrink-0"
+          className="px-4 py-2.5 rounded-[10px] text-white text-body-sm font-semibold shrink-0"
           style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)' }}
         >
           + New {tab === 'shifts' ? 'shift' : 'booking'}
@@ -87,7 +86,7 @@ export function SchedulingPage() {
       </div>
 
       {error && (
-        <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
+        <div className="text-body-sm text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
           {error}
         </div>
       )}
@@ -136,27 +135,29 @@ function ShiftTable({ title, rows, muted }: { title: string; rows: TechnicianShi
           <p>Shifts will show up here once scheduled.</p>
         </div>
       ) : (
-        <table className="w-full border-collapse">
+        <div className="table-scroll">
+          <table className="w-full border-collapse">
           <thead>
-            <tr>
-              {['Technician ID', 'Starts', 'Ends', 'Notes'].map((h) => (
-                <th key={h} className="text-left text-[11px] uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border">
-                  {h}
-                </th>
-              ))}
-            </tr>
+          <tr>
+          {['Technician ID', 'Starts', 'Ends', 'Notes'].map((h) => (
+          <th key={h} className="text-left text-caption uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border">
+          {h}
+          </th>
+          ))}
+          </tr>
           </thead>
           <tbody>
-            {rows.map((s) => (
-              <tr key={s.id}>
-                <td className="p-3 border-b border-border text-[13px] font-semibold">#{s.technician_id}</td>
-                <td className="p-3 border-b border-border text-[13px] text-ink-soft">{new Date(s.starts_at).toLocaleString()}</td>
-                <td className="p-3 border-b border-border text-[13px] text-ink-soft">{new Date(s.ends_at).toLocaleString()}</td>
-                <td className="p-3 border-b border-border text-[13px] text-ink-soft">{s.notes || '—'}</td>
-              </tr>
-            ))}
+          {rows.map((s) => (
+          <tr key={s.id}>
+          <td className="p-3 border-b border-border text-body-sm font-semibold">#{s.technician_id}</td>
+          <td className="p-3 border-b border-border text-body-sm text-ink-soft">{new Date(s.starts_at).toLocaleString()}</td>
+          <td className="p-3 border-b border-border text-body-sm text-ink-soft">{new Date(s.ends_at).toLocaleString()}</td>
+          <td className="p-3 border-b border-border text-body-sm text-ink-soft">{s.notes || '—'}</td>
+          </tr>
+          ))}
           </tbody>
-        </table>
+          </table>
+        </div>
       )}
     </div>
   );
@@ -182,28 +183,30 @@ function BookingTable({
           <p>Equipment bookings will show up here once scheduled.</p>
         </div>
       ) : (
-        <table className="w-full border-collapse">
+        <div className="table-scroll">
+          <table className="w-full border-collapse">
           <thead>
-            <tr>
-              {['Equipment', 'Case', 'Starts', 'Ends', 'Notes'].map((h) => (
-                <th key={h} className="text-left text-[11px] uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border">
-                  {h}
-                </th>
-              ))}
-            </tr>
+          <tr>
+          {['Equipment', 'Case', 'Starts', 'Ends', 'Notes'].map((h) => (
+          <th key={h} className="text-left text-caption uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border">
+          {h}
+          </th>
+          ))}
+          </tr>
           </thead>
           <tbody>
-            {rows.map((b) => (
-              <tr key={b.id}>
-                <td className="p-3 border-b border-border text-[13px] font-semibold">{equipmentName(b.equipment_id)}</td>
-                <td className="p-3 border-b border-border text-[13px] text-ink-soft">{b.case_id ? `#${b.case_id}` : '—'}</td>
-                <td className="p-3 border-b border-border text-[13px] text-ink-soft">{new Date(b.starts_at).toLocaleString()}</td>
-                <td className="p-3 border-b border-border text-[13px] text-ink-soft">{new Date(b.ends_at).toLocaleString()}</td>
-                <td className="p-3 border-b border-border text-[13px] text-ink-soft">{b.notes || '—'}</td>
-              </tr>
-            ))}
+          {rows.map((b) => (
+          <tr key={b.id}>
+          <td className="p-3 border-b border-border text-body-sm font-semibold">{equipmentName(b.equipment_id)}</td>
+          <td className="p-3 border-b border-border text-body-sm text-ink-soft">{b.case_id ? `#${b.case_id}` : '—'}</td>
+          <td className="p-3 border-b border-border text-body-sm text-ink-soft">{new Date(b.starts_at).toLocaleString()}</td>
+          <td className="p-3 border-b border-border text-body-sm text-ink-soft">{new Date(b.ends_at).toLocaleString()}</td>
+          <td className="p-3 border-b border-border text-body-sm text-ink-soft">{b.notes || '—'}</td>
+          </tr>
+          ))}
           </tbody>
-        </table>
+          </table>
+        </div>
       )}
     </div>
   );

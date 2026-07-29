@@ -61,7 +61,7 @@ export function PurchaseOrderDetailPage() {
 
   if (error || !po) {
     return (
-      <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5">
+      <div className="text-body-sm text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5">
         {error || 'Purchase order not found.'}
       </div>
     );
@@ -75,7 +75,7 @@ export function PurchaseOrderDetailPage() {
     <div>
       <button
         onClick={() => navigate('/purchase-orders')}
-        className="text-[12.5px] text-[#1C8A93] font-semibold mb-4"
+        className="text-body-sm text-[#1C8A93] font-semibold mb-4"
       >
         ← Back to purchase orders
       </button>
@@ -90,7 +90,7 @@ export function PurchaseOrderDetailPage() {
             <button
               onClick={() => handleStatus('Ordered')}
               disabled={statusSubmitting}
-              className="px-4 py-2.5 rounded-[10px] border border-border bg-white text-[13px] font-semibold disabled:opacity-60"
+              className="px-4 py-2.5 rounded-[10px] border border-border bg-white text-body-sm font-semibold disabled:opacity-60"
             >
               Mark as Ordered
             </button>
@@ -99,7 +99,7 @@ export function PurchaseOrderDetailPage() {
             <button
               onClick={() => handleStatus('Cancelled')}
               disabled={statusSubmitting}
-              className="px-4 py-2.5 rounded-[10px] border border-border bg-white text-[13px] font-semibold text-[#9C4326] disabled:opacity-60"
+              className="px-4 py-2.5 rounded-[10px] border border-border bg-white text-body-sm font-semibold text-[#9C4326] disabled:opacity-60"
             >
               Cancel
             </button>
@@ -107,7 +107,7 @@ export function PurchaseOrderDetailPage() {
           {canReceive && (
             <button
               onClick={() => setReceiveOpen(true)}
-              className="px-4 py-2.5 rounded-[10px] text-white text-[13px] font-semibold"
+              className="px-4 py-2.5 rounded-[10px] text-white text-body-sm font-semibold"
               style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)' }}
             >
               Receive
@@ -117,46 +117,48 @@ export function PurchaseOrderDetailPage() {
       </div>
 
       {po.notes && (
-        <div className="surface-card rounded-[16px] p-4 mb-5">
-          <p className="text-[11px] uppercase tracking-wider text-ink-soft mb-1">Notes</p>
-          <p className="text-[13px] text-ink">{po.notes}</p>
+        <div className="surface-card rounded-[18px] p-4 mb-5">
+          <p className="text-caption uppercase tracking-wider text-ink-soft mb-1">Notes</p>
+          <p className="text-body-sm text-ink">{po.notes}</p>
         </div>
       )}
 
       <div className="surface-card rounded-[18px] p-5">
         <h4 className="font-display text-sm font-bold text-ink mb-3">Items</h4>
         {!po.items || po.items.length === 0 ? (
-          <p className="text-[13px] text-ink-soft">No items on this purchase order.</p>
+          <p className="text-body-sm text-ink-soft">No items on this purchase order.</p>
         ) : (
-          <table className="w-full border-collapse">
+          <div className="table-scroll">
+            <table className="w-full border-collapse">
             <thead>
-              <tr>
-                {['Material', 'Ordered', 'Received', 'Remaining', 'Unit cost'].map((h) => (
-                  <th
-                    key={h}
-                    className="text-left text-[11px] uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
+            <tr>
+            {['Material', 'Ordered', 'Received', 'Remaining', 'Unit cost'].map((h) => (
+            <th
+            key={h}
+            className="text-left text-caption uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border"
+            >
+            {h}
+            </th>
+            ))}
+            </tr>
             </thead>
             <tbody>
-              {po.items.map((it) => (
-                <tr key={it.id}>
-                  <td className="p-3 border-b border-border text-[13px] font-semibold">
-                    Material #{it.material_id}
-                  </td>
-                  <td className="p-3 border-b border-border text-[13px]">{Number(it.quantity_ordered)}</td>
-                  <td className="p-3 border-b border-border text-[13px]">{Number(it.quantity_received)}</td>
-                  <td className="p-3 border-b border-border text-[13px]">
-                    {Number(it.quantity_ordered) - Number(it.quantity_received)}
-                  </td>
-                  <td className="p-3 border-b border-border text-[13px]">${Number(it.unit_cost).toFixed(2)}</td>
-                </tr>
-              ))}
+            {po.items.map((it) => (
+            <tr key={it.id}>
+            <td className="p-3 border-b border-border text-body-sm font-semibold">
+            Material #{it.material_id}
+            </td>
+            <td className="p-3 border-b border-border text-body-sm">{Number(it.quantity_ordered)}</td>
+            <td className="p-3 border-b border-border text-body-sm">{Number(it.quantity_received)}</td>
+            <td className="p-3 border-b border-border text-body-sm">
+            {Number(it.quantity_ordered) - Number(it.quantity_received)}
+            </td>
+            <td className="p-3 border-b border-border text-body-sm">${Number(it.unit_cost).toFixed(2)}</td>
+            </tr>
+            ))}
             </tbody>
-          </table>
+            </table>
+          </div>
         )}
       </div>
 

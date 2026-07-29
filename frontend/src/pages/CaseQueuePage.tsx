@@ -69,7 +69,6 @@ export function CaseQueuePage() {
     <div>
       <div className="flex items-start justify-between mb-5">
         <div>
-          <h2 className="font-display text-lg font-bold text-ink mb-1">Case Queue</h2>
           <p className="text-sm text-ink-soft">All cases across every stage of production.</p>
         </div>
         <button
@@ -108,7 +107,7 @@ export function CaseQueuePage() {
         </div>
 
         {error && (
-          <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
+          <div className="text-body-sm text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
             {error}
           </div>
         )}
@@ -137,46 +136,74 @@ export function CaseQueuePage() {
             </button>
           </div>
         ) : (
-          <table className="w-full border-collapse">
-            <thead>
-              <tr>
-                {['Case', 'Patient', 'Practice', 'Priority', 'Status', 'Due'].map((h) => (
-                  <th
-                    key={h}
-                    className="text-left text-[11px] uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
+          <>
+            {/* Stacked cards below sm (640px) — avoids a cramped/clipped
+                table on phones. Same data and click-through as the table. */}
+            <div className="sm:hidden space-y-2">
               {visibleCases.map((c) => (
-                <tr
+                <div
                   key={c.id}
                   onClick={() => navigate(`/cases/${c.id}`)}
-                  className="cursor-pointer hover:bg-page-bg-top transition-colors"
+                  className="surface-card rounded-xl p-3 cursor-pointer"
                 >
-                  <td className="p-3 border-b border-border font-mono text-[12.5px] text-ink-soft">
-                    {c.case_number}
-                  </td>
-                  <td className="p-3 border-b border-border text-[13px]">
-                    {c.patient_name || '—'}
-                  </td>
-                  <td className="p-3 border-b border-border text-[13px]">
-                    {practiceName(c.practice_id)}
-                  </td>
-                  <td className="p-3 border-b border-border text-[13px]">{c.priority}</td>
-                  <td className="p-3 border-b border-border">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-mono text-caption text-ink-soft">{c.case_number}</span>
                     <StatusPill status={c.current_status} />
-                  </td>
-                  <td className="p-3 border-b border-border text-[13px]">
+                  </div>
+                  <div className="text-body-sm font-medium text-ink">{c.patient_name || '—'}</div>
+                  <div className="text-caption text-ink-soft">
+                    {practiceName(c.practice_id)} · {c.priority} · Due{' '}
                     {parseFlexibleDate(c.due_date)?.toLocaleDateString() ?? c.due_date}
-                  </td>
-                </tr>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+
+            {/* Table for sm and up, wrapped so it scrolls horizontally
+                instead of clipping or forcing page-level overflow. */}
+            <div className="hidden sm:block table-scroll">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr>
+                    {['Case', 'Patient', 'Practice', 'Priority', 'Status', 'Due'].map((h) => (
+                      <th
+                        key={h}
+                        className="text-left text-caption uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border"
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleCases.map((c) => (
+                    <tr
+                      key={c.id}
+                      onClick={() => navigate(`/cases/${c.id}`)}
+                      className="cursor-pointer hover:bg-page-bg-top transition-colors"
+                    >
+                      <td className="p-3 border-b border-border font-mono text-body-sm text-ink-soft">
+                        {c.case_number}
+                      </td>
+                      <td className="p-3 border-b border-border text-body-sm">
+                        {c.patient_name || '—'}
+                      </td>
+                      <td className="p-3 border-b border-border text-body-sm">
+                        {practiceName(c.practice_id)}
+                      </td>
+                      <td className="p-3 border-b border-border text-body-sm">{c.priority}</td>
+                      <td className="p-3 border-b border-border">
+                        <StatusPill status={c.current_status} />
+                      </td>
+                      <td className="p-3 border-b border-border text-body-sm">
+                        {parseFlexibleDate(c.due_date)?.toLocaleDateString() ?? c.due_date}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
 
         {pagination && pagination.totalPages > 1 && (

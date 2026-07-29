@@ -49,13 +49,12 @@ export function MaterialsPage() {
     <div>
       <div className="flex items-start justify-between mb-5">
         <div>
-          <h2 className="font-display text-lg font-bold text-ink mb-1">Materials</h2>
           <p className="text-sm text-ink-soft">Catalog and current stock levels.</p>
         </div>
         {canCreate && (
           <button
             onClick={() => setNewMaterialOpen(true)}
-            className="px-4 py-2.5 rounded-[10px] text-white text-[13px] font-semibold"
+            className="px-4 py-2.5 rounded-[10px] text-white text-body-sm font-semibold"
             style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)' }}
           >
             + New material
@@ -89,7 +88,7 @@ export function MaterialsPage() {
 
       <div className="surface-card rounded-[18px] p-5">
         {error && (
-          <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
+          <div className="text-body-sm text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
             {error}
           </div>
         )}
@@ -110,46 +109,48 @@ export function MaterialsPage() {
             <p>Nothing has been added to the catalog yet.</p>
           </div>
         ) : (
-          <table className="w-full border-collapse">
+          <div className="table-scroll">
+            <table className="w-full border-collapse">
             <thead>
-              <tr>
-                {['Name', 'Category', 'Unit', 'Unit cost', 'Current stock', 'Status', ''].map((h) => (
-                  <th
-                    key={h}
-                    className="text-left text-[11px] uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
+            <tr>
+            {['Name', 'Category', 'Unit', 'Unit cost', 'Current stock', 'Status', ''].map((h) => (
+            <th
+            key={h}
+            className="text-left text-caption uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border"
+            >
+            {h}
+            </th>
+            ))}
+            </tr>
             </thead>
             <tbody>
-              {materials.map((m) => {
-                const category = categories.find((c) => c.id === m.category_id);
-                return (
-                  <tr
-                    key={m.id}
-                    className="hover:bg-page-bg-top transition-colors cursor-pointer"
-                    onClick={() => navigate(`/materials/${m.id}`)}
-                  >
-                    <td className="p-3 border-b border-border text-[13px] font-semibold">{m.name}</td>
-                    <td className="p-3 border-b border-border text-[13px] text-ink-soft">{category?.name ?? '—'}</td>
-                    <td className="p-3 border-b border-border text-[13px] text-ink-soft">{m.unit}</td>
-                    <td className="p-3 border-b border-border text-[13px]">${Number(m.unit_cost).toFixed(2)}</td>
-                    <td className="p-3 border-b border-border text-[13px]">
-                      {Number(m.current_stock)} {m.unit}
-                    </td>
-                    <td className="p-3 border-b border-border">
-                      <MaterialStatusPill status={m.status} />
-                    </td>
-                    <td className="p-3 border-b border-border text-right text-[12px] text-[#1C8A93] font-semibold">
-                      View →
-                    </td>
-                  </tr>
-                );
-              })}
+            {materials.map((m) => {
+            const category = categories.find((c) => c.id === m.category_id);
+            return (
+            <tr
+            key={m.id}
+            className="hover:bg-page-bg-top transition-colors cursor-pointer"
+            onClick={() => navigate(`/materials/${m.id}`)}
+            >
+            <td className="p-3 border-b border-border text-body-sm font-semibold">{m.name}</td>
+            <td className="p-3 border-b border-border text-body-sm text-ink-soft">{category?.name ?? '—'}</td>
+            <td className="p-3 border-b border-border text-body-sm text-ink-soft">{m.unit}</td>
+            <td className="p-3 border-b border-border text-body-sm">${Number(m.unit_cost).toFixed(2)}</td>
+            <td className="p-3 border-b border-border text-body-sm">
+            {Number(m.current_stock)} {m.unit}
+            </td>
+            <td className="p-3 border-b border-border">
+            <MaterialStatusPill status={m.status} />
+            </td>
+            <td className="p-3 border-b border-border text-right text-caption text-[#1C8A93] font-semibold">
+            View →
+            </td>
+            </tr>
+            );
+            })}
             </tbody>
-          </table>
+            </table>
+          </div>
         )}
       </div>
 

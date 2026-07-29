@@ -153,7 +153,7 @@ export function PracticeDetailPage() {
 
   if (error || !practice) {
     return (
-      <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5">
+      <div className="text-body-sm text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5">
         {error || 'Practice not found.'}
       </div>
     );
@@ -161,7 +161,7 @@ export function PracticeDetailPage() {
 
   return (
     <div>
-      <button onClick={() => navigate('/practices')} className="text-[12.5px] text-[#1C8A93] font-semibold mb-4">
+      <button onClick={() => navigate('/practices')} className="text-body-sm text-[#1C8A93] font-semibold mb-4">
         ← Back to practices
       </button>
 
@@ -175,7 +175,7 @@ export function PracticeDetailPage() {
         {tab === 'contracts' && (
           <button
             onClick={() => setNewContractOpen(true)}
-            className="px-4 py-2.5 rounded-[10px] text-white text-[13px] font-semibold"
+            className="px-4 py-2.5 rounded-[10px] text-white text-body-sm font-semibold"
             style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)' }}
           >
             + New contract
@@ -203,37 +203,39 @@ export function PracticeDetailPage() {
               <p>Add a contract to record this practice's terms.</p>
             </div>
           ) : (
-            <table className="w-full border-collapse">
+            <div className="table-scroll">
+              <table className="w-full border-collapse">
               <thead>
-                <tr>
-                  {['Payment terms', 'Credit limit', 'Start', 'End', 'Created'].map((h) => (
-                    <th
-                      key={h}
-                      className="text-left text-[11px] uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border"
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
+              <tr>
+              {['Payment terms', 'Credit limit', 'Start', 'End', 'Created'].map((h) => (
+              <th
+              key={h}
+              className="text-left text-caption uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border"
+              >
+              {h}
+              </th>
+              ))}
+              </tr>
               </thead>
               <tbody>
-                {contracts.map((c) => (
-                  <tr key={c.id}>
-                    <td className="p-3 border-b border-border text-[13px] font-semibold">{c.payment_terms}</td>
-                    <td className="p-3 border-b border-border text-[13px]">${Number(c.credit_limit).toFixed(2)}</td>
-                    <td className="p-3 border-b border-border text-[13px] text-ink-soft">
-                      {new Date(c.contract_start_date).toLocaleDateString()}
-                    </td>
-                    <td className="p-3 border-b border-border text-[13px] text-ink-soft">
-                      {c.contract_end_date ? new Date(c.contract_end_date).toLocaleDateString() : '—'}
-                    </td>
-                    <td className="p-3 border-b border-border text-[13px] text-ink-soft">
-                      {new Date(c.created_at).toLocaleDateString()}
-                    </td>
-                  </tr>
-                ))}
+              {contracts.map((c) => (
+              <tr key={c.id}>
+              <td className="p-3 border-b border-border text-body-sm font-semibold">{c.payment_terms}</td>
+              <td className="p-3 border-b border-border text-body-sm">${Number(c.credit_limit).toFixed(2)}</td>
+              <td className="p-3 border-b border-border text-body-sm text-ink-soft">
+              {new Date(c.contract_start_date).toLocaleDateString()}
+              </td>
+              <td className="p-3 border-b border-border text-body-sm text-ink-soft">
+              {c.contract_end_date ? new Date(c.contract_end_date).toLocaleDateString() : '—'}
+              </td>
+              <td className="p-3 border-b border-border text-body-sm text-ink-soft">
+              {new Date(c.created_at).toLocaleDateString()}
+              </td>
+              </tr>
+              ))}
               </tbody>
-            </table>
+              </table>
+            </div>
           )
         ) : tab === 'notes' ? (
           <div>
@@ -249,7 +251,7 @@ export function PracticeDetailPage() {
               <button
                 onClick={handleAddNote}
                 disabled={noteSubmitting || !noteBody.trim()}
-                className="px-4 rounded-[9px] text-white text-[13px] font-semibold disabled:opacity-60"
+                className="px-4 rounded-[10px] text-white text-body-sm font-semibold disabled:opacity-60"
                 style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)' }}
               >
                 Add
@@ -264,8 +266,8 @@ export function PracticeDetailPage() {
               <div className="space-y-2.5">
                 {notes.map((n) => (
                   <div key={n.id} className="border border-border rounded-xl p-3">
-                    <p className="text-[13px] text-ink">{n.body}</p>
-                    <p className="text-[11px] text-ink-soft mt-1">{new Date(n.created_at).toLocaleString()}</p>
+                    <p className="text-body-sm text-ink">{n.body}</p>
+                    <p className="text-caption text-ink-soft mt-1">{new Date(n.created_at).toLocaleString()}</p>
                   </div>
                 ))}
               </div>
@@ -276,7 +278,7 @@ export function PracticeDetailPage() {
             {canEditPatients && (
               <div className="mb-4">
                 {patientFormError && (
-                  <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-2.5">
+                  <div className="text-body-sm text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-2.5">
                     {patientFormError}
                   </div>
                 )}
@@ -299,7 +301,7 @@ export function PracticeDetailPage() {
                   <button
                     onClick={handleAddPatient}
                     disabled={patientSubmitting || !newPatientFirstName.trim() || !newPatientLastName.trim()}
-                    className="px-4 rounded-[9px] text-white text-[13px] font-semibold disabled:opacity-60 shrink-0"
+                    className="px-4 rounded-[10px] text-white text-body-sm font-semibold disabled:opacity-60 shrink-0"
                     style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)' }}
                   >
                     Add patient
@@ -313,80 +315,82 @@ export function PracticeDetailPage() {
                 <p>Patients added here can be linked to cases for this practice.</p>
               </div>
             ) : (
-              <table className="w-full border-collapse">
+              <div className="table-scroll">
+                <table className="w-full border-collapse">
                 <thead>
-                  <tr>
-                    {['First name', 'Last name', 'Added', ''].map((h) => (
-                      <th
-                        key={h}
-                        className="text-left text-[11px] uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border"
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
+                <tr>
+                {['First name', 'Last name', 'Added', ''].map((h) => (
+                <th
+                key={h}
+                className="text-left text-caption uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border"
+                >
+                {h}
+                </th>
+                ))}
+                </tr>
                 </thead>
                 <tbody>
-                  {patients.map((p) =>
-                    editingPatientId === p.id ? (
-                      <tr key={p.id}>
-                        <td className="p-3 border-b border-border">
-                          <input
-                            className="form-input"
-                            type="text"
-                            value={editFirstName}
-                            onChange={(e) => setEditFirstName(e.target.value)}
-                          />
-                        </td>
-                        <td className="p-3 border-b border-border">
-                          <input
-                            className="form-input"
-                            type="text"
-                            value={editLastName}
-                            onChange={(e) => setEditLastName(e.target.value)}
-                          />
-                        </td>
-                        <td className="p-3 border-b border-border text-[13px] text-ink-soft">
-                          {new Date(p.created_at).toLocaleDateString()}
-                        </td>
-                        <td className="p-3 border-b border-border text-right whitespace-nowrap">
-                          <button
-                            onClick={() => handleSavePatient(p.id)}
-                            disabled={editSubmitting || !editFirstName.trim() || !editLastName.trim()}
-                            className="text-[12px] font-semibold text-[#1C8A93] hover:underline mr-3 disabled:opacity-60"
-                          >
-                            Save
-                          </button>
-                          <button
-                            onClick={cancelEditPatient}
-                            className="text-[12px] font-semibold text-ink-soft hover:underline"
-                          >
-                            Cancel
-                          </button>
-                        </td>
-                      </tr>
-                    ) : (
-                      <tr key={p.id}>
-                        <td className="p-3 border-b border-border text-[13px] font-semibold">{p.first_name}</td>
-                        <td className="p-3 border-b border-border text-[13px]">{p.last_name}</td>
-                        <td className="p-3 border-b border-border text-[13px] text-ink-soft">
-                          {new Date(p.created_at).toLocaleDateString()}
-                        </td>
-                        <td className="p-3 border-b border-border text-right">
-                          {canEditPatients && (
-                            <button
-                              onClick={() => startEditPatient(p)}
-                              className="text-[12px] font-semibold text-[#1C8A93] hover:underline"
-                            >
-                              Edit
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  )}
+                {patients.map((p) =>
+                editingPatientId === p.id ? (
+                <tr key={p.id}>
+                <td className="p-3 border-b border-border">
+                <input
+                className="form-input"
+                type="text"
+                value={editFirstName}
+                onChange={(e) => setEditFirstName(e.target.value)}
+                />
+                </td>
+                <td className="p-3 border-b border-border">
+                <input
+                className="form-input"
+                type="text"
+                value={editLastName}
+                onChange={(e) => setEditLastName(e.target.value)}
+                />
+                </td>
+                <td className="p-3 border-b border-border text-body-sm text-ink-soft">
+                {new Date(p.created_at).toLocaleDateString()}
+                </td>
+                <td className="p-3 border-b border-border text-right whitespace-nowrap">
+                <button
+                onClick={() => handleSavePatient(p.id)}
+                disabled={editSubmitting || !editFirstName.trim() || !editLastName.trim()}
+                className="text-caption font-semibold text-[#1C8A93] hover:underline mr-3 disabled:opacity-60"
+                >
+                Save
+                </button>
+                <button
+                onClick={cancelEditPatient}
+                className="text-caption font-semibold text-ink-soft hover:underline"
+                >
+                Cancel
+                </button>
+                </td>
+                </tr>
+                ) : (
+                <tr key={p.id}>
+                <td className="p-3 border-b border-border text-body-sm font-semibold">{p.first_name}</td>
+                <td className="p-3 border-b border-border text-body-sm">{p.last_name}</td>
+                <td className="p-3 border-b border-border text-body-sm text-ink-soft">
+                {new Date(p.created_at).toLocaleDateString()}
+                </td>
+                <td className="p-3 border-b border-border text-right">
+                {canEditPatients && (
+                <button
+                onClick={() => startEditPatient(p)}
+                className="text-caption font-semibold text-[#1C8A93] hover:underline"
+                >
+                Edit
+                </button>
+                )}
+                </td>
+                </tr>
+                )
+                )}
                 </tbody>
-              </table>
+                </table>
+              </div>
             )}
           </div>
         )}

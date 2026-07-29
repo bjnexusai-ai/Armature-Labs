@@ -41,13 +41,12 @@ export function EquipmentPage() {
     <div>
       <div className="flex items-start justify-between mb-5">
         <div>
-          <h2 className="font-display text-lg font-bold text-ink mb-1">Equipment</h2>
           <p className="text-sm text-ink-soft">Machines, status, and maintenance history.</p>
         </div>
         {canCreate && (
           <button
             onClick={() => setNewOpen(true)}
-            className="px-4 py-2.5 rounded-[10px] text-white text-[13px] font-semibold"
+            className="px-4 py-2.5 rounded-[10px] text-white text-body-sm font-semibold"
             style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)' }}
           >
             + New equipment
@@ -68,7 +67,7 @@ export function EquipmentPage() {
 
       <div className="surface-card rounded-[18px] p-5">
         {error && (
-          <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
+          <div className="text-body-sm text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
             {error}
           </div>
         )}
@@ -85,37 +84,39 @@ export function EquipmentPage() {
             <p>Nothing has been added to the catalog yet.</p>
           </div>
         ) : (
-          <table className="w-full border-collapse">
+          <div className="table-scroll">
+            <table className="w-full border-collapse">
             <thead>
-              <tr>
-                {['Name', 'Type', 'Serial #', 'Next maintenance due', 'Status', ''].map((h) => (
-                  <th key={h} className="text-left text-[11px] uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border">
-                    {h}
-                  </th>
-                ))}
-              </tr>
+            <tr>
+            {['Name', 'Type', 'Serial #', 'Next maintenance due', 'Status', ''].map((h) => (
+            <th key={h} className="text-left text-caption uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border">
+            {h}
+            </th>
+            ))}
+            </tr>
             </thead>
             <tbody>
-              {equipment.map((e) => (
-                <tr
-                  key={e.id}
-                  className="hover:bg-page-bg-top transition-colors cursor-pointer"
-                  onClick={() => navigate(`/equipment/${e.id}`)}
-                >
-                  <td className="p-3 border-b border-border text-[13px] font-semibold">{e.name}</td>
-                  <td className="p-3 border-b border-border text-[13px] text-ink-soft">{e.equipment_type}</td>
-                  <td className="p-3 border-b border-border text-[13px] text-ink-soft font-mono">{e.serial_number || '—'}</td>
-                  <td className="p-3 border-b border-border text-[13px] text-ink-soft">
-                    {e.next_maintenance_due_date ? new Date(`${e.next_maintenance_due_date}T00:00:00`).toLocaleDateString() : '—'}
-                  </td>
-                  <td className="p-3 border-b border-border">
-                    <EquipmentStatusPill status={e.status} />
-                  </td>
-                  <td className="p-3 border-b border-border text-right text-[12px] text-[#1C8A93] font-semibold">View →</td>
-                </tr>
-              ))}
+            {equipment.map((e) => (
+            <tr
+            key={e.id}
+            className="hover:bg-page-bg-top transition-colors cursor-pointer"
+            onClick={() => navigate(`/equipment/${e.id}`)}
+            >
+            <td className="p-3 border-b border-border text-body-sm font-semibold">{e.name}</td>
+            <td className="p-3 border-b border-border text-body-sm text-ink-soft">{e.equipment_type}</td>
+            <td className="p-3 border-b border-border text-body-sm text-ink-soft font-mono">{e.serial_number || '—'}</td>
+            <td className="p-3 border-b border-border text-body-sm text-ink-soft">
+            {e.next_maintenance_due_date ? new Date(`${e.next_maintenance_due_date}T00:00:00`).toLocaleDateString() : '—'}
+            </td>
+            <td className="p-3 border-b border-border">
+            <EquipmentStatusPill status={e.status} />
+            </td>
+            <td className="p-3 border-b border-border text-right text-caption text-[#1C8A93] font-semibold">View →</td>
+            </tr>
+            ))}
             </tbody>
-          </table>
+            </table>
+          </div>
         )}
       </div>
 

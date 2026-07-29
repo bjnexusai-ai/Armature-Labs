@@ -47,7 +47,6 @@ export function InvoicesPage() {
     <div>
       <div className="flex items-start justify-between mb-5">
         <div>
-          <h2 className="font-display text-lg font-bold text-ink mb-1">Invoices</h2>
           <p className="text-sm text-ink-soft">
             {user?.role === 'dentist_client'
               ? 'Invoices for your practice.'
@@ -57,7 +56,7 @@ export function InvoicesPage() {
         {canCreate && (
           <button
             onClick={() => setNewInvoiceOpen(true)}
-            className="px-4 py-2.5 rounded-[10px] text-white text-[13px] font-semibold"
+            className="px-4 py-2.5 rounded-[10px] text-white text-body-sm font-semibold"
             style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)' }}
           >
             + New invoice
@@ -67,7 +66,7 @@ export function InvoicesPage() {
 
       <div className="surface-card rounded-[18px] p-5">
         {error && (
-          <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
+          <div className="text-body-sm text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
             {error}
           </div>
         )}
@@ -88,57 +87,59 @@ export function InvoicesPage() {
             <p>Nothing has been billed here yet.</p>
           </div>
         ) : (
-          <table className="w-full border-collapse">
+          <div className="table-scroll">
+            <table className="w-full border-collapse">
             <thead>
-              <tr>
-                {['Invoice #', 'Status', 'Subtotal', 'Paid', 'Balance', 'Due', 'Created', ''].map((h) => (
-                  <th
-                    key={h}
-                    className="text-left text-[11px] uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
+            <tr>
+            {['Invoice #', 'Status', 'Subtotal', 'Paid', 'Balance', 'Due', 'Created', ''].map((h) => (
+            <th
+            key={h}
+            className="text-left text-caption uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border"
+            >
+            {h}
+            </th>
+            ))}
+            </tr>
             </thead>
             <tbody>
-              {invoices.map((inv) => {
-                const balance = Number(inv.subtotal) - Number(inv.amount_paid);
-                return (
-                  <tr
-                    key={inv.id}
-                    className="hover:bg-page-bg-top transition-colors cursor-pointer"
-                    onClick={() => navigate(`/invoices/${inv.id}`)}
-                  >
-                    <td className="p-3 border-b border-border font-mono text-[12.5px] text-ink-soft">
-                      {inv.invoice_number}
-                    </td>
-                    <td className="p-3 border-b border-border">
-                      <InvoiceStatusPill status={inv.status} />
-                    </td>
-                    <td className="p-3 border-b border-border text-[13px]">${Number(inv.subtotal).toFixed(2)}</td>
-                    <td className="p-3 border-b border-border text-[13px]">
-                      ${Number(inv.amount_paid).toFixed(2)}
-                    </td>
-                    <td className="p-3 border-b border-border text-[13px] font-semibold">
-                      ${balance.toFixed(2)}
-                    </td>
-                    <td className="p-3 border-b border-border text-[13px] text-ink-soft">
-                      {inv.due_date
-                        ? (parseFlexibleDate(inv.due_date)?.toLocaleDateString() ?? inv.due_date)
-                        : 'No due date'}
-                    </td>
-                    <td className="p-3 border-b border-border text-[13px] text-ink-soft">
-                      {new Date(inv.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="p-3 border-b border-border text-right text-[12px] text-[#1C8A93] font-semibold">
-                      View →
-                    </td>
-                  </tr>
-                );
-              })}
+            {invoices.map((inv) => {
+            const balance = Number(inv.subtotal) - Number(inv.amount_paid);
+            return (
+            <tr
+            key={inv.id}
+            className="hover:bg-page-bg-top transition-colors cursor-pointer"
+            onClick={() => navigate(`/invoices/${inv.id}`)}
+            >
+            <td className="p-3 border-b border-border font-mono text-body-sm text-ink-soft">
+            {inv.invoice_number}
+            </td>
+            <td className="p-3 border-b border-border">
+            <InvoiceStatusPill status={inv.status} />
+            </td>
+            <td className="p-3 border-b border-border text-body-sm">${Number(inv.subtotal).toFixed(2)}</td>
+            <td className="p-3 border-b border-border text-body-sm">
+            ${Number(inv.amount_paid).toFixed(2)}
+            </td>
+            <td className="p-3 border-b border-border text-body-sm font-semibold">
+            ${balance.toFixed(2)}
+            </td>
+            <td className="p-3 border-b border-border text-body-sm text-ink-soft">
+            {inv.due_date
+            ? (parseFlexibleDate(inv.due_date)?.toLocaleDateString() ?? inv.due_date)
+            : 'No due date'}
+            </td>
+            <td className="p-3 border-b border-border text-body-sm text-ink-soft">
+            {new Date(inv.created_at).toLocaleDateString()}
+            </td>
+            <td className="p-3 border-b border-border text-right text-caption text-[#1C8A93] font-semibold">
+            View →
+            </td>
+            </tr>
+            );
+            })}
             </tbody>
-          </table>
+            </table>
+          </div>
         )}
       </div>
 

@@ -59,7 +59,7 @@ export function LoginPage() {
       >
         <div className="brand-mesh-pattern" />
 
-        <div className="brand-mark relative z-[1] mt-1.5 font-display font-extrabold text-[30px] tracking-[-0.015em]">
+        <div className="brand-mark relative z-[1] mt-1.5 font-display font-extrabold text-display tracking-[-0.015em]">
           Armature Labs
           <small className="block font-body font-medium text-[9.5px] tracking-[0.18em] text-[#F3FAF6] mt-1.5 opacity-80">
             ADMIN PORTAL
@@ -81,22 +81,22 @@ export function LoginPage() {
           </div>
         </div>
 
-        <div className="brand-glass relative z-[1] rounded-[20px] p-[22px_24px]" style={{ background: 'rgba(15,34,30,0.30)', backdropFilter: 'blur(18px) saturate(90%)', border: '1px solid rgba(234,242,236,0.16)', boxShadow: '0 8px 28px rgba(6,30,26,0.10)' }}>
-          <p className="font-display text-[20px] font-bold leading-snug m-0 mb-2 text-white">
+        <div className="brand-glass relative z-[1] rounded-[18px] p-[22px_24px]" style={{ background: 'rgba(15,34,30,0.30)', backdropFilter: 'blur(18px) saturate(90%)', border: '1px solid rgba(234,242,236,0.16)', boxShadow: '0 8px 28px rgba(6,30,26,0.10)' }}>
+          <p className="font-display text-title font-bold leading-snug m-0 mb-2 text-white">
             Real-time visibility into every case.
           </p>
-          <span className="text-[12.5px] text-[#E1EDE6] leading-relaxed block">
+          <span className="text-body-sm text-[#E1EDE6] leading-relaxed block">
             From intake to delivery — design approvals, bisque approvals, and
             shipping, all in one place.
           </span>
           <div className="flex gap-7 mt-4 pt-4" style={{ borderTop: '1px solid rgba(234,242,236,0.12)' }}>
             <div>
-              <b className="block font-display text-[19px] font-extrabold text-[#5FE8CE]">10</b>
-              <span className="text-[11px] text-[#DCEAE3]">status stages</span>
+              <b className="block font-display text-title font-extrabold text-[#5FE8CE]">10</b>
+              <span className="text-caption text-[#DCEAE3]">status stages</span>
             </div>
             <div>
-              <b className="block font-display text-[22px] font-extrabold text-[#7DF2DC]">2</b>
-              <span className="text-[11px] text-[#DCEAE3]">approval gates</span>
+              <b className="block font-display text-title font-extrabold text-[#7DF2DC]">2</b>
+              <span className="text-caption text-[#DCEAE3]">approval gates</span>
             </div>
           </div>
         </div>
@@ -114,17 +114,17 @@ export function LoginPage() {
       >
         <div className="login-card w-full max-w-[352px] relative z-[1] -mt-6">
           <div className="bg-card-bg rounded-[24px] px-8 pt-9 pb-[30px]" style={{ border: '1px solid rgba(18,140,150,0.10)', boxShadow: '0 1px 0 rgba(255,255,255,0.9) inset, 0 24px 60px -18px rgba(15,42,44,0.22), 0 4px 14px rgba(15,42,44,0.06)' }}>
-            <div className="font-display font-extrabold text-[27px] tracking-[-0.015em] mb-3">
+            <div className="font-display font-extrabold text-display tracking-[-0.015em] mb-3">
               Sign in
             </div>
-            <p className="text-[13.5px] text-ink-soft mb-10 leading-relaxed">
+            <p className="text-body-lg text-ink-soft mb-10 leading-relaxed">
               Welcome back — enter your credentials to access the portal.
             </p>
 
             <form onSubmit={handleSubmit} noValidate>
               <div
                 role="alert"
-                className="flex items-start gap-2.5 rounded-xl px-3.5 py-2.5 text-[12.5px] font-medium leading-snug transition-all overflow-hidden"
+                className="flex items-start gap-2.5 rounded-xl px-3.5 py-2.5 text-body-sm font-medium leading-snug transition-all overflow-hidden"
                 style={{
                   background: '#FBEEEA',
                   border: '1px solid #EED0C4',
@@ -146,7 +146,7 @@ export function LoginPage() {
               </div>
 
               <div className="mb-[18px]">
-                <label htmlFor="email" className="text-[12.5px] font-semibold mb-[11px] block">
+                <label htmlFor="email" className="text-body-sm font-semibold mb-[11px] block">
                   Email
                 </label>
                 <div className="relative flex items-center">
@@ -168,7 +168,7 @@ export function LoginPage() {
               </div>
 
               <div className="mb-[18px]">
-                <label htmlFor="password" className="text-[12.5px] font-semibold mb-[11px] block">
+                <label htmlFor="password" className="text-body-sm font-semibold mb-[11px] block">
                   Password
                 </label>
                 <div className="relative flex items-center">
@@ -214,7 +214,7 @@ export function LoginPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="login-btn w-full h-[52px] rounded-2xl text-white font-bold text-[14.5px] mt-1.5 flex items-center justify-center gap-2.5"
+                className="login-btn w-full h-[52px] rounded-2xl text-white font-semibold text-body-lg mt-1.5 flex items-center justify-center gap-2.5"
                 style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)', boxShadow: '0 8px 18px -9px rgba(23,140,143,0.42)' }}
               >
                 {submitting && <span className="btn-spinner" />}

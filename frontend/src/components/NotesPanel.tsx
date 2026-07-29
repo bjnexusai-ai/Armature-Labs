@@ -67,8 +67,8 @@ export function NotesPanel({ caseId }: { caseId: number }) {
 
   return (
     <div>
-      <form onSubmit={handleSubmit} className="surface-card rounded-[16px] p-4 mb-4">
-        <label className="block text-[12.5px] font-semibold text-ink mb-1.5">
+      <form onSubmit={handleSubmit} className="surface-card rounded-[18px] p-4 mb-4">
+        <label className="block text-body-sm font-semibold text-ink mb-1.5">
           {isInternal ? 'New message' : 'Message the lab'}
         </label>
         <textarea
@@ -97,16 +97,16 @@ export function NotesPanel({ caseId }: { caseId: number }) {
               </button>
             </div>
           ) : (
-            <span className="text-[11.5px] text-ink-soft">This message is visible to the assigned lab staff.</span>
+            <span className="text-caption text-ink-soft">This message is visible to the assigned lab staff.</span>
           )}
-          <button type="submit" className="btn-primary h-9 px-4 rounded-[9px] font-semibold text-[13px] disabled:opacity-60" disabled={submitting || !body.trim()}>
+          <button type="submit" className="btn-primary h-9 px-4 rounded-[10px] font-semibold text-body-sm disabled:opacity-60" disabled={submitting || !body.trim()}>
             {submitting ? 'Sending…' : 'Send'}
           </button>
         </div>
       </form>
 
       {error && (
-        <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
+        <div className="text-body-sm text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
           {error}
         </div>
       )}
@@ -135,19 +135,19 @@ export function NotesPanel({ caseId }: { caseId: number }) {
                 style={mine ? { borderColor: 'rgba(28,138,147,0.28)' } : undefined}
               >
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[12px] font-semibold text-ink">
+                  <span className="text-caption font-semibold text-ink">
                     {mine ? 'You' : `Author #${n.author_id}`}
                   </span>
                   <div className="flex items-center gap-2">
                     {n.visibility === 'internal' && (
-                      <span className="text-[10px] font-mono uppercase tracking-wide bg-page-bg-top text-ink-soft rounded px-1.5 py-0.5">
+                      <span className="text-caption font-mono uppercase tracking-wide bg-page-bg-top text-ink-soft rounded px-1.5 py-0.5">
                         internal
                       </span>
                     )}
-                    <span className="text-[11px] text-ink-soft">{timeAgo(n.created_at)}</span>
+                    <span className="text-caption text-ink-soft">{timeAgo(n.created_at)}</span>
                   </div>
                 </div>
-                <p className="text-[13px] text-ink m-0 whitespace-pre-wrap">{n.body}</p>
+                <p className="text-body-sm text-ink m-0 whitespace-pre-wrap">{n.body}</p>
               </div>
             );
           })}

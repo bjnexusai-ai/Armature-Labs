@@ -90,7 +90,7 @@ export function InvoiceDetailPage() {
   if (error || !invoice) {
     return (
       <div className="surface-card rounded-[18px] p-5">
-        <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
+        <div className="text-body-sm text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
           {error || 'Invoice not found.'}
         </div>
         <button
@@ -109,13 +109,13 @@ export function InvoiceDetailPage() {
     <div>
       <button
         onClick={() => navigate('/invoices')}
-        className="text-[12.5px] font-semibold text-[#1C8A93] hover:underline mb-3"
+        className="text-body-sm font-semibold text-[#1C8A93] hover:underline mb-3"
       >
         ← Back to invoices
       </button>
 
       {paymentRedirect === 'success' && (
-        <div className="flex items-center justify-between text-[12.5px] text-[#1C6B4A] bg-[#E9F7F0] border border-[#C6E9D8] rounded-xl px-3.5 py-2.5 mb-4">
+        <div className="flex items-center justify-between text-body-sm text-[#1C6B4A] bg-[#E9F7F0] border border-[#C6E9D8] rounded-xl px-3.5 py-2.5 mb-4">
           <span>
             Payment submitted. It can take a few moments for the balance below to update once Stripe's webhook lands.
           </span>
@@ -125,7 +125,7 @@ export function InvoiceDetailPage() {
         </div>
       )}
       {paymentRedirect === 'cancelled' && (
-        <div className="flex items-center justify-between text-[12.5px] text-ink-soft bg-page-bg-top border border-border rounded-xl px-3.5 py-2.5 mb-4">
+        <div className="flex items-center justify-between text-body-sm text-ink-soft bg-page-bg-top border border-border rounded-xl px-3.5 py-2.5 mb-4">
           <span>Checkout was cancelled — no payment was made.</span>
           <button onClick={dismissPaymentBanner} className="font-semibold hover:underline shrink-0 ml-3">
             Dismiss
@@ -133,7 +133,7 @@ export function InvoiceDetailPage() {
         </div>
       )}
       {checkoutError && (
-        <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
+        <div className="text-body-sm text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
           {checkoutError}
         </div>
       )}
@@ -159,7 +159,7 @@ export function InvoiceDetailPage() {
               <button
                 onClick={handlePayNow}
                 disabled={checkoutLoading}
-                className="px-4 py-2.5 rounded-[10px] text-white text-[13px] font-semibold disabled:opacity-60"
+                className="px-4 py-2.5 rounded-[10px] text-white text-body-sm font-semibold disabled:opacity-60"
                 style={{ background: 'linear-gradient(135deg,#5B4CC4,#7A6CE0)' }}
               >
                 {checkoutLoading ? 'Redirecting…' : 'Pay with card'}
@@ -168,7 +168,7 @@ export function InvoiceDetailPage() {
             {canRecordPayment && (
               <button
                 onClick={() => setPaymentModalOpen(true)}
-                className="px-4 py-2.5 rounded-[10px] text-white text-[13px] font-semibold"
+                className="px-4 py-2.5 rounded-[10px] text-white text-body-sm font-semibold"
                 style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)' }}
               >
                 Mark as paid
@@ -187,10 +187,10 @@ export function InvoiceDetailPage() {
             <span className="text-badge-teal text-lg">🧾</span>
           </div>
           <div>
-            <div className="font-display font-bold text-[22px] leading-none tracking-[-0.01em] text-ink">
+            <div className="font-display font-bold text-title leading-none tracking-[-0.01em] text-ink">
               ${Number(invoice.subtotal).toFixed(2)}
             </div>
-            <div className="text-[12.5px] text-ink-soft mt-[3px] font-medium">Subtotal</div>
+            <div className="text-body-sm text-ink-soft mt-[3px] font-medium">Subtotal</div>
           </div>
         </div>
         <div className="surface-card fade-in rounded-[18px] p-[18px_20px] flex items-center gap-3.5">
@@ -201,10 +201,10 @@ export function InvoiceDetailPage() {
             <span className="text-badge-green text-lg">✅</span>
           </div>
           <div>
-            <div className="font-display font-bold text-[22px] leading-none tracking-[-0.01em] text-ink">
+            <div className="font-display font-bold text-title leading-none tracking-[-0.01em] text-ink">
               ${Number(invoice.amount_paid).toFixed(2)}
             </div>
-            <div className="text-[12.5px] text-ink-soft mt-[3px] font-medium">Amount paid</div>
+            <div className="text-body-sm text-ink-soft mt-[3px] font-medium">Amount paid</div>
           </div>
         </div>
         <div className="surface-card fade-in rounded-[18px] p-[18px_20px] flex items-center gap-3.5">
@@ -212,13 +212,16 @@ export function InvoiceDetailPage() {
             className="w-11 h-11 rounded-[10px] flex items-center justify-center shrink-0"
             style={{ background: 'var(--color-badge-amber-bg)' }}
           >
-            <span className="text-badge-amber text-lg">⏳</span>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-badge-amber">
+              <circle cx="12" cy="12" r="8.5" />
+              <path d="M12 7.5V12l3 2" />
+            </svg>
           </div>
           <div>
-            <div className="font-display font-bold text-[22px] leading-none tracking-[-0.01em] text-ink">
+            <div className="font-display font-bold text-title leading-none tracking-[-0.01em] text-ink">
               ${balance.toFixed(2)}
             </div>
-            <div className="text-[12.5px] text-ink-soft mt-[3px] font-medium">Balance due</div>
+            <div className="text-body-sm text-ink-soft mt-[3px] font-medium">Balance due</div>
           </div>
         </div>
         <div className="surface-card fade-in rounded-[18px] p-[18px_20px] flex items-center gap-3.5">
@@ -226,65 +229,70 @@ export function InvoiceDetailPage() {
             className="w-11 h-11 rounded-[10px] flex items-center justify-center shrink-0"
             style={{ background: 'var(--color-badge-teal-bg)' }}
           >
-            <span className="text-badge-teal text-lg">📅</span>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-badge-teal">
+              <rect x="3.5" y="4.5" width="17" height="16" rx="2.5" />
+              <path d="M3.5 9.5h17M8 3v3M16 3v3" />
+            </svg>
           </div>
           <div>
-            <div className="font-display font-bold text-[22px] leading-none tracking-[-0.01em] text-ink">
+            <div className="font-display font-bold text-title leading-none tracking-[-0.01em] text-ink">
               {invoice.due_date
                 ? (parseFlexibleDate(invoice.due_date)?.toLocaleDateString() ?? invoice.due_date)
                 : 'No due date'}
             </div>
-            <div className="text-[12.5px] text-ink-soft mt-[3px] font-medium">Due</div>
+            <div className="text-body-sm text-ink-soft mt-[3px] font-medium">Due</div>
           </div>
         </div>
       </div>
 
       <div className="surface-card rounded-[18px] p-5 mb-5">
-        <h3 className="font-display text-[15px] font-bold text-ink mb-3">Line items</h3>
+        <h3 className="font-display text-body-lg font-bold text-ink mb-3">Line items</h3>
         {invoice.lineItems.length === 0 ? (
-          <p className="text-[13px] text-ink-soft">No line items.</p>
+          <p className="text-body-sm text-ink-soft">No line items.</p>
         ) : (
-          <table className="w-full border-collapse">
+          <div className="table-scroll">
+            <table className="w-full border-collapse">
             <thead>
-              <tr>
-                {['Description', 'Case', 'Qty', 'Unit price', 'Total'].map((h) => (
-                  <th
-                    key={h}
-                    className="text-left text-[11px] uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
+            <tr>
+            {['Description', 'Case', 'Qty', 'Unit price', 'Total'].map((h) => (
+            <th
+            key={h}
+            className="text-left text-caption uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border"
+            >
+            {h}
+            </th>
+            ))}
+            </tr>
             </thead>
             <tbody>
-              {invoice.lineItems.map((li) => (
-                <tr key={li.id}>
-                  <td className="p-3 border-b border-border text-[13px]">{li.description}</td>
-                  <td className="p-3 border-b border-border text-[13px] text-ink-soft">
-                    {li.case_id ? (
-                      <button
-                        onClick={() => navigate(`/cases/${li.case_id}`)}
-                        className="font-mono text-[#1C8A93] hover:underline"
-                      >
-                        #{li.case_id}
-                      </button>
-                    ) : (
-                      '—'
-                    )}
-                  </td>
-                  <td className="p-3 border-b border-border text-[13px]">{li.quantity}</td>
-                  <td className="p-3 border-b border-border text-[13px]">${Number(li.unit_price).toFixed(2)}</td>
-                  <td className="p-3 border-b border-border text-[13px] font-semibold">
-                    ${Number(li.line_total).toFixed(2)}
-                  </td>
-                </tr>
-              ))}
+            {invoice.lineItems.map((li) => (
+            <tr key={li.id}>
+            <td className="p-3 border-b border-border text-body-sm">{li.description}</td>
+            <td className="p-3 border-b border-border text-body-sm text-ink-soft">
+            {li.case_id ? (
+            <button
+            onClick={() => navigate(`/cases/${li.case_id}`)}
+            className="font-mono text-[#1C8A93] hover:underline"
+            >
+            #{li.case_id}
+            </button>
+            ) : (
+            '—'
+            )}
+            </td>
+            <td className="p-3 border-b border-border text-body-sm">{li.quantity}</td>
+            <td className="p-3 border-b border-border text-body-sm">${Number(li.unit_price).toFixed(2)}</td>
+            <td className="p-3 border-b border-border text-body-sm font-semibold">
+            ${Number(li.line_total).toFixed(2)}
+            </td>
+            </tr>
+            ))}
             </tbody>
-          </table>
+            </table>
+          </div>
         )}
         {Number(invoice.tax_amount) > 0 && (
-          <div className="mt-3 pt-3 border-t border-border space-y-1 text-[13px]">
+          <div className="mt-3 pt-3 border-t border-border space-y-1 text-body-sm">
             <div className="flex justify-between text-ink-soft">
               <span>Subtotal</span>
               <span>${Number(invoice.subtotal).toFixed(2)}</span>
@@ -300,7 +308,7 @@ export function InvoiceDetailPage() {
           </div>
         )}
         {invoice.notes && (
-          <p className="text-[12.5px] text-ink-soft mt-3 pt-3 border-t border-border">
+          <p className="text-body-sm text-ink-soft mt-3 pt-3 border-t border-border">
             <span className="font-semibold text-ink">Notes: </span>
             {invoice.notes}
           </p>
@@ -308,7 +316,7 @@ export function InvoiceDetailPage() {
       </div>
 
       <div className="surface-card rounded-[18px] p-5">
-        <h3 className="font-display text-[15px] font-bold text-ink mb-3">Payment timeline</h3>
+        <h3 className="font-display text-body-lg font-bold text-ink mb-3">Payment timeline</h3>
         {invoice.payments.length === 0 ? (
           <div className="empty-state">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
@@ -326,12 +334,12 @@ export function InvoiceDetailPage() {
                 className="flex items-center justify-between p-3 rounded-lg border border-border bg-page-bg-top"
               >
                 <div>
-                  <p className="text-[13px] font-semibold text-ink">
+                  <p className="text-body-sm font-semibold text-ink">
                     ${Number(p.amount).toFixed(2)} · {p.method}
                   </p>
-                  {p.reference_note && <p className="text-[12px] text-ink-soft">{p.reference_note}</p>}
+                  {p.reference_note && <p className="text-caption text-ink-soft">{p.reference_note}</p>}
                 </div>
-                <span className="text-[12px] text-ink-soft">{new Date(p.created_at).toLocaleString()}</span>
+                <span className="text-caption text-ink-soft">{new Date(p.created_at).toLocaleString()}</span>
               </li>
             ))}
           </ul>

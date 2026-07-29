@@ -102,10 +102,10 @@ export function NewChecklistModal({ open, onClose, onCreated }: NewChecklistModa
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="modal-box w-full max-w-[480px] bg-card-bg rounded-[20px] p-[26px_26px_22px] shadow-[0_30px_70px_rgba(10,30,30,0.28)] max-h-[86vh] overflow-y-auto">
+      <div className="modal-box w-full max-w-[480px] bg-card-bg rounded-[18px] p-[26px_26px_22px] shadow-[0_30px_70px_rgba(10,30,30,0.28)] max-h-[86vh] overflow-y-auto">
         <div className="flex justify-between items-start mb-4">
           <div>
-            <h3 className="font-display text-[17px] font-bold text-ink m-0">New QC checklist</h3>
+            <h3 className="font-display text-title-sm font-bold text-ink m-0">New QC checklist</h3>
             <p className="text-xs text-ink-soft mt-0.5">Define the items technicians check off before final approval</p>
           </div>
           <button
@@ -118,14 +118,14 @@ export function NewChecklistModal({ open, onClose, onCreated }: NewChecklistModa
         </div>
 
         {error && (
-          <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
+          <div className="text-body-sm text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit}>
           <div className="mb-3.5">
-            <label className="block text-[12.5px] font-semibold text-ink mb-1.5">Checklist name</label>
+            <label className="block text-body-sm font-semibold text-ink mb-1.5">Checklist name</label>
             <input
               className="form-input"
               type="text"
@@ -137,7 +137,7 @@ export function NewChecklistModal({ open, onClose, onCreated }: NewChecklistModa
           </div>
 
           <div className="mb-3.5">
-            <label className="block text-[12.5px] font-semibold text-ink mb-1.5">
+            <label className="block text-body-sm font-semibold text-ink mb-1.5">
               Case type <span className="text-ink-soft font-normal">(optional)</span>
             </label>
             <select
@@ -157,11 +157,11 @@ export function NewChecklistModal({ open, onClose, onCreated }: NewChecklistModa
 
           <div className="mb-3.5">
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-[12.5px] font-semibold text-ink">Checklist items</label>
+              <label className="block text-body-sm font-semibold text-ink">Checklist items</label>
               <button
                 type="button"
                 onClick={() => setItems((its) => [...its, emptyItem()])}
-                className="text-[11.5px] font-semibold text-[#1C8A93] hover:underline"
+                className="text-caption font-semibold text-[#1C8A93] hover:underline"
               >
                 + Add item
               </button>
@@ -169,7 +169,7 @@ export function NewChecklistModal({ open, onClose, onCreated }: NewChecklistModa
             <div className="space-y-2">
               {items.map((it, i) => (
                 <div key={it.key} className="flex gap-2 items-center">
-                  <span className="text-[11px] text-ink-soft w-4 shrink-0">{i + 1}.</span>
+                  <span className="text-caption text-ink-soft w-4 shrink-0">{i + 1}.</span>
                   <input
                     className="form-input flex-1"
                     type="text"
@@ -195,14 +195,14 @@ export function NewChecklistModal({ open, onClose, onCreated }: NewChecklistModa
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 h-10 rounded-[9px] border border-border bg-white font-semibold text-[13px] cursor-pointer hover:bg-page-bg-top"
+              className="flex-1 h-10 rounded-[10px] border border-border bg-white font-semibold text-body-sm cursor-pointer hover:bg-page-bg-top"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="flex-1 h-10 rounded-[9px] text-white font-semibold text-[13px] cursor-pointer disabled:opacity-60"
+              className="flex-1 h-10 rounded-[10px] text-white font-semibold text-body-sm cursor-pointer disabled:opacity-60"
               style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)' }}
             >
               {submitting ? 'Creating…' : 'Create checklist'}

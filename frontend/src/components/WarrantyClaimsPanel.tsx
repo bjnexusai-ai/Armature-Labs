@@ -65,7 +65,7 @@ export function WarrantyClaimsPanel({
   return (
     <div>
       <div className="flex items-center justify-between mb-3.5">
-        <span className="text-[12.5px] text-ink-soft">
+        <span className="text-body-sm text-ink-soft">
           {canFile
             ? 'Either the lab or the dental office can file a claim once a case has been delivered.'
             : 'A warranty claim can only be filed once this case reaches "Delivered" status.'}
@@ -73,7 +73,7 @@ export function WarrantyClaimsPanel({
         {canFile && (
           <button
             onClick={() => setFiling((f) => !f)}
-            className="btn-primary h-9 px-4 rounded-[9px] font-semibold text-[13px] shrink-0 ml-3"
+            className="btn-primary h-9 px-4 rounded-[10px] font-semibold text-body-sm shrink-0 ml-3"
           >
             {filing ? 'Cancel' : '+ File a claim'}
           </button>
@@ -81,8 +81,8 @@ export function WarrantyClaimsPanel({
       </div>
 
       {filing && canFile && (
-        <form onSubmit={handleSubmit} className="surface-card rounded-[16px] p-4 mb-4">
-          <label className="block text-[12.5px] font-semibold text-ink mb-1.5">What's the issue?</label>
+        <form onSubmit={handleSubmit} className="surface-card rounded-[18px] p-4 mb-4">
+          <label className="block text-body-sm font-semibold text-ink mb-1.5">What's the issue?</label>
           <textarea
             className="form-input h-24 resize-none py-2 mb-3"
             placeholder="Describe the fit, shade, or damage issue…"
@@ -93,7 +93,7 @@ export function WarrantyClaimsPanel({
           <button
             type="submit"
             disabled={submitting || !description.trim()}
-            className="h-9 px-4 rounded-[9px] text-white font-semibold text-[13px] disabled:opacity-60"
+            className="h-9 px-4 rounded-[10px] text-white font-semibold text-body-sm disabled:opacity-60"
             style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)' }}
           >
             {submitting ? 'Filing…' : 'File claim'}
@@ -102,7 +102,7 @@ export function WarrantyClaimsPanel({
       )}
 
       {error && (
-        <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
+        <div className="text-body-sm text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
           {error}
         </div>
       )}
@@ -126,28 +126,28 @@ export function WarrantyClaimsPanel({
             <div key={c.id} className="surface-card rounded-[14px] p-4">
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-[13px] font-semibold text-ink">Claim #{c.id}</span>
+                  <span className="text-body-sm font-semibold text-ink">Claim #{c.id}</span>
                   <WarrantyStatusPill status={c.status} />
                 </div>
                 {isInternal && !c.resolved_at && (
                   <button
                     onClick={() => setResolvingClaim(c)}
-                    className="h-8 px-3 rounded-[8px] border border-border bg-white font-semibold text-[12px] cursor-pointer hover:bg-page-bg-top shrink-0"
+                    className="h-8 px-3 rounded-[10px] border border-border bg-white font-semibold text-caption cursor-pointer hover:bg-page-bg-top shrink-0"
                   >
                     Resolve
                   </button>
                 )}
               </div>
-              <p className="text-[13px] text-ink m-0 mb-2">{c.description}</p>
+              <p className="text-body-sm text-ink m-0 mb-2">{c.description}</p>
               {c.resolution_notes && (
                 <div className="bg-page-bg-top rounded-[10px] p-3">
-                  <span className="block text-[10.5px] uppercase tracking-wider text-ink-soft mb-1">
+                  <span className="block text-caption uppercase tracking-wider text-ink-soft mb-1">
                     Resolution notes
                   </span>
-                  <p className="text-[13px] text-ink m-0">{c.resolution_notes}</p>
+                  <p className="text-body-sm text-ink m-0">{c.resolution_notes}</p>
                 </div>
               )}
-              <div className="text-[11px] text-ink-soft mt-2 space-x-3">
+              <div className="text-caption text-ink-soft mt-2 space-x-3">
                 <span>Filed {new Date(c.created_at).toLocaleDateString()}</span>
                 {c.resolved_at && <span>Resolved {new Date(c.resolved_at).toLocaleDateString()}</span>}
               </div>

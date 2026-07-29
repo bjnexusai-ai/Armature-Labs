@@ -76,7 +76,7 @@ export function CaseDetailPage() {
     <div>
       <button
         onClick={() => navigate('/cases')}
-        className="text-[13px] font-semibold text-hero-teal mb-4 flex items-center gap-1 hover:underline"
+        className="text-body-sm font-semibold text-hero-teal mb-4 flex items-center gap-1 hover:underline"
       >
         ← Back to case queue
       </button>
@@ -95,7 +95,7 @@ export function CaseDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
         <div className="surface-card rounded-[18px] p-5">
-          <h3 className="font-display text-[15px] font-bold text-ink mb-3.5">Case details</h3>
+          <h3 className="font-display text-body-lg font-bold text-ink mb-3.5">Case details</h3>
           <div className="grid grid-cols-2 gap-3">
             <DetailCell label="Practice" value={practiceName ?? `Practice #${caseRecord.practice_id}`} />
             <DetailCell
@@ -119,24 +119,24 @@ export function CaseDetailPage() {
           </div>
           {caseRecord.rx_instructions && (
             <div className="mt-3.5 bg-page-bg-top rounded-[10px] p-3">
-              <span className="block text-[10.5px] uppercase tracking-wider text-ink-soft mb-1">
+              <span className="block text-caption uppercase tracking-wider text-ink-soft mb-1">
                 Rx instructions
               </span>
-              <p className="text-[13px] text-ink m-0">{caseRecord.rx_instructions}</p>
+              <p className="text-body-sm text-ink m-0">{caseRecord.rx_instructions}</p>
             </div>
           )}
           {caseRecord.notes && (
             <div className="mt-2.5 bg-page-bg-top rounded-[10px] p-3">
-              <span className="block text-[10.5px] uppercase tracking-wider text-ink-soft mb-1">
+              <span className="block text-caption uppercase tracking-wider text-ink-soft mb-1">
                 Notes
               </span>
-              <p className="text-[13px] text-ink m-0">{caseRecord.notes}</p>
+              <p className="text-body-sm text-ink m-0">{caseRecord.notes}</p>
             </div>
           )}
         </div>
 
         <div className="surface-card rounded-[18px] p-5">
-          <h3 className="font-display text-[15px] font-bold text-ink mb-1">Current stage</h3>
+          <h3 className="font-display text-body-lg font-bold text-ink mb-1">Current stage</h3>
           {currentStage ? (
             <>
               <p className="text-sm text-ink-soft mb-3.5">{currentStage.status}</p>
@@ -149,10 +149,10 @@ export function CaseDetailPage() {
               </div>
               {currentStage.notes && (
                 <div className="bg-page-bg-top rounded-[10px] p-3">
-                  <span className="block text-[10.5px] uppercase tracking-wider text-ink-soft mb-1">
+                  <span className="block text-caption uppercase tracking-wider text-ink-soft mb-1">
                     Stage notes
                   </span>
-                  <p className="text-[13px] text-ink m-0">{currentStage.notes}</p>
+                  <p className="text-body-sm text-ink m-0">{currentStage.notes}</p>
                 </div>
               )}
             </>
@@ -160,7 +160,7 @@ export function CaseDetailPage() {
             <p className="text-sm text-ink-soft">No stage history yet.</p>
           )}
 
-          <h3 className="font-display text-[15px] font-bold text-ink mt-5 mb-3">
+          <h3 className="font-display text-body-lg font-bold text-ink mt-5 mb-3">
             Recent status changes
           </h3>
           {audit.length === 0 ? (
@@ -168,7 +168,7 @@ export function CaseDetailPage() {
           ) : (
             <div className="space-y-2.5">
               {audit.map((a) => (
-                <div key={a.id} className="flex items-start justify-between text-[12.5px] border-b border-border pb-2.5 last:border-0">
+                <div key={a.id} className="flex items-start justify-between text-body-sm border-b border-border pb-2.5 last:border-0">
                   <div>
                     <span className="font-semibold text-ink">
                       {a.old_status ? `${a.old_status} → ` : ''}
@@ -201,8 +201,8 @@ export function CaseDetailPage() {
 function DetailCell({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="bg-page-bg-top rounded-[10px] px-3 py-2.5">
-      <span className="block text-[10.5px] uppercase tracking-wider text-ink-soft mb-0.5">{label}</span>
-      <b className="text-[13.5px] font-bold text-ink">{value}</b>
+      <span className="block text-caption uppercase tracking-wider text-ink-soft mb-0.5">{label}</span>
+      <b className="text-body-lg font-semibold text-ink">{value}</b>
     </div>
   );
 }

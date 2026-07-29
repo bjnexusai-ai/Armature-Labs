@@ -116,10 +116,10 @@ export function NewMaterialModal({ open, onClose, onCreated }: NewMaterialModalP
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="modal-box w-full max-w-[520px] bg-card-bg rounded-[20px] p-[26px_26px_22px] shadow-[0_30px_70px_rgba(10,30,30,0.28)] max-h-[86vh] overflow-y-auto">
+      <div className="modal-box w-full max-w-[520px] bg-card-bg rounded-[18px] p-[26px_26px_22px] shadow-[0_30px_70px_rgba(10,30,30,0.28)] max-h-[86vh] overflow-y-auto">
         <div className="flex justify-between items-start mb-4">
           <div>
-            <h3 className="font-display text-[17px] font-bold text-ink m-0">New material</h3>
+            <h3 className="font-display text-title-sm font-bold text-ink m-0">New material</h3>
             <p className="text-xs text-ink-soft mt-0.5">Adds a material to the catalog</p>
           </div>
           <button
@@ -132,7 +132,7 @@ export function NewMaterialModal({ open, onClose, onCreated }: NewMaterialModalP
         </div>
 
         {(optionsError || submitError) && (
-          <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
+          <div className="text-body-sm text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
             {submitError || optionsError}
           </div>
         )}
@@ -140,11 +140,11 @@ export function NewMaterialModal({ open, onClose, onCreated }: NewMaterialModalP
         <form onSubmit={handleSubmit}>
           <div className="mb-3.5">
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-[12.5px] font-semibold text-ink">Category</label>
+              <label className="block text-body-sm font-semibold text-ink">Category</label>
               <button
                 type="button"
                 onClick={() => setNewCategoryMode((v) => !v)}
-                className="text-[11.5px] font-semibold text-[#1C8A93] hover:underline"
+                className="text-caption font-semibold text-[#1C8A93] hover:underline"
               >
                 {newCategoryMode ? 'Choose existing instead' : '+ new category'}
               </button>
@@ -176,13 +176,13 @@ export function NewMaterialModal({ open, onClose, onCreated }: NewMaterialModalP
           </div>
 
           <div className="mb-3.5">
-            <label className="block text-[12.5px] font-semibold text-ink mb-1.5">Name</label>
+            <label className="block text-body-sm font-semibold text-ink mb-1.5">Name</label>
             <input className="form-input" type="text" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
 
           <div className="flex gap-2.5 mb-3.5">
             <div className="flex-1">
-              <label className="block text-[12.5px] font-semibold text-ink mb-1.5">Unit</label>
+              <label className="block text-body-sm font-semibold text-ink mb-1.5">Unit</label>
               <input
                 className="form-input"
                 type="text"
@@ -192,7 +192,7 @@ export function NewMaterialModal({ open, onClose, onCreated }: NewMaterialModalP
               />
             </div>
             <div className="flex-1">
-              <label className="block text-[12.5px] font-semibold text-ink mb-1.5">Unit cost ($)</label>
+              <label className="block text-body-sm font-semibold text-ink mb-1.5">Unit cost ($)</label>
               <input
                 className="form-input"
                 type="number"
@@ -206,7 +206,7 @@ export function NewMaterialModal({ open, onClose, onCreated }: NewMaterialModalP
 
           <div className="flex gap-2.5 mb-4">
             <div className="flex-1">
-              <label className="block text-[12.5px] font-semibold text-ink mb-1.5">Reorder threshold</label>
+              <label className="block text-body-sm font-semibold text-ink mb-1.5">Reorder threshold</label>
               <input
                 className="form-input"
                 type="number"
@@ -216,7 +216,7 @@ export function NewMaterialModal({ open, onClose, onCreated }: NewMaterialModalP
               />
             </div>
             <div className="flex-1">
-              <label className="block text-[12.5px] font-semibold text-ink mb-1.5">Initial stock (optional)</label>
+              <label className="block text-body-sm font-semibold text-ink mb-1.5">Initial stock (optional)</label>
               <input
                 className="form-input"
                 type="number"
@@ -231,14 +231,14 @@ export function NewMaterialModal({ open, onClose, onCreated }: NewMaterialModalP
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 h-10 rounded-[9px] border border-border bg-white font-semibold text-[13px] cursor-pointer hover:bg-page-bg-top"
+              className="flex-1 h-10 rounded-[10px] border border-border bg-white font-semibold text-body-sm cursor-pointer hover:bg-page-bg-top"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting || loadingOptions}
-              className="flex-1 h-10 rounded-[9px] text-white font-semibold text-[13px] cursor-pointer disabled:opacity-60"
+              className="flex-1 h-10 rounded-[10px] text-white font-semibold text-body-sm cursor-pointer disabled:opacity-60"
               style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)' }}
             >
               {submitting ? 'Creating…' : 'Create material'}

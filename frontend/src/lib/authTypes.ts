@@ -10,6 +10,15 @@ export type Role =
   | 'designer'
   | 'dentist_client';
 
+/** "office_manager" -> "Office Manager". Shared so it's defined once
+ * instead of re-implemented in every file that displays a role. */
+export function roleLabel(role: string): string {
+  return role
+    .split('_')
+    .map((w) => w[0].toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
 export interface AuthUser {
   id: number;
   fullName: string;

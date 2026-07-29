@@ -100,23 +100,23 @@ export function CaseSnapshotHero({ caseRecord, caseTypeName, loading }: CaseSnap
         </div>
         <div className="flex gap-9 flex-wrap">
           <div>
-            <div className="text-[11px] opacity-70">Stage</div>
-            <div className="font-bold text-sm">
+            <div className="text-caption opacity-70">Stage</div>
+            <div className="font-semibold text-sm">
               {caseRecord.current_status}
               {pct != null ? ` · ${pct}%` : ''}
             </div>
           </div>
           <div>
-            <div className="text-[11px] opacity-70">Case type</div>
-            <div className="font-bold text-sm">{caseTypeName ?? '—'}</div>
+            <div className="text-caption opacity-70">Case type</div>
+            <div className="font-semibold text-sm">{caseTypeName ?? '—'}</div>
           </div>
           <div>
-            <div className="text-[11px] opacity-70">Assignment</div>
-            <div className="font-bold text-sm">{caseRecord.assigned_staff_id ? 'Assigned' : 'Unassigned'}</div>
+            <div className="text-caption opacity-70">Assignment</div>
+            <div className="font-semibold text-sm">{caseRecord.assigned_staff_id ? 'Assigned' : 'Unassigned'}</div>
           </div>
           <div>
-            <div className="text-[11px] opacity-70">Due</div>
-            <div className="font-bold text-sm">{dueLabel}</div>
+            <div className="text-caption opacity-70">Due</div>
+            <div className="font-semibold text-sm">{dueLabel}</div>
           </div>
         </div>
       </div>

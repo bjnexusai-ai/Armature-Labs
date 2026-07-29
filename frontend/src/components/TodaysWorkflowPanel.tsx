@@ -17,7 +17,7 @@ interface TodaysWorkflowPanelProps {
 export function TodaysWorkflowPanel({ steps, loading }: TodaysWorkflowPanelProps) {
   return (
     <div className="surface-card fade-in rounded-[18px] p-5 mb-5">
-      <h3 className="font-display text-[15px] font-bold m-0 text-ink tracking-[-0.01em]">Today's workflow</h3>
+      <h3 className="font-display text-body-lg font-bold m-0 text-ink tracking-[-0.01em]">Today's workflow</h3>
       <p className="text-xs text-ink-soft mt-0.5 mb-0">Live case pipeline across the lab</p>
       <div className="flex justify-between items-start mt-4.5 flex-wrap gap-2.5">
         {loading
@@ -35,11 +35,11 @@ export function TodaysWorkflowPanel({ steps, loading }: TodaysWorkflowPanelProps
                 <div className="w-[100px] text-center">
                   <div className={`wf-step ${step.status}`}>
                     <div className="wf-dot">
-                      {step.status === 'completed' && <span className="text-white font-bold text-sm">✓</span>}
+                      {step.status === 'completed' && <span className="text-white font-semibold text-sm">✓</span>}
                     </div>
                   </div>
-                  <h5 className="mt-2.5 mb-0 text-[13px] font-bold text-ink">{step.label}</h5>
-                  <small className="block mt-0.5 text-ink-soft text-[11.5px]">{step.sub}</small>
+                  <h5 className="mt-2.5 mb-0 text-body-sm font-semibold text-ink">{step.label}</h5>
+                  <small className="block mt-0.5 text-ink-soft text-caption">{step.sub}</small>
                 </div>
                 {i < steps.length - 1 && <div className="wf-connector" />}
               </div>

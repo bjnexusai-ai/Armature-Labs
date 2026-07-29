@@ -36,10 +36,10 @@ export function MetricCard({ icon, iconBg, value, label, loading }: MetricCardPr
         {icon}
       </div>
       <div>
-        <div className="font-display font-bold text-[22px] leading-none tracking-[-0.01em] text-ink">
+        <div className="font-display font-bold text-title leading-none tracking-[-0.01em] text-ink">
           {animated}
         </div>
-        <div className="text-[12.5px] text-ink-soft mt-[3px] font-medium">{label}</div>
+        <div className="text-body-sm text-ink-soft mt-[3px] font-medium">{label}</div>
       </div>
     </div>
   );

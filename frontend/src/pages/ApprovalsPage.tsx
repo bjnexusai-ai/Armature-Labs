@@ -60,7 +60,6 @@ export function ApprovalsPage() {
     <div>
       <div className="flex items-start justify-between mb-5">
         <div>
-          <h2 className="font-display text-lg font-bold text-ink mb-1">Approvals</h2>
           <p className="text-sm text-ink-soft">
             Design and bisque photos awaiting a decision before a case can move forward.
           </p>
@@ -84,7 +83,7 @@ export function ApprovalsPage() {
         </div>
 
         {error && (
-          <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
+          <div className="text-body-sm text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
             {error}
           </div>
         )}
@@ -105,67 +104,69 @@ export function ApprovalsPage() {
             <p>No {statusFilter || ''} approvals right now.</p>
           </div>
         ) : (
-          <table className="w-full border-collapse">
+          <div className="table-scroll">
+            <table className="w-full border-collapse">
             <thead>
-              <tr>
-                {['Case', 'Patient', 'Stage', 'Media', 'Status', ''].map((h) => (
-                  <th
-                    key={h}
-                    className="text-left text-[11px] uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
+            <tr>
+            {['Case', 'Patient', 'Stage', 'Media', 'Status', ''].map((h) => (
+            <th
+            key={h}
+            className="text-left text-caption uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border"
+            >
+            {h}
+            </th>
+            ))}
+            </tr>
             </thead>
             <tbody>
-              {approvals.map((a) => (
-                <tr key={a.id} className="hover:bg-page-bg-top transition-colors">
-                  <td
-                    className="p-3 border-b border-border font-mono text-[12.5px] text-ink-soft cursor-pointer"
-                    onClick={() => navigate(`/cases/${a.case_id}`)}
-                  >
-                    {a.case_number}
-                  </td>
-                  <td className="p-3 border-b border-border text-[13px]">{a.patient_name || '—'}</td>
-                  <td className="p-3 border-b border-border text-[13px] capitalize">{a.stage}</td>
-                  <td className="p-3 border-b border-border text-[13px]">
-                    <a
-                      href={a.media_file_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-[#1C8A93] hover:underline"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {a.media_file_name}
-                    </a>
-                  </td>
-                  <td className="p-3 border-b border-border">
-                    <ApprovalStatusPill status={a.status} />
-                  </td>
-                  <td className="p-3 border-b border-border text-right whitespace-nowrap">
-                    {a.status === 'pending' && canAct && (
-                      <div className="flex gap-1.5 justify-end">
-                        <button
-                          onClick={() => openAction(a, 'request-changes')}
-                          className="px-2.5 py-1.5 rounded-md border border-border text-xs font-semibold hover:bg-page-bg-top"
-                        >
-                          Request changes
-                        </button>
-                        <button
-                          onClick={() => openAction(a, 'approve')}
-                          className="px-2.5 py-1.5 rounded-md text-white text-xs font-semibold"
-                          style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)' }}
-                        >
-                          Approve
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
+            {approvals.map((a) => (
+            <tr key={a.id} className="hover:bg-page-bg-top transition-colors">
+            <td
+            className="p-3 border-b border-border font-mono text-body-sm text-ink-soft cursor-pointer"
+            onClick={() => navigate(`/cases/${a.case_id}`)}
+            >
+            {a.case_number}
+            </td>
+            <td className="p-3 border-b border-border text-body-sm">{a.patient_name || '—'}</td>
+            <td className="p-3 border-b border-border text-body-sm capitalize">{a.stage}</td>
+            <td className="p-3 border-b border-border text-body-sm">
+            <a
+            href={a.media_file_url}
+            target="_blank"
+            rel="noreferrer"
+            className="text-[#1C8A93] hover:underline"
+            onClick={(e) => e.stopPropagation()}
+            >
+            {a.media_file_name}
+            </a>
+            </td>
+            <td className="p-3 border-b border-border">
+            <ApprovalStatusPill status={a.status} />
+            </td>
+            <td className="p-3 border-b border-border text-right whitespace-nowrap">
+            {a.status === 'pending' && canAct && (
+            <div className="flex gap-1.5 justify-end">
+            <button
+            onClick={() => openAction(a, 'request-changes')}
+            className="px-2.5 py-1.5 rounded-md border border-border text-xs font-semibold hover:bg-page-bg-top"
+            >
+            Request changes
+            </button>
+            <button
+            onClick={() => openAction(a, 'approve')}
+            className="px-2.5 py-1.5 rounded-md text-white text-xs font-semibold"
+            style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)' }}
+            >
+            Approve
+            </button>
+            </div>
+            )}
+            </td>
+            </tr>
+            ))}
             </tbody>
-          </table>
+            </table>
+          </div>
         )}
 
         {pagination && pagination.totalPages > 1 && (

@@ -40,7 +40,7 @@ export function ActionRequiredQueue({ items, loading }: ActionRequiredQueueProps
 
   return (
     <div className="surface-card fade-in rounded-[18px] p-5">
-      <h3 className="font-display text-[15px] font-bold m-0 text-ink tracking-[-0.01em]">Action required queue</h3>
+      <h3 className="font-display text-body-lg font-bold m-0 text-ink tracking-[-0.01em]">Action required queue</h3>
       <p className="text-xs text-ink-soft mt-0.5 mb-2.5">Cases needing staff attention</p>
       <input
         type="text"
@@ -79,10 +79,10 @@ export function ActionRequiredQueue({ items, loading }: ActionRequiredQueueProps
               style={{ background: 'transparent' }}
             >
               <div className="min-w-0">
-                <div className="text-[13px] font-semibold text-ink truncate">
+                <div className="text-body-sm font-semibold text-ink truncate">
                   {item.patientLabel} — {item.practiceLabel}
                 </div>
-                <div className="text-[11.5px] text-ink-soft font-mono">{item.caseNumber}</div>
+                <div className="text-caption text-ink-soft font-mono">{item.caseNumber}</div>
               </div>
               <div className="shrink-0">
                 <StatusPill status={item.status} />

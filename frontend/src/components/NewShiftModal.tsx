@@ -88,10 +88,10 @@ export function NewShiftModal({ open, onClose, onCreated }: NewShiftModalProps) 
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="modal-box w-full max-w-[460px] bg-card-bg rounded-[20px] p-[26px_26px_22px] shadow-[0_30px_70px_rgba(10,30,30,0.28)] max-h-[86vh] overflow-y-auto">
+      <div className="modal-box w-full max-w-[460px] bg-card-bg rounded-[18px] p-[26px_26px_22px] shadow-[0_30px_70px_rgba(10,30,30,0.28)] max-h-[86vh] overflow-y-auto">
         <div className="flex justify-between items-start mb-4">
           <div>
-            <h3 className="font-display text-[17px] font-bold text-ink m-0">New technician shift</h3>
+            <h3 className="font-display text-title-sm font-bold text-ink m-0">New technician shift</h3>
           </div>
           <button
             onClick={onClose}
@@ -103,14 +103,14 @@ export function NewShiftModal({ open, onClose, onCreated }: NewShiftModalProps) 
         </div>
 
         {submitError && (
-          <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
+          <div className="text-body-sm text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
             {submitError}
           </div>
         )}
 
         <form onSubmit={handleSubmit}>
           <div className="mb-3.5">
-            <label className="block text-[12.5px] font-semibold text-ink mb-1.5">Technician ID</label>
+            <label className="block text-body-sm font-semibold text-ink mb-1.5">Technician ID</label>
             <input
               className="form-input"
               type="number"
@@ -119,7 +119,7 @@ export function NewShiftModal({ open, onClose, onCreated }: NewShiftModalProps) 
               onChange={(e) => setTechnicianId(e.target.value)}
               placeholder="e.g. 3"
             />
-            <p className="text-[11px] text-ink-soft mt-1.5">
+            <p className="text-caption text-ink-soft mt-1.5">
               No staff directory endpoint currently links a technician's name to their ID — ask your Office Manager if
               unsure.
             </p>
@@ -127,17 +127,17 @@ export function NewShiftModal({ open, onClose, onCreated }: NewShiftModalProps) 
 
           <div className="flex gap-2.5 mb-3.5">
             <div className="flex-1">
-              <label className="block text-[12.5px] font-semibold text-ink mb-1.5">Starts</label>
+              <label className="block text-body-sm font-semibold text-ink mb-1.5">Starts</label>
               <input className="form-input" type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} />
             </div>
             <div className="flex-1">
-              <label className="block text-[12.5px] font-semibold text-ink mb-1.5">Ends</label>
+              <label className="block text-body-sm font-semibold text-ink mb-1.5">Ends</label>
               <input className="form-input" type="datetime-local" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} />
             </div>
           </div>
 
           <div className="mb-4">
-            <label className="block text-[12.5px] font-semibold text-ink mb-1.5">Notes (optional)</label>
+            <label className="block text-body-sm font-semibold text-ink mb-1.5">Notes (optional)</label>
             <textarea className="form-input h-16 resize-none py-2" value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
 
@@ -145,14 +145,14 @@ export function NewShiftModal({ open, onClose, onCreated }: NewShiftModalProps) 
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 h-10 rounded-[9px] border border-border bg-white font-semibold text-[13px] cursor-pointer hover:bg-page-bg-top"
+              className="flex-1 h-10 rounded-[10px] border border-border bg-white font-semibold text-body-sm cursor-pointer hover:bg-page-bg-top"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="flex-1 h-10 rounded-[9px] text-white font-semibold text-[13px] cursor-pointer disabled:opacity-60"
+              className="flex-1 h-10 rounded-[10px] text-white font-semibold text-body-sm cursor-pointer disabled:opacity-60"
               style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)' }}
             >
               {submitting ? 'Creating…' : 'Create shift'}

@@ -70,10 +70,10 @@ export function MaintenanceLogModal({ open, equipment, onClose, onLogged }: Main
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="modal-box w-full max-w-[460px] bg-card-bg rounded-[20px] p-[26px_26px_22px] shadow-[0_30px_70px_rgba(10,30,30,0.28)] max-h-[86vh] overflow-y-auto">
+      <div className="modal-box w-full max-w-[460px] bg-card-bg rounded-[18px] p-[26px_26px_22px] shadow-[0_30px_70px_rgba(10,30,30,0.28)] max-h-[86vh] overflow-y-auto">
         <div className="flex justify-between items-start mb-4">
           <div>
-            <h3 className="font-display text-[17px] font-bold text-ink m-0">Log maintenance</h3>
+            <h3 className="font-display text-title-sm font-bold text-ink m-0">Log maintenance</h3>
             <p className="text-xs text-ink-soft mt-0.5">{equipment.name}</p>
           </div>
           <button
@@ -86,7 +86,7 @@ export function MaintenanceLogModal({ open, equipment, onClose, onLogged }: Main
         </div>
 
         {submitError && (
-          <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
+          <div className="text-body-sm text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
             {submitError}
           </div>
         )}
@@ -106,13 +106,13 @@ export function MaintenanceLogModal({ open, equipment, onClose, onLogged }: Main
           </div>
 
           <div className="mb-3.5">
-            <label className="block text-[12.5px] font-semibold text-ink mb-1.5">Next due date (optional)</label>
+            <label className="block text-body-sm font-semibold text-ink mb-1.5">Next due date (optional)</label>
             <input className="form-input" type="date" value={nextDueDate} onChange={(e) => setNextDueDate(e.target.value)} />
-            <p className="text-[11px] text-ink-soft mt-1.5">Leave blank to keep this machine's existing due date unchanged.</p>
+            <p className="text-caption text-ink-soft mt-1.5">Leave blank to keep this machine's existing due date unchanged.</p>
           </div>
 
           <div className="mb-4">
-            <label className="block text-[12.5px] font-semibold text-ink mb-1.5">Notes (optional)</label>
+            <label className="block text-body-sm font-semibold text-ink mb-1.5">Notes (optional)</label>
             <textarea className="form-input h-16 resize-none py-2" value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
 
@@ -120,14 +120,14 @@ export function MaintenanceLogModal({ open, equipment, onClose, onLogged }: Main
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 h-10 rounded-[9px] border border-border bg-white font-semibold text-[13px] cursor-pointer hover:bg-page-bg-top"
+              className="flex-1 h-10 rounded-[10px] border border-border bg-white font-semibold text-body-sm cursor-pointer hover:bg-page-bg-top"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="flex-1 h-10 rounded-[9px] text-white font-semibold text-[13px] cursor-pointer disabled:opacity-60"
+              className="flex-1 h-10 rounded-[10px] text-white font-semibold text-body-sm cursor-pointer disabled:opacity-60"
               style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)' }}
             >
               {submitting ? 'Recording…' : 'Record log'}

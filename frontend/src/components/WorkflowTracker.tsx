@@ -25,12 +25,12 @@ export function WorkflowTracker({ steps }: WorkflowTrackerProps) {
             <div className={`wf-step ${step.status}`}>
               <div className="wf-dot">
                 {step.status === 'completed' && (
-                  <span className="text-white font-bold text-sm">✓</span>
+                  <span className="text-white font-semibold text-sm">✓</span>
                 )}
               </div>
             </div>
-            <h5 className="mt-2.5 mb-0 text-[13px] font-bold text-ink">{step.label}</h5>
-            <small className="block mt-0.5 text-ink-soft text-[11.5px]">{step.sub}</small>
+            <h5 className="mt-2.5 mb-0 text-body-sm font-semibold text-ink">{step.label}</h5>
+            <small className="block mt-0.5 text-ink-soft text-caption">{step.sub}</small>
           </div>
           {i < steps.length - 1 && <div className="wf-connector" />}
         </div>

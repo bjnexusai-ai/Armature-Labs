@@ -122,8 +122,8 @@ export function DonutChart({ slices, isolatedKey, onToggleIsolate, centerLabel }
                   className="inline-block rounded-full shrink-0"
                   style={{ width: 9, height: 9, background: s.color }}
                 />
-                <span className="text-[12.5px] text-ink flex-1">{s.label}</span>
-                <span className="text-[12.5px] font-semibold text-ink-soft">{s.value}</span>
+                <span className="text-body-sm text-ink flex-1">{s.label}</span>
+                <span className="text-body-sm font-semibold text-ink-soft">{s.value}</span>
               </button>
             );
           })}
@@ -131,7 +131,7 @@ export function DonutChart({ slices, isolatedKey, onToggleIsolate, centerLabel }
           <button
             type="button"
             onClick={() => onToggleIsolate(null)}
-            className="text-[11.5px] text-[#1C8A93] font-semibold mt-1 text-left px-1.5"
+            className="text-caption text-[#1C8A93] font-semibold mt-1 text-left px-1.5"
           >
             ← Show all statuses
           </button>

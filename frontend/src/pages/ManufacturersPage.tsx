@@ -34,12 +34,11 @@ export function ManufacturersPage() {
     <div>
       <div className="flex items-start justify-between mb-5">
         <div>
-          <h2 className="font-display text-lg font-bold text-ink mb-1">Manufacturers</h2>
           <p className="text-sm text-ink-soft">Lab → manufacturer payouts via Stripe Connect</p>
         </div>
         <button
           onClick={() => setNewOpen(true)}
-          className="px-4 py-2.5 rounded-[10px] text-white text-[13px] font-semibold"
+          className="px-4 py-2.5 rounded-[10px] text-white text-body-sm font-semibold"
           style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)' }}
         >
           + New manufacturer
@@ -47,7 +46,7 @@ export function ManufacturersPage() {
       </div>
 
       {error && (
-        <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
+        <div className="text-body-sm text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
           {error}
         </div>
       )}
@@ -68,49 +67,51 @@ export function ManufacturersPage() {
             <p>No manufacturers yet. Add one to start onboarding Stripe Connect payouts.</p>
           </div>
         ) : (
-          <table className="w-full border-collapse">
+          <div className="table-scroll">
+            <table className="w-full border-collapse">
             <thead>
-              <tr>
-                {['Name', 'Contact', 'Country', 'Connect status', ''].map((h) => (
-                  <th
-                    key={h}
-                    className="text-left text-[11px] uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
+            <tr>
+            {['Name', 'Contact', 'Country', 'Connect status', ''].map((h) => (
+            <th
+            key={h}
+            className="text-left text-caption uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border"
+            >
+            {h}
+            </th>
+            ))}
+            </tr>
             </thead>
             <tbody>
-              {manufacturers.map((m) => (
-                <tr
-                  key={m.id}
-                  className="cursor-pointer hover:bg-page-bg-top"
-                  onClick={() => navigate(`/manufacturers/${m.id}`)}
-                >
-                  <td className="p-3 border-b border-border text-[13px] font-semibold text-ink">{m.name}</td>
-                  <td className="p-3 border-b border-border text-[13px] text-ink-soft">
-                    {m.contact_name || m.email || m.phone || '—'}
-                  </td>
-                  <td className="p-3 border-b border-border text-[13px] font-mono text-ink-soft">{m.country}</td>
-                  <td className="p-3 border-b border-border text-[13px]">
-                    {m.stripe_connected_account_id ? (
-                      <span className="status-pill" style={{ background: 'var(--color-badge-amber-bg)', color: 'var(--color-badge-amber)' }}>
-                        {m.connect_status}
-                      </span>
-                    ) : (
-                      <span className="status-pill" style={{ background: 'var(--color-badge-tan-bg)', color: 'var(--color-badge-tan)' }}>
-                        Not started
-                      </span>
-                    )}
-                  </td>
-                  <td className="p-3 border-b border-border text-[13px] text-right text-[#1C8A93] font-semibold">
-                    View →
-                  </td>
-                </tr>
-              ))}
+            {manufacturers.map((m) => (
+            <tr
+            key={m.id}
+            className="cursor-pointer hover:bg-page-bg-top"
+            onClick={() => navigate(`/manufacturers/${m.id}`)}
+            >
+            <td className="p-3 border-b border-border text-body-sm font-semibold text-ink">{m.name}</td>
+            <td className="p-3 border-b border-border text-body-sm text-ink-soft">
+            {m.contact_name || m.email || m.phone || '—'}
+            </td>
+            <td className="p-3 border-b border-border text-body-sm font-mono text-ink-soft">{m.country}</td>
+            <td className="p-3 border-b border-border text-body-sm">
+            {m.stripe_connected_account_id ? (
+            <span className="status-pill" style={{ background: 'var(--color-badge-amber-bg)', color: 'var(--color-badge-amber)' }}>
+            {m.connect_status}
+            </span>
+            ) : (
+            <span className="status-pill" style={{ background: 'var(--color-badge-tan-bg)', color: 'var(--color-badge-tan)' }}>
+            Not started
+            </span>
+            )}
+            </td>
+            <td className="p-3 border-b border-border text-body-sm text-right text-[#1C8A93] font-semibold">
+            View →
+            </td>
+            </tr>
+            ))}
             </tbody>
-          </table>
+            </table>
+          </div>
         )}
       </div>
 

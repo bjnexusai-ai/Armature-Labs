@@ -48,7 +48,7 @@ export function MaterialDetailPage() {
 
   if (error || !material) {
     return (
-      <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5">
+      <div className="text-body-sm text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5">
         {error || 'Material not found.'}
       </div>
     );
@@ -56,7 +56,7 @@ export function MaterialDetailPage() {
 
   return (
     <div>
-      <button onClick={() => navigate('/materials')} className="text-[12.5px] text-[#1C8A93] font-semibold mb-4">
+      <button onClick={() => navigate('/materials')} className="text-body-sm text-[#1C8A93] font-semibold mb-4">
         ← Back to materials
       </button>
 
@@ -73,7 +73,7 @@ export function MaterialDetailPage() {
         {canRecord && (
           <button
             onClick={() => setTxnModalOpen(true)}
-            className="px-4 py-2.5 rounded-[10px] text-white text-[13px] font-semibold"
+            className="px-4 py-2.5 rounded-[10px] text-white text-body-sm font-semibold"
             style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)' }}
           >
             Record transaction
@@ -82,19 +82,19 @@ export function MaterialDetailPage() {
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-5">
-        <div className="surface-card rounded-[16px] p-4">
-          <p className="text-[11px] uppercase tracking-wider text-ink-soft mb-1">Unit cost</p>
-          <p className="text-lg font-bold text-ink">${Number(material.unit_cost).toFixed(2)}</p>
+        <div className="surface-card rounded-[18px] p-4">
+          <p className="text-caption uppercase tracking-wider text-ink-soft mb-1">Unit cost</p>
+          <p className="text-lg stat-value text-ink">${Number(material.unit_cost).toFixed(2)}</p>
         </div>
-        <div className="surface-card rounded-[16px] p-4">
-          <p className="text-[11px] uppercase tracking-wider text-ink-soft mb-1">Reorder threshold</p>
-          <p className="text-lg font-bold text-ink">
+        <div className="surface-card rounded-[18px] p-4">
+          <p className="text-caption uppercase tracking-wider text-ink-soft mb-1">Reorder threshold</p>
+          <p className="text-lg stat-value text-ink">
             {Number(material.reorder_threshold)} {material.unit}
           </p>
         </div>
-        <div className="surface-card rounded-[16px] p-4">
-          <p className="text-[11px] uppercase tracking-wider text-ink-soft mb-1">Current stock</p>
-          <p className="text-lg font-bold text-ink">
+        <div className="surface-card rounded-[18px] p-4">
+          <p className="text-caption uppercase tracking-wider text-ink-soft mb-1">Current stock</p>
+          <p className="text-lg stat-value text-ink">
             {Number(material.current_stock)} {material.unit}
           </p>
         </div>
@@ -108,40 +108,42 @@ export function MaterialDetailPage() {
             <p>Consumption, receiving, and adjustments will show up here.</p>
           </div>
         ) : (
-          <table className="w-full border-collapse">
+          <div className="table-scroll">
+            <table className="w-full border-collapse">
             <thead>
-              <tr>
-                {['Type', 'Quantity', 'Lot #', 'Notes', 'Date'].map((h) => (
-                  <th
-                    key={h}
-                    className="text-left text-[11px] uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
+            <tr>
+            {['Type', 'Quantity', 'Lot #', 'Notes', 'Date'].map((h) => (
+            <th
+            key={h}
+            className="text-left text-caption uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border"
+            >
+            {h}
+            </th>
+            ))}
+            </tr>
             </thead>
             <tbody>
-              {transactions.map((t) => (
-                <tr key={t.id}>
-                  <td className="p-3 border-b border-border text-[13px] font-semibold">{t.type}</td>
-                  <td
-                    className={`p-3 border-b border-border text-[13px] ${
-                      Number(t.quantity) < 0 ? 'text-[#9C4326]' : 'text-[#16A37A]'
-                    }`}
-                  >
-                    {Number(t.quantity) > 0 ? '+' : ''}
-                    {Number(t.quantity)}
-                  </td>
-                  <td className="p-3 border-b border-border text-[13px] font-mono text-ink-soft">{t.lot_number}</td>
-                  <td className="p-3 border-b border-border text-[13px] text-ink-soft">{t.notes || '—'}</td>
-                  <td className="p-3 border-b border-border text-[13px] text-ink-soft">
-                    {new Date(t.created_at).toLocaleString()}
-                  </td>
-                </tr>
-              ))}
+            {transactions.map((t) => (
+            <tr key={t.id}>
+            <td className="p-3 border-b border-border text-body-sm font-semibold">{t.type}</td>
+            <td
+            className={`p-3 border-b border-border text-body-sm ${
+            Number(t.quantity) < 0 ? 'text-[#9C4326]' : 'text-[#16A37A]'
+            }`}
+            >
+            {Number(t.quantity) > 0 ? '+' : ''}
+            {Number(t.quantity)}
+            </td>
+            <td className="p-3 border-b border-border text-body-sm font-mono text-ink-soft">{t.lot_number}</td>
+            <td className="p-3 border-b border-border text-body-sm text-ink-soft">{t.notes || '—'}</td>
+            <td className="p-3 border-b border-border text-body-sm text-ink-soft">
+            {new Date(t.created_at).toLocaleString()}
+            </td>
+            </tr>
+            ))}
             </tbody>
-          </table>
+            </table>
+          </div>
         )}
       </div>
 

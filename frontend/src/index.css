@@ -64,14 +64,40 @@
   --shadow-sm: 0 6px 22px rgba(20,60,70,0.06);
   --shadow-md: 0 10px 28px rgba(20,60,70,0.09);
   --shadow-lg: 0 16px 40px rgba(20,60,70,0.16);
+
+  /* Locked type scale — replaces 19 uncoordinated text-[Npx] values found
+     across the app. Anchored to the values the codebase already clustered
+     around most heavily (confirmed by grep count), not arbitrary new
+     numbers, to keep the migration low-risk. */
+  --text-caption: 11px;    /* was 10.5-11.5px cluster (67 instances) */
+  --text-body-sm: 13px;    /* was 12.5-13px cluster (335 instances) */
+  --text-body-lg: 14.5px;  /* was 13.5-15px cluster (23 instances) */
+  --text-title-sm: 17px;   /* was a standalone 17px cluster (19 instances) */
+  --text-title: 22px;      /* was 19-23px cluster (9 instances) */
+  --text-display: 28px;    /* was 27-30px cluster (2 instances) */
+
+  /* Locked radius scale — replaces 13 uncoordinated rounded-[Npx] values.
+     Anchored the same way: merged near-duplicate clusters onto their
+     majority value instead of picking a fresh number. */
+  --radius-sm: 10px;  /* merged 9px (48) + 10px (39) clusters */
+  --radius-lg: 18px;  /* merged 16px (9) + 18px (45) + 20px (20) clusters */
+  --radius-full: 999px; /* pills, avatars */
 }
+
+/* Semantic text-size classes — use these instead of a new text-[Npx]. */
+.text-caption  { font-size: var(--text-caption); }
+.text-body-sm  { font-size: var(--text-body-sm); }
+.text-body-lg  { font-size: var(--text-body-lg); }
+.text-title-sm { font-size: var(--text-title-sm); }
+.text-title    { font-size: var(--text-title); }
+.text-display  { font-size: var(--text-display); }
 
 /* ===== Reusable panel surface (ported from the reference's .panel — shadow
    deepens on hover, no lift/transform) ===== */
 .surface-card {
   background: var(--color-card-bg);
   border: 1px solid rgba(18,140,150,0.08);
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   transition: box-shadow 180ms ease;
 }
@@ -88,6 +114,29 @@ body {
 
 .mesh-gradient { background: var(--mesh-gradient); }
 .sidebar-scrim { background: var(--sidebar-scrim); }
+
+/* Bold numeric/stat values (unit cost, status, etc) must use the display
+   font, not the body font — Inter is only loaded at 400/500/600, so
+   font-bold (700) on Inter gets synthetically (fake) bolded by the browser.
+   Plus Jakarta Sans is loaded through 800, so bold stat values render with
+   real glyphs instead of a browser-stretched approximation. */
+.stat-value {
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+/* Wrap any <table> in a `.table-scroll` div so it scrolls horizontally
+   instead of clipping or forcing page-level overflow on narrow viewports. */
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table-scroll table { min-width: 640px; }
+
+/* Mobile drawer scrim behind the slide-in sidebar (md and below). */
+.drawer-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 26, 26, 0.44);
+  z-index: 90;
+}
 
 :focus-visible {
   outline: 2px solid var(--color-nav-active);

@@ -51,19 +51,19 @@ export function ProgressPhotosPanel({ caseId }: { caseId: number }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-3.5">
-        <span className="text-[12.5px] text-ink-soft">Internal production shots — not visible to the dental office.</span>
+        <span className="text-body-sm text-ink-soft">Internal production shots — not visible to the dental office.</span>
         <button
           onClick={() => setAdding((a) => !a)}
-          className="btn-primary h-9 px-4 rounded-[9px] font-semibold text-[13px]"
+          className="btn-primary h-9 px-4 rounded-[10px] font-semibold text-body-sm"
         >
           {adding ? 'Cancel' : '+ Add photo'}
         </button>
       </div>
 
       {adding && (
-        <form onSubmit={handleSubmit} className="surface-card rounded-[16px] p-4 mb-4">
+        <form onSubmit={handleSubmit} className="surface-card rounded-[18px] p-4 mb-4">
           <div className="mb-3">
-            <label className="block text-[12.5px] font-semibold text-ink mb-1.5">Photo URL</label>
+            <label className="block text-body-sm font-semibold text-ink mb-1.5">Photo URL</label>
             <input
               className="form-input"
               type="text"
@@ -74,7 +74,7 @@ export function ProgressPhotosPanel({ caseId }: { caseId: number }) {
             />
           </div>
           <div className="mb-3.5">
-            <label className="block text-[12.5px] font-semibold text-ink mb-1.5">
+            <label className="block text-body-sm font-semibold text-ink mb-1.5">
               Caption <span className="text-ink-soft font-normal">(optional)</span>
             </label>
             <input
@@ -89,7 +89,7 @@ export function ProgressPhotosPanel({ caseId }: { caseId: number }) {
           <button
             type="submit"
             disabled={submitting || !fileUrl.trim()}
-            className="h-9 px-4 rounded-[9px] text-white font-semibold text-[13px] disabled:opacity-60"
+            className="h-9 px-4 rounded-[10px] text-white font-semibold text-body-sm disabled:opacity-60"
             style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)' }}
           >
             {submitting ? 'Adding…' : 'Add photo'}
@@ -98,7 +98,7 @@ export function ProgressPhotosPanel({ caseId }: { caseId: number }) {
       )}
 
       {error && (
-        <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
+        <div className="text-body-sm text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
           {error}
         </div>
       )}
@@ -127,8 +127,8 @@ export function ProgressPhotosPanel({ caseId }: { caseId: number }) {
                 <img src={p.file_url} alt={p.caption || 'Progress photo'} className="w-full h-full object-cover" />
               </div>
               <div className="p-2.5">
-                {p.caption && <p className="text-[12px] text-ink m-0 mb-1">{p.caption}</p>}
-                <span className="text-[10.5px] text-ink-soft font-mono">
+                {p.caption && <p className="text-caption text-ink m-0 mb-1">{p.caption}</p>}
+                <span className="text-caption text-ink-soft font-mono">
                   {new Date(p.taken_at).toLocaleDateString()}
                 </span>
               </div>

@@ -72,10 +72,10 @@ export function RecordPaymentModal({ invoice, onClose, onDone }: RecordPaymentMo
       }}
     >
       {invoice && (
-        <div className="modal-box w-full max-w-[420px] bg-card-bg rounded-[20px] p-[26px_26px_22px] shadow-[0_30px_70px_rgba(10,30,30,0.28)] max-h-[86vh] overflow-y-auto">
+        <div className="modal-box w-full max-w-[420px] bg-card-bg rounded-[18px] p-[26px_26px_22px] shadow-[0_30px_70px_rgba(10,30,30,0.28)] max-h-[86vh] overflow-y-auto">
           <div className="flex justify-between items-start mb-4">
             <div>
-              <h3 className="font-display text-[17px] font-bold text-ink m-0">Record payment</h3>
+              <h3 className="font-display text-title-sm font-bold text-ink m-0">Record payment</h3>
               <p className="text-xs text-ink-soft mt-0.5 font-mono">{invoice.invoice_number}</p>
             </div>
             <button
@@ -87,19 +87,19 @@ export function RecordPaymentModal({ invoice, onClose, onDone }: RecordPaymentMo
             </button>
           </div>
 
-          <p className="text-[12.5px] text-ink-soft mb-4">
+          <p className="text-body-sm text-ink-soft mb-4">
             Balance due: <span className="font-semibold text-ink">${balanceDue.toFixed(2)}</span>
           </p>
 
           {error && (
-            <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
+            <div className="text-body-sm text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit}>
             <div className="mb-3.5">
-              <label className="block text-[12.5px] font-semibold text-ink mb-1.5">Amount ($)</label>
+              <label className="block text-body-sm font-semibold text-ink mb-1.5">Amount ($)</label>
               <input
                 className="form-input"
                 type="number"
@@ -112,7 +112,7 @@ export function RecordPaymentModal({ invoice, onClose, onDone }: RecordPaymentMo
             </div>
 
             <div className="mb-3.5">
-              <label className="block text-[12.5px] font-semibold text-ink mb-1.5">Method</label>
+              <label className="block text-body-sm font-semibold text-ink mb-1.5">Method</label>
               <select className="form-input" value={method} onChange={(e) => setMethod(e.target.value)}>
                 <option>Check</option>
                 <option>Cash</option>
@@ -122,7 +122,7 @@ export function RecordPaymentModal({ invoice, onClose, onDone }: RecordPaymentMo
             </div>
 
             <div className="mb-3.5">
-              <label className="block text-[12.5px] font-semibold text-ink mb-1.5">
+              <label className="block text-body-sm font-semibold text-ink mb-1.5">
                 Reference note <span className="text-ink-soft font-normal">(optional)</span>
               </label>
               <input
@@ -139,14 +139,14 @@ export function RecordPaymentModal({ invoice, onClose, onDone }: RecordPaymentMo
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 h-10 rounded-[9px] border border-border bg-white font-semibold text-[13px] cursor-pointer hover:bg-page-bg-top"
+                className="flex-1 h-10 rounded-[10px] border border-border bg-white font-semibold text-body-sm cursor-pointer hover:bg-page-bg-top"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={submitting}
-                className="flex-1 h-10 rounded-[9px] text-white font-semibold text-[13px] cursor-pointer disabled:opacity-60"
+                className="flex-1 h-10 rounded-[10px] text-white font-semibold text-body-sm cursor-pointer disabled:opacity-60"
                 style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)' }}
               >
                 {submitting ? 'Recording…' : 'Mark as paid'}

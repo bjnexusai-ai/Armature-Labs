@@ -48,13 +48,13 @@ export function ShipmentsPanel({ caseId, isInternal }: { caseId: number; isInter
     <div>
       {isInternal && (
         <div className="flex items-center justify-between mb-3.5">
-          <span className="text-[12.5px] text-ink-soft">
+          <span className="text-body-sm text-ink-soft">
             Creation is explicit, not auto-fired off a case status change — a case can have more than one shipment (e.g. a reshipment).
           </span>
           <button
             onClick={handleCreate}
             disabled={creating}
-            className="btn-primary h-9 px-4 rounded-[9px] font-semibold text-[13px] disabled:opacity-60 shrink-0 ml-3"
+            className="btn-primary h-9 px-4 rounded-[10px] font-semibold text-body-sm disabled:opacity-60 shrink-0 ml-3"
           >
             {creating ? 'Creating…' : '+ New shipment'}
           </button>
@@ -62,7 +62,7 @@ export function ShipmentsPanel({ caseId, isInternal }: { caseId: number; isInter
       )}
 
       {error && (
-        <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
+        <div className="text-body-sm text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
           {error}
         </div>
       )}
@@ -88,14 +88,14 @@ export function ShipmentsPanel({ caseId, isInternal }: { caseId: number; isInter
             <div key={s.id} className="surface-card rounded-[14px] p-4 flex items-center justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-[13px] font-semibold text-ink">Shipment #{s.id}</span>
+                  <span className="text-body-sm font-semibold text-ink">Shipment #{s.id}</span>
                   <ShipmentStatusPill status={s.status} />
                 </div>
-                <div className="text-[12.5px] text-ink-soft space-x-3">
+                <div className="text-body-sm text-ink-soft space-x-3">
                   <span>{s.carrier || 'Carrier not set'}</span>
                   <span className="font-mono">{s.tracking_number || 'No tracking number'}</span>
                 </div>
-                <div className="text-[11px] text-ink-soft mt-1 space-x-3">
+                <div className="text-caption text-ink-soft mt-1 space-x-3">
                   {s.shipped_at && <span>Shipped {new Date(s.shipped_at).toLocaleDateString()}</span>}
                   {s.delivered_at && <span>Delivered {new Date(s.delivered_at).toLocaleDateString()}</span>}
                 </div>
@@ -103,7 +103,7 @@ export function ShipmentsPanel({ caseId, isInternal }: { caseId: number; isInter
               {isInternal && (
                 <button
                   onClick={() => setEditingShipment(s)}
-                  className="h-9 px-3.5 rounded-[9px] border border-border bg-white font-semibold text-[12.5px] cursor-pointer hover:bg-page-bg-top shrink-0"
+                  className="h-9 px-3.5 rounded-[10px] border border-border bg-white font-semibold text-body-sm cursor-pointer hover:bg-page-bg-top shrink-0"
                 >
                   Update
                 </button>

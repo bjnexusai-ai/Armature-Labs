@@ -67,12 +67,11 @@ export function QcPage() {
     <div>
       <div className="flex items-start justify-between mb-5">
         <div>
-          <h2 className="font-display text-lg font-bold text-ink mb-1">Quality control</h2>
           <p className="text-sm text-ink-soft">Checklists used for case QC, and rework resolution.</p>
         </div>
         <button
           onClick={() => setNewChecklistOpen(true)}
-          className="px-4 py-2.5 rounded-[10px] text-white text-[13px] font-semibold"
+          className="px-4 py-2.5 rounded-[10px] text-white text-body-sm font-semibold"
           style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)' }}
         >
           + New checklist
@@ -80,10 +79,10 @@ export function QcPage() {
       </div>
 
       <div className="surface-card rounded-[18px] p-5 mb-5">
-        <h3 className="font-display text-[15px] font-bold text-ink mb-3">Checklists</h3>
+        <h3 className="font-display text-body-lg font-bold text-ink mb-3">Checklists</h3>
 
         {error && (
-          <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
+          <div className="text-body-sm text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
             {error}
           </div>
         )}
@@ -108,14 +107,14 @@ export function QcPage() {
             {checklists.map((cl) => (
               <div key={cl.id} className="rounded-xl border border-border p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-[13.5px] font-semibold text-ink">{cl.name}</h4>
-                  <span className="text-[11px] font-mono uppercase tracking-wide text-ink-soft bg-page-bg-top rounded px-1.5 py-0.5">
+                  <h4 className="text-body-lg font-semibold text-ink">{cl.name}</h4>
+                  <span className="text-caption font-mono uppercase tracking-wide text-ink-soft bg-page-bg-top rounded px-1.5 py-0.5">
                     {cl.case_type_id ? `Case type #${cl.case_type_id}` : 'All case types'}
                   </span>
                 </div>
                 <ol className="list-decimal list-inside space-y-1">
                   {cl.items.map((item) => (
-                    <li key={item.id} className="text-[13px] text-ink-soft">
+                    <li key={item.id} className="text-body-sm text-ink-soft">
                       {item.item_text}
                     </li>
                   ))}
@@ -127,21 +126,21 @@ export function QcPage() {
       </div>
 
       <div className="surface-card rounded-[18px] p-5">
-        <h3 className="font-display text-[15px] font-bold text-ink mb-1">Resolve rework</h3>
-        <p className="text-[12.5px] text-ink-soft mb-3">
+        <h3 className="font-display text-body-lg font-bold text-ink mb-1">Resolve rework</h3>
+        <p className="text-body-sm text-ink-soft mb-3">
           Resolves a rework record directly by its id — this isn't case-scoped, so enter the rework
           record's own ID (shown wherever rework was flagged for a case).
         </p>
 
         {resolveError && (
-          <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
+          <div className="text-body-sm text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
             {resolveError}
           </div>
         )}
 
         <form onSubmit={handleResolveRework} className="flex gap-3 items-end flex-wrap">
           <div>
-            <label className="block text-[12.5px] font-semibold text-ink mb-1.5">Rework ID</label>
+            <label className="block text-body-sm font-semibold text-ink mb-1.5">Rework ID</label>
             <input
               className="form-input w-32"
               type="number"
@@ -152,7 +151,7 @@ export function QcPage() {
             />
           </div>
           <div className="flex-1 min-w-[220px]">
-            <label className="block text-[12.5px] font-semibold text-ink mb-1.5">
+            <label className="block text-body-sm font-semibold text-ink mb-1.5">
               Resolution notes <span className="text-ink-soft font-normal">(optional)</span>
             </label>
             <input
@@ -166,7 +165,7 @@ export function QcPage() {
           <button
             type="submit"
             disabled={resolving}
-            className="h-10 px-4 rounded-[9px] text-white font-semibold text-[13px] cursor-pointer disabled:opacity-60"
+            className="h-10 px-4 rounded-[10px] text-white font-semibold text-body-sm cursor-pointer disabled:opacity-60"
             style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)' }}
           >
             {resolving ? 'Resolving…' : 'Resolve'}

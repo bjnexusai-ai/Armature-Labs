@@ -71,7 +71,7 @@ export function EquipmentDetailPage() {
 
   if (error || !equipment) {
     return (
-      <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5">
+      <div className="text-body-sm text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5">
         {error || 'Equipment not found.'}
       </div>
     );
@@ -79,7 +79,7 @@ export function EquipmentDetailPage() {
 
   return (
     <div>
-      <button onClick={() => navigate('/equipment')} className="text-[12.5px] text-[#1C8A93] font-semibold mb-4">
+      <button onClick={() => navigate('/equipment')} className="text-body-sm text-[#1C8A93] font-semibold mb-4">
         ← Back to equipment
       </button>
 
@@ -94,7 +94,7 @@ export function EquipmentDetailPage() {
         </div>
         <button
           onClick={() => setLogModalOpen(true)}
-          className="px-4 py-2.5 rounded-[10px] text-white text-[13px] font-semibold shrink-0"
+          className="px-4 py-2.5 rounded-[10px] text-white text-body-sm font-semibold shrink-0"
           style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)' }}
         >
           Log maintenance
@@ -102,16 +102,16 @@ export function EquipmentDetailPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 mb-5">
-        <div className="surface-card rounded-[16px] p-4">
-          <p className="text-[11px] uppercase tracking-wider text-ink-soft mb-1">Next maintenance due</p>
-          <p className="text-lg font-bold text-ink">
+        <div className="surface-card rounded-[18px] p-4">
+          <p className="text-caption uppercase tracking-wider text-ink-soft mb-1">Next maintenance due</p>
+          <p className="text-lg stat-value text-ink">
             {equipment.next_maintenance_due_date
               ? new Date(`${equipment.next_maintenance_due_date}T00:00:00`).toLocaleDateString()
               : 'Not scheduled'}
           </p>
         </div>
-        <div className="surface-card rounded-[16px] p-4">
-          <p className="text-[11px] uppercase tracking-wider text-ink-soft mb-2">Status</p>
+        <div className="surface-card rounded-[18px] p-4">
+          <p className="text-caption uppercase tracking-wider text-ink-soft mb-2">Status</p>
           {canChangeStatus ? (
             <select
               className="form-input"
@@ -126,7 +126,7 @@ export function EquipmentDetailPage() {
               ))}
             </select>
           ) : (
-            <p className="text-lg font-bold text-ink">{equipment.status}</p>
+            <p className="text-lg stat-value text-ink">{equipment.status}</p>
           )}
         </div>
       </div>
@@ -139,29 +139,31 @@ export function EquipmentDetailPage() {
             <p>Routine service, repairs, and inspections will show up here.</p>
           </div>
         ) : (
-          <table className="w-full border-collapse">
+          <div className="table-scroll">
+            <table className="w-full border-collapse">
             <thead>
-              <tr>
-                {['Type', 'Notes', 'Next due', 'Logged'].map((h) => (
-                  <th key={h} className="text-left text-[11px] uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border">
-                    {h}
-                  </th>
-                ))}
-              </tr>
+            <tr>
+            {['Type', 'Notes', 'Next due', 'Logged'].map((h) => (
+            <th key={h} className="text-left text-caption uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border">
+            {h}
+            </th>
+            ))}
+            </tr>
             </thead>
             <tbody>
-              {logs.map((l) => (
-                <tr key={l.id}>
-                  <td className="p-3 border-b border-border text-[13px] font-semibold">{l.log_type}</td>
-                  <td className="p-3 border-b border-border text-[13px] text-ink-soft">{l.notes || '—'}</td>
-                  <td className="p-3 border-b border-border text-[13px] text-ink-soft">
-                    {l.next_due_date ? new Date(`${l.next_due_date}T00:00:00`).toLocaleDateString() : '—'}
-                  </td>
-                  <td className="p-3 border-b border-border text-[13px] text-ink-soft">{new Date(l.performed_at).toLocaleString()}</td>
-                </tr>
-              ))}
+            {logs.map((l) => (
+            <tr key={l.id}>
+            <td className="p-3 border-b border-border text-body-sm font-semibold">{l.log_type}</td>
+            <td className="p-3 border-b border-border text-body-sm text-ink-soft">{l.notes || '—'}</td>
+            <td className="p-3 border-b border-border text-body-sm text-ink-soft">
+            {l.next_due_date ? new Date(`${l.next_due_date}T00:00:00`).toLocaleDateString() : '—'}
+            </td>
+            <td className="p-3 border-b border-border text-body-sm text-ink-soft">{new Date(l.performed_at).toLocaleString()}</td>
+            </tr>
+            ))}
             </tbody>
-          </table>
+            </table>
+          </div>
         )}
       </div>
 

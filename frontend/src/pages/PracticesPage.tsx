@@ -30,13 +30,12 @@ export function PracticesPage() {
   return (
     <div>
       <div className="mb-5">
-        <h2 className="font-display text-lg font-bold text-ink mb-1">Practices</h2>
         <p className="text-sm text-ink-soft">Dentist practices and their account details.</p>
       </div>
 
       <div className="surface-card rounded-[18px] p-5">
         {error && (
-          <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
+          <div className="text-body-sm text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
             {error}
           </div>
         )}
@@ -53,38 +52,40 @@ export function PracticesPage() {
             <p>Practices will show up here once added.</p>
           </div>
         ) : (
-          <table className="w-full border-collapse">
+          <div className="table-scroll">
+            <table className="w-full border-collapse">
             <thead>
-              <tr>
-                {['Name', 'City', 'State', 'Phone', 'Status', ''].map((h) => (
-                  <th
-                    key={h}
-                    className="text-left text-[11px] uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border"
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
+            <tr>
+            {['Name', 'City', 'State', 'Phone', 'Status', ''].map((h) => (
+            <th
+            key={h}
+            className="text-left text-caption uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border"
+            >
+            {h}
+            </th>
+            ))}
+            </tr>
             </thead>
             <tbody>
-              {practices.map((p) => (
-                <tr
-                  key={p.id}
-                  className="hover:bg-page-bg-top transition-colors cursor-pointer"
-                  onClick={() => navigate(`/practices/${p.id}`)}
-                >
-                  <td className="p-3 border-b border-border text-[13px] font-semibold">{p.practice_name}</td>
-                  <td className="p-3 border-b border-border text-[13px] text-ink-soft">{p.city || '—'}</td>
-                  <td className="p-3 border-b border-border text-[13px] text-ink-soft">{p.state || '—'}</td>
-                  <td className="p-3 border-b border-border text-[13px] text-ink-soft">{p.phone || '—'}</td>
-                  <td className="p-3 border-b border-border text-[13px] text-ink-soft">{p.status}</td>
-                  <td className="p-3 border-b border-border text-right text-[12px] text-[#1C8A93] font-semibold">
-                    View →
-                  </td>
-                </tr>
-              ))}
+            {practices.map((p) => (
+            <tr
+            key={p.id}
+            className="hover:bg-page-bg-top transition-colors cursor-pointer"
+            onClick={() => navigate(`/practices/${p.id}`)}
+            >
+            <td className="p-3 border-b border-border text-body-sm font-semibold">{p.practice_name}</td>
+            <td className="p-3 border-b border-border text-body-sm text-ink-soft">{p.city || '—'}</td>
+            <td className="p-3 border-b border-border text-body-sm text-ink-soft">{p.state || '—'}</td>
+            <td className="p-3 border-b border-border text-body-sm text-ink-soft">{p.phone || '—'}</td>
+            <td className="p-3 border-b border-border text-body-sm text-ink-soft">{p.status}</td>
+            <td className="p-3 border-b border-border text-right text-caption text-[#1C8A93] font-semibold">
+            View →
+            </td>
+            </tr>
+            ))}
             </tbody>
-          </table>
+            </table>
+          </div>
         )}
       </div>
     </div>

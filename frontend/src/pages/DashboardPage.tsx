@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { roleLabel } from '../lib/authTypes';
 import { MetricCard } from '../components/MetricCard';
 import { CaseSnapshotHero } from '../components/CaseSnapshotHero';
 import { TodaysWorkflowPanel } from '../components/TodaysWorkflowPanel';
@@ -104,8 +105,10 @@ export function DashboardPage() {
     <div>
       <div className="flex items-start justify-between mb-5">
         <div>
-          <h2 className="font-display text-lg font-bold text-ink mb-1">Dashboard</h2>
-          <p className="text-sm text-ink-soft max-w-xl">Operational snapshot across all active practices.</p>
+          <p className="text-sm text-ink-soft max-w-xl">
+            Operational snapshot across all active practices.
+            {user && <> Signed in as {roleLabel(user.role)}.</>}
+          </p>
         </div>
         <button
           onClick={() => showToast('This is what a real action confirmation will look like')}
@@ -126,50 +129,50 @@ export function DashboardPage() {
           value={metrics.activeCases}
           label="Active cases"
           iconBg="var(--color-badge-teal-bg)"
-          icon={<span className="text-badge-teal text-lg">🦷</span>}
+          icon={
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-badge-teal">
+              <path d="M12 3c-2.2 0-3.4 1.3-4.5 1.3S5.4 3.4 4 3.9c-1.6.6-2 2.8-1.6 5C3 11.4 4 12.5 4.3 15c.3 2.2.7 5.5 2.2 5.5 1.6 0 1.2-3.6 2.3-3.6s.8 3.6 2.3 3.6c1.7 0 2-4 2.3-6 .1-.9.6-1.5 1.1-1.5s1 .6 1.1 1.5c.3 2 .6 6 2.3 6 1.5 0 1.9-3.3 2.2-5.5.3-2.5 1.3-3.6 1.9-6.1.4-2.2 0-4.4-1.6-5-1.4-.5-2.4.4-3.5.4S14.2 3 12 3Z"/>
+            </svg>
+          }
         />
         <MetricCard
           loading={loading}
           value={metrics.pendingApproval}
           label="Pending approval"
           iconBg="var(--color-badge-amber-bg)"
-          icon={<span className="text-badge-amber text-lg">⏳</span>}
+          icon={
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-badge-amber">
+              <circle cx="12" cy="12" r="8.5" />
+              <path d="M12 7.5V12l3 2" />
+            </svg>
+          }
         />
         <MetricCard
           loading={loading}
           value={metrics.dueThisWeek}
           label="Due this week"
           iconBg="var(--color-badge-coral-bg)"
-          icon={<span className="text-badge-coral text-lg">📅</span>}
+          icon={
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-badge-coral">
+              <rect x="3.5" y="4.5" width="17" height="16" rx="2.5" />
+              <path d="M3.5 9.5h17M8 3v3M16 3v3" />
+            </svg>
+          }
         />
         <MetricCard
           loading={loading}
           value={metrics.onHold}
           label="On hold"
           iconBg="var(--color-badge-green-bg)"
-          icon={<span className="text-badge-green text-lg">⏸</span>}
+          icon={
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="text-badge-green">
+              <path d="M9 5v14M15 5v14" />
+            </svg>
+          }
         />
       </div>
 
       <ActionRequiredQueue items={queueItems} loading={loading} />
-
-      <div className="surface-card rounded-[18px] p-6 mt-5">
-        <h2 className="font-display text-[15px] font-bold text-ink tracking-[-0.01em] mb-3">Signed in as</h2>
-        <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm max-w-md">
-          <dt className="text-ink-soft">Name</dt>
-          <dd className="text-ink font-medium">{user?.fullName}</dd>
-          <dt className="text-ink-soft">Email</dt>
-          <dd className="text-ink font-medium">{user?.email}</dd>
-          <dt className="text-ink-soft">Role</dt>
-          <dd className="text-ink font-medium">{user?.role}</dd>
-          <dt className="text-ink-soft">Can approve photos</dt>
-          <dd className="text-ink font-medium">{String(user?.canApprovePhotos)}</dd>
-          <dt className="text-ink-soft">Can view invoices</dt>
-          <dd className="text-ink font-medium">{String(user?.canViewInvoices)}</dd>
-          <dt className="text-ink-soft">Can edit patient info</dt>
-          <dd className="text-ink font-medium">{String(user?.canEditPatientInfo)}</dd>
-        </dl>
-      </div>
     </div>
   );
 }

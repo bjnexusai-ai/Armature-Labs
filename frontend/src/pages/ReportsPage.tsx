@@ -90,27 +90,26 @@ export function ReportsPage() {
     <div>
       <div className="mb-5 flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h2 className="font-display text-lg font-bold text-ink mb-1">Reports</h2>
           <p className="text-sm text-ink-soft">Saved report presets and live operational charts.</p>
         </div>
         <button
           type="button"
           onClick={() => setModalOpen(true)}
-          className="btn-primary h-10 px-4 rounded-[9px] font-semibold text-[13px] shrink-0"
+          className="btn-primary h-10 px-4 rounded-[10px] font-semibold text-body-sm shrink-0"
         >
           + New saved report
         </button>
       </div>
 
       {error && (
-        <div className="text-[12.5px] text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
+        <div className="text-body-sm text-[#9C4326] bg-[#FBEEEA] border border-[#EED0C4] rounded-xl px-3.5 py-2.5 mb-4">
           {error}
         </div>
       )}
 
       {/* Saved report presets */}
       <div className="surface-card rounded-[18px] p-5 mb-5">
-        <h3 className="font-display text-[14.5px] font-bold text-ink mb-3">Saved reports</h3>
+        <h3 className="font-display text-body-lg font-bold text-ink mb-3">Saved reports</h3>
         {loading ? (
           <div className="space-y-2">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -123,43 +122,45 @@ export function ReportsPage() {
             <p>Save a report preset to quickly get back to it later.</p>
           </div>
         ) : (
-          <table className="w-full border-collapse">
+          <div className="table-scroll">
+            <table className="w-full border-collapse">
             <thead>
-              <tr>
-                {['Name', 'Type', 'Last updated', ''].map((h) => (
-                  <th key={h} className="text-left text-[11px] uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border">
-                    {h}
-                  </th>
-                ))}
-              </tr>
+            <tr>
+            {['Name', 'Type', 'Last updated', ''].map((h) => (
+            <th key={h} className="text-left text-caption uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border">
+            {h}
+            </th>
+            ))}
+            </tr>
             </thead>
             <tbody>
-              {savedReports.map((r) => (
-                <tr key={r.id} className="hover:bg-page-bg-top transition-colors">
-                  <td className="p-3 border-b border-border text-[13px] font-semibold">{r.name}</td>
-                  <td className="p-3 border-b border-border text-[13px] text-ink-soft">{r.report_type}</td>
-                  <td className="p-3 border-b border-border text-[13px] text-ink-soft">
-                    {new Date(r.updated_at).toLocaleDateString()}
-                  </td>
-                  <td className="p-3 border-b border-border text-right">
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(r.id)}
-                      className="text-[12px] text-[#9C4326] font-semibold cursor-pointer bg-transparent border-0"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
+            {savedReports.map((r) => (
+            <tr key={r.id} className="hover:bg-page-bg-top transition-colors">
+            <td className="p-3 border-b border-border text-body-sm font-semibold">{r.name}</td>
+            <td className="p-3 border-b border-border text-body-sm text-ink-soft">{r.report_type}</td>
+            <td className="p-3 border-b border-border text-body-sm text-ink-soft">
+            {new Date(r.updated_at).toLocaleDateString()}
+            </td>
+            <td className="p-3 border-b border-border text-right">
+            <button
+            type="button"
+            onClick={() => handleDelete(r.id)}
+            className="text-caption text-[#9C4326] font-semibold cursor-pointer bg-transparent border-0"
+            >
+            Delete
+            </button>
+            </td>
+            </tr>
+            ))}
             </tbody>
-          </table>
+            </table>
+          </div>
         )}
       </div>
 
       {/* Donut — cases by status */}
       <div className="surface-card rounded-[18px] p-5 mb-5">
-        <h3 className="font-display text-[14.5px] font-bold text-ink mb-1">Cases by status</h3>
+        <h3 className="font-display text-body-lg font-bold text-ink mb-1">Cases by status</h3>
         <p className="text-xs text-ink-soft mb-4">Click a segment (or the legend) to isolate it.</p>
         {loading ? (
           <div className="skeleton h-[180px] rounded-lg" />
@@ -171,7 +172,7 @@ export function ReportsPage() {
       {/* Line — approval response time */}
       <div className="surface-card rounded-[18px] p-5 mb-5">
         <div className="flex items-center justify-between flex-wrap gap-3 mb-1">
-          <h3 className="font-display text-[14.5px] font-bold text-ink">Approval response time</h3>
+          <h3 className="font-display text-body-lg font-bold text-ink">Approval response time</h3>
           <div className="range-toggle">
             {(['7D', '6W', '90D'] as RangeKey[]).map((r) => (
               <button key={r} type="button" className={`range-btn ${range === r ? 'active' : ''}`} onClick={() => setRange(r)}>
@@ -193,7 +194,7 @@ export function ReportsPage() {
 
       {/* Bar — top practices by volume */}
       <div className="surface-card rounded-[18px] p-5">
-        <h3 className="font-display text-[14.5px] font-bold text-ink mb-1">Top practices by volume</h3>
+        <h3 className="font-display text-body-lg font-bold text-ink mb-1">Top practices by volume</h3>
         <p className="text-xs text-ink-soft mb-4">Cases submitted in the last 30 days, top 8 practices.</p>
         {loading ? (
           <div className="skeleton h-[200px] rounded-lg" />
