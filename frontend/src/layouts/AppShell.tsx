@@ -209,7 +209,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
           <div className="font-display font-bold text-lg leading-tight text-white">
             Armature Labs
-            <small className="block font-body font-semibold text-[10.5px] tracking-[0.1em] text-[#CFE6E1] mt-0.5">
+            <small className="block font-body font-semibold text-caption tracking-[0.1em] text-[#CFE6E1] mt-0.5">
               ADMIN PORTAL
             </small>
           </div>
@@ -218,7 +218,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <nav className="relative z-[1] flex-1">
           {groupBySection(items).map((group) => (
             <div key={group.section}>
-              <div className="nav-section px-6 pt-4 pb-1.5 text-[10.5px] font-bold tracking-[0.1em] uppercase text-[#9FD8CE]">
+              <div className="nav-section px-6 pt-4 pb-1.5 text-caption font-semibold tracking-[0.1em] uppercase text-[#9FD8CE]">
                 {group.section}
               </div>
               <div className="px-3 space-y-0.5">
@@ -233,12 +233,12 @@ export function AppShell({ children }: { children: ReactNode }) {
                     return (
                       <div
                         key={item.key}
-                        className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-[13.5px] font-semibold text-white/50 cursor-not-allowed select-none"
+                        className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-body-lg font-semibold text-white/50 cursor-not-allowed select-none"
                         title={`Coming soon — Frontend Session ${item.session}`}
                       >
                         <NavIcon icon={item.icon} />
                         <span className="flex-1">{item.label}</span>
-                        <span className="text-[10px] font-mono uppercase tracking-wide bg-white/10 rounded px-1.5 py-0.5">
+                        <span className="text-caption font-mono uppercase tracking-wide bg-white/10 rounded px-1.5 py-0.5">
                           soon
                         </span>
                       </div>
@@ -249,7 +249,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                       key={item.key}
                       to={item.path}
                       className={({ isActive }) =>
-                        `nav-link flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-[13.5px] font-semibold transition-colors ${
+                        `nav-link flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-body-lg font-semibold transition-colors ${
                           isActive ? 'active text-[#04302E]' : 'text-[#F2F8F5] hover:bg-white/10'
                         }`
                       }
@@ -270,7 +270,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="relative z-[1] px-3 mt-4">
           <button
             onClick={logout}
-            className="w-full text-left rounded-lg px-3 py-2.5 text-[13.5px] font-semibold text-[#F2F8F5] hover:bg-white/10 transition-colors"
+            className="w-full text-left rounded-lg px-3 py-2.5 text-body-lg font-semibold text-[#F2F8F5] hover:bg-white/10 transition-colors"
           >
             Sign out
           </button>
@@ -296,7 +296,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </button>
             <div>
               <h1 className="font-display text-[19px] md:text-[23px] font-bold m-0 tracking-[-0.015em]">{pageTitle}</h1>
-              <p className="m-0 mt-0.5 text-[13px] text-ink-soft hidden sm:block">Welcome back, {user.fullName.split(' ')[0]}</p>
+              <p className="m-0 mt-0.5 text-body-sm text-ink-soft hidden sm:block">Welcome back, {user.fullName.split(' ')[0]}</p>
             </div>
           </div>
 
@@ -311,7 +311,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 placeholder="Search cases…"
                 disabled
                 title="Search wires up once the Case Queue (Frontend Session 2) is live"
-                className="w-[220px] h-[38px] rounded-[10px] pl-9 pr-3.5 text-[13px] bg-white opacity-60 cursor-not-allowed"
+                className="w-[220px] h-[38px] rounded-[10px] pl-9 pr-3.5 text-body-sm bg-white opacity-60 cursor-not-allowed"
                 style={{ border: '1px solid var(--color-border)' }}
               />
             </div>
@@ -335,9 +335,9 @@ export function AppShell({ children }: { children: ReactNode }) {
                 className={`notif-dropdown ${notifOpen ? 'open' : ''} absolute top-[46px] right-0 w-[300px] bg-white rounded-[14px] p-2 z-[80]`}
                 style={{ border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-lg)' }}
               >
-                <h4 className="text-[12.5px] font-bold px-2.5 pt-2 pb-1.5 text-ink">Notifications</h4>
+                <h4 className="text-body-sm font-semibold px-2.5 pt-2 pb-1.5 text-ink">Notifications</h4>
                 {pendingApprovals.length === 0 ? (
-                  <p className="text-[12px] text-ink-soft px-2.5 py-3">No pending approvals.</p>
+                  <p className="text-caption text-ink-soft px-2.5 py-3">No pending approvals.</p>
                 ) : (
                   pendingApprovals.map((a) => (
                     <div
@@ -348,14 +348,14 @@ export function AppShell({ children }: { children: ReactNode }) {
                       }}
                       className="flex gap-2.5 px-2.5 py-2.5 rounded-[9px] hover:bg-page-bg-top cursor-pointer"
                     >
-                      <div className="w-[30px] h-[30px] rounded-lg flex items-center justify-center text-[13px] bg-badge-teal-bg shrink-0">
+                      <div className="w-[30px] h-[30px] rounded-lg flex items-center justify-center text-body-sm bg-badge-teal-bg shrink-0">
                         🦷
                       </div>
                       <div>
-                        <p className="text-[12.5px] font-semibold m-0 text-ink">
+                        <p className="text-body-sm font-semibold m-0 text-ink">
                           {a.case_number} — {a.stage} approval pending
                         </p>
-                        <span className="text-[11px] text-ink-soft">{timeAgo(a.created_at)}</span>
+                        <span className="text-caption text-ink-soft">{timeAgo(a.created_at)}</span>
                       </div>
                     </div>
                   ))
@@ -365,7 +365,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                     setNotifOpen(false);
                     navigate('/approvals');
                   }}
-                  className="w-full text-left text-[11.5px] font-semibold text-[#1C8A93] px-2.5 pt-1.5 pb-1.5 hover:underline"
+                  className="w-full text-left text-caption font-semibold text-[#1C8A93] px-2.5 pt-1.5 pb-1.5 hover:underline"
                 >
                   View all approvals
                 </button>
