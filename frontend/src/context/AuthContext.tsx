@@ -1,12 +1,12 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
-import { apiFetch, ApiError } from '../lib/api';
+import { apiFetch, ApiError, logoutRequest } from '../lib/api';
 import type { AuthUser, LoginResponse } from '../lib/authTypes';
 
 interface AuthContextValue {
   user: AuthUser | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -25,12 +25,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(readStoredUser);
 
   const login = useCallback(async (email: string, password: string) => {
-    // sessionStorage (not localStorage) is a deliberate, documented default —
-    // see Armature_Labs_Frontend_Wiring_Prompt.md §2 and the Master Frontend
-    // Plan's Known Open Items: clears on tab close, reasonable for a demo/
-    // early build, but flagged for revisit (httpOnly cookies) before this
-    // goes near production. Don't "fix" this silently — it's Session 9's
-    // decision to make explicitly, not this session's to bury.
+    // Frontend Session 9 §2 decision (resolved here, not re-punted): stays
+    // on sessionStorage rather than moving to httpOnly cookies. Reasoning,
+    // recorded in full in FRONTEND_LOG.md's Session 9 entry: this session's
+    // §1 work gives sessionStorage real server-side revocation for the
+    // first time (logout actually revokes now, refresh rotation +
+    // reuse-detection already existed via B10) — that closes the worst
+    // practical gap (a stolen token being unrevocable for up to 7 days).
+    // httpOnly cookies would meaningfully reduce the XSS exposure window
+    // further, but require backend changes together (cookie-setting on
+    // login/refresh/logout, CSRF protection, SameSite policy, CORS
+    // credentials:true) that are cross-stack, not a frontend-only change
+    // this session can finish alone. Recorded as a named follow-up, not a
+    // silent re-punt.
     const data = await apiFetch<LoginResponse>('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
@@ -41,11 +48,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
   }, []);
 
-  const logout = useCallback(() => {
-    sessionStorage.removeItem('accessToken');
-    sessionStorage.removeItem('refreshToken');
-    sessionStorage.removeItem('currentUser');
-    setUser(null);
+  const logout = useCallback(async () => {
+    // Frontend Session 9 §1.2 — logout() is now async and actually revokes
+    // the refresh token server-side (confirmed against auth.controller.js:
+    // POST /api/auth/logout takes { refreshToken } in the body, 204 on
+    // success). Previously this only cleared local storage — a token
+    // grabbed before logout kept working for up to 7 days regardless of
+    // the user clicking "log out." If the revocation call fails (network
+    // down, token already expired/already revoked), still clear local
+    // storage and log the user out client-side — a failed revocation call
+    // must never trap someone in a logged-in UI.
+    const storedRefreshToken = sessionStorage.getItem('refreshToken');
+    try {
+      if (storedRefreshToken) {
+        await logoutRequest(storedRefreshToken);
+      }
+    } catch {
+      // Best-effort — see comment above. Local logout proceeds regardless.
+    } finally {
+      sessionStorage.removeItem('accessToken');
+      sessionStorage.removeItem('refreshToken');
+      sessionStorage.removeItem('currentUser');
+      setUser(null);
+    }
   }, []);
 
   const value = useMemo(

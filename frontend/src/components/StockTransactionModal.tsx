@@ -3,6 +3,7 @@ import { ApiError, adjustMaterial, consumeMaterial } from '../lib/api';
 import type { Material } from '../lib/caseTypes';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { isManagerRole } from '../lib/permissions';
 
 interface StockTransactionModalProps {
   open: boolean;
@@ -23,7 +24,7 @@ type Mode = 'consume' | 'adjust';
 export function StockTransactionModal({ open, material, onClose, onRecorded }: StockTransactionModalProps) {
   const { user } = useAuth();
   const { showToast } = useToast();
-  const canAdjust = user?.role === 'owner' || user?.role === 'office_manager';
+  const canAdjust = isManagerRole(user);
 
   const [mode, setMode] = useState<Mode>('consume');
   const [quantity, setQuantity] = useState('');

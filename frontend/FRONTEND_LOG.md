@@ -1445,3 +1445,221 @@ not assumed either way.
 This is the next session's/whoever-runs-it's first step per §6 of
 `PARALLEL_BUILD_PROTOCOL.md` before this session can be marked genuinely
 done, not just code-complete.
+
+## Session 9 — Auth hardening (refresh + real logout), permission audit, accessibility/responsive pass (closes the 9-session frontend plan)
+
+**Depends on:** Backend Session 9 (integration/hardening — closed per
+`BUILD_LOG.md`) + B10 (refresh token revocation/rotation/reuse-detection,
+rate limiting — merged as "B10 (partial)"/"B10 complete", 194/194). Could
+not run `npm test` live in this environment (no Postgres available here),
+so the 194/194 count is carried from `BUILD_LOG.md`/git history rather
+than freshly reconfirmed — flagging that honestly rather than claiming a
+run that didn't happen. Everything this session actually depends on
+(exact endpoint shapes, token expiry) was confirmed directly against
+source, not memory:
+
+- `POST /api/auth/refresh` — `{ refreshToken }` body, no auth header.
+  **Rotates on every call** — returns a NEW `refreshToken` as well as a new
+  `accessToken`; both must be re-stored or the next refresh presents an
+  already-rotated token and trips the backend's reuse-detection (confirmed
+  by reading `auth.controller.js`'s `refresh()` directly, not assumed).
+- `POST /api/auth/logout` — `{ refreshToken }` body, no auth header
+  needed (route has no `requireAuth`), 204 on success, and is a no-op 204
+  even if the token's already invalid.
+- `POST /api/auth/logout-all` — `requireAuth` (access token identifies the
+  user), no body, revokes every refresh token row for that user.
+- `JWT_ACCESS_EXPIRES_IN=15m` / `JWT_REFRESH_EXPIRES_IN=7d` confirmed from
+  `backend/.env.example` directly, not from memory of the backend log's
+  stated defaults.
+
+### §1 — Fixed the actually-broken auth flow
+
+Before this session: access token expired in 15m, nothing refreshed it,
+the stored refresh token was dead weight, and `logout()` never revoked
+anything server-side (a token grabbed before logout kept working up to
+7 days regardless of clicking "log out").
+
+- `lib/api.ts` — `apiFetch` now does a silent refresh-and-retry-once on a
+  401 (excluding `/api/auth/login`, `/api/auth/refresh`, `/api/auth/logout`
+  themselves, to avoid recursion). Concurrent 401s share one in-flight
+  refresh via a module-level `refreshPromise`; additionally, if another
+  concurrent call already rotated the token by the time a given 401 is
+  handled (storage's access token no longer matches what was sent), that
+  call skips its own refresh and just retries with the already-rotated
+  token instead of triggering a redundant `/refresh` call. On refresh
+  failure, storage is cleared and the user is redirected to `/login` —
+  no loop. Added `logoutRequest`/`logoutAllRequest` matching the confirmed
+  controller shapes above.
+- `context/AuthContext.tsx` — `logout()` is now `async` and calls
+  `logoutRequest` with the stored refresh token before clearing local
+  storage. If the revocation call fails (network down, already expired),
+  local storage is still cleared and the user is still logged out
+  client-side in a `finally` — a failed revocation call must never trap
+  someone in a logged-in UI.
+- **"Log out everywhere":** `logoutAllRequest()` is built and exported in
+  `api.ts` (confirmed against `logoutAll`/`requireAuth`) but **not wired to
+  any UI** this session. There's no existing account/settings screen in
+  this app to hang it off, and the Master Frontend Plan's own instruction
+  is not to invent one just to use this — flagging it here as a named
+  follow-up rather than bolting on a nav item nobody asked for. Whoever
+  picks this up next: the function is ready, it just needs a place to put
+  a button.
+
+**Verified against a mock server (not the real backend — no Postgres in
+this environment), running the actual `api.ts` code with only the one
+Vite-specific `import.meta.env` line substituted for a plain Node env
+read (no other logic changed) — a real logic-level exercise, not just a
+build check, since this is exactly the class of bug (silent-refresh
+timing) that only shows up at runtime:**
+
+- Stale access token → 401 → silent refresh → retry succeeds; both new
+  tokens get persisted. ✅
+- 3 concurrent requests on a stale token: all 3 eventually succeed, and
+  **no refresh call was ever rejected as stale/reused** — the dangerous
+  case (backend reuse-detection nuking the whole session because two
+  calls presented the same already-rotated token). Being fully honest
+  about a real finding here: dedup collapsed 3 independent 401s into 2
+  refresh calls, not a perfect 1, under artificially fast local-loopback
+  timing (real network latency gives the shared-promise window much more
+  room in practice, and the token-already-rotated check added above cut
+  it from 3→2) — but zero of those calls got rejected, which is the
+  actual thing that matters. Noting this as a known, narrow timing edge
+  rather than claiming airtight dedup that wasn't actually demonstrated.
+- Refresh itself failing (dead/garbage refresh token) → clean `ApiError`,
+  storage cleared, no infinite loop. ✅
+- `logoutRequest` sends exactly `{ refreshToken }`, matching the
+  controller's real parsed body. ✅
+
+### §2 — Token storage decision (resolved, not re-punted)
+
+**Decision: stay on `sessionStorage`, now backed by real server-side
+revocation (§1 above).** Recorded explicitly, with reasoning, per the
+Master Frontend Plan's requirement that this be resolved *at* Session 9:
+
+- §1's fixes close the worst practical gap — a stolen/leaked token used to
+  be unrevocable for up to 7 days; it's now actually cut off the moment
+  `logout()`/`logout-all` runs, and it still clears on tab close as
+  before.
+- `sessionStorage` remains readable by any injected script for as long as
+  the tab lives (the underlying XSS exposure isn't reduced by this
+  session's work) — httpOnly cookies would meaningfully shrink that
+  window further.
+- Not doing the httpOnly move this session because it's genuinely
+  cross-stack, not a frontend-only change: cookie-setting on
+  login/refresh/logout, CSRF protection (cookies get sent automatically),
+  `SameSite` policy, and CORS `credentials: true` alongside the origin
+  allowlist backend Session 9 already locked down — all backend changes
+  this session can't make unilaterally.
+- Named follow-up, not silently deferred again: **httpOnly cookie
+  migration** — needs a paired backend+frontend session, scoped outside
+  this 9-session plan.
+- The old `AuthContext.tsx` comment flagging this as "Session 9's decision
+  to make" has been replaced with the actual decision and reasoning above
+  — not left unresolved a second time.
+
+### §3 — Permission-gating audit
+
+Re-ran the grep myself rather than trusting the prompt's stated count:
+`grep -rn "user?.role ===" src/` → confirmed exactly 9 matches (matches
+the prompt's claimed baseline, but confirmed fresh rather than assumed).
+One of the 9 is plain display-text branching (`InvoicesPage.tsx`'s
+"Invoices for your practice" vs "All practice invoices" copy — not a
+permission gate, not touched). The other 8 are real action gates, each
+cross-referenced against the actual backend route/middleware file (not
+re-derived from memory of Session 9 backend's already-live-verified
+matrix):
+
+- `StockTransactionModal.tsx` (`canAdjust`) → `requireManagerRole` on
+  `POST /materials/:id/adjust` (`inventory.routes.js`). ✅ hidden via `&&`.
+- `SavedReportModal.tsx` (`canUseRevenue`) → `assertRevenueAllowed` in
+  `reports.controller.js` (Owner/Office Manager only for the Revenue
+  preset). ✅ hidden — filters the Revenue option out of `availableTypes`
+  entirely rather than disabling it.
+- `InvoiceDetailPage.tsx` (`canRecordPayment`) → `requireBillingAccess` on
+  `POST /invoices/:id/payments` (`billing.routes.js`). ✅ hidden.
+- `InvoiceDetailPage.tsx` (`canPayViaStripe`, a composite of
+  `canRecordPayment` plus a `dentist_client` + `canViewInvoices` check) →
+  `requireCheckoutAccess` in `stripe.routes.js`, confirmed to mirror
+  `billing.routes.js`'s own invoice-read-access split exactly. ✅ hidden.
+- `EquipmentDetailPage.tsx` (`canChangeStatus`) → `requireManagerRole` on
+  `PATCH /equipment/:id/status` (`equipment.routes.js`). ✅ hidden (ternary,
+  not `disabled`).
+- `InvoicesPage.tsx` / `EquipmentPage.tsx` / `MaterialsPage.tsx`
+  (`canCreate` ×3) → each confirmed against the corresponding
+  `requireManagerRole`/`requireBillingAccess` create route. ✅ all hidden.
+
+All 8 gates were already **hidden** (conditional render), not merely
+`disabled` — no fixes needed there, this audit's finding was clean.
+
+Extracted the duplicated `user?.role === 'owner' || user?.role ===
+'office_manager'` condition (present in all 7 of the plain-manager-role
+gates above) into `lib/permissions.ts`'s `isManagerRole()` — one place for
+these to stay in sync instead of 7 independent copies. All 7 call sites
+updated to use it; `canPayViaStripe`'s composite condition still layers
+its own `dentist_client` check on top, unchanged.
+
+### §4 — Accessibility + responsive pass
+
+Re-ran the baseline counts myself rather than trusting the prompt's
+numbers — they matched almost exactly (24 `aria-label`, 225
+`<button>`/`<input>`, 9 responsive breakpoint usages — prompt said ~7,
+close enough to call "confirmed, not stale").
+
+- **Icon-only buttons:** wrote a small script to find every `<button>`
+  containing an `<svg>` with no other text and no `aria-label` — **zero
+  found**. Every icon-only button (modal ✕ close buttons, the
+  notification bell, etc.) already had one from prior sessions. Genuine
+  clean finding, not skipped — confirmed rather than assumed clean.
+- **Focus states:** a global `:focus-visible` rule already exists in
+  `index.css` covering every interactive element app-wide (plus
+  `.field-input:focus`/`.form-input:focus`/`.password-toggle:focus-visible`
+  for the login form specifically). Confirmed already satisfied, no
+  changes needed.
+- **Forms:** confirmed a real, unaddressed gap — 74 `<label>` elements
+  app-wide, only 2 using `htmlFor`/`id` (both on `LoginPage.tsx`, which
+  was already correct). The other 72 are visually-adjacent text, not
+  programmatically associated. Fixing all of them in one session isn't
+  this session's realistic scope (matches the prompt's own "don't try to
+  make every one of ~200 elements perfect" guidance) — **not fixed this
+  session, flagged as a follow-up.** Whoever picks this up: a shared
+  `FormField` wrapper (label+input+htmlFor/id in one place) would be the
+  efficient way to close this across the ~15 modals/forms that all use
+  the same `block text-[12.5px] font-semibold` label pattern, rather than
+  hand-fixing each one.
+- **Responsive:** the real, highest-leverage gap here wasn't any single
+  page's grid (Dashboard's metric cards already had `sm:`/`lg:`
+  breakpoints from an earlier session, confirmed by re-checking before
+  assuming otherwise) — it was `AppShell.tsx`'s sidebar: a permanently
+  fixed 240px column with zero responsive handling, wrapping literally
+  every authenticated screen. Fixed once, at the source, rather than
+  patching Dashboard/Case Queue/Case Detail/Invoices individually:
+  sidebar becomes an off-canvas drawer below `md` (hamburger toggle in the
+  header, scrim overlay, closes automatically on route change), header/
+  main padding tightened on small screens (`px-8`→`px-4 md:px-8`, etc.),
+  page title/welcome text sized down and the welcome line hidden below
+  `sm`. This one fix covers Dashboard/Case Queue/Case Detail/Invoices (and
+  every other screen) at once rather than needing four separate per-page
+  changes.
+
+### Verified
+
+- `npx tsc -b`, `npm run build`, `npx oxlint` — all clean (oxlint: 2
+  pre-existing warnings unrelated to this session's changes, both
+  `react(only-export-components)` on files that export a hook alongside a
+  component — a structural pattern that predates this session, 0 errors).
+- §1's refresh/logout logic exercised against a mock server running the
+  real `api.ts` code (see above) — the one item this session couldn't
+  build-check its way past.
+- Did **not** get a real browser click-through against a live backend in
+  this environment (no Postgres available) — flagging this the same way
+  prior sessions have when the live click-through step couldn't be done
+  here.
+
+### This closes the 9-session frontend plan
+
+Per the Master Frontend Plan, Frontend Session 9 was the last row. Same
+framing as the backend's own Session 9 closing note: anything after this
+— full mobile parity (separate track, see `MOBILE_LOG.md`), the httpOnly
+cookie migration (named follow-up above), the remaining ~72-label form
+association work, "log out everywhere" UI — is new, separately-scoped
+work, not a continuation of this numbered plan.

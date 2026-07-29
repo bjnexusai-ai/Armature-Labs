@@ -5,6 +5,7 @@ import type { Material, MaterialCategory } from '../lib/caseTypes';
 import { useAuth } from '../context/AuthContext';
 import { MaterialStatusPill } from '../components/MaterialStatusPill';
 import { NewMaterialModal } from '../components/NewMaterialModal';
+import { isManagerRole } from '../lib/permissions';
 
 // Confirmed against inventory.controller.js — entire router is
 // requireInternal (no dentist_client access), so this page is reachable
@@ -23,7 +24,7 @@ export function MaterialsPage() {
   const [newMaterialOpen, setNewMaterialOpen] = useState(false);
 
   // Category/material creation is requireManagerRole server-side.
-  const canCreate = user?.role === 'owner' || user?.role === 'office_manager';
+  const canCreate = isManagerRole(user);
 
   const load = useCallback(() => {
     setLoading(true);

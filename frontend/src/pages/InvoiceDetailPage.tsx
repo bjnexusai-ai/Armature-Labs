@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { InvoiceStatusPill } from '../components/InvoiceStatusPill';
 import { RecordPaymentModal } from '../components/RecordPaymentModal';
 import { parseFlexibleDate } from '../lib/dateUtils';
+import { isManagerRole } from '../lib/permissions';
 
 export function InvoiceDetailPage() {
   const { id } = useParams();
@@ -23,7 +24,7 @@ export function InvoiceDetailPage() {
   // Recording a payment is Owner/Office Manager only server-side
   // (requireBillingAccess on POST /invoices/:id/payments) — hides the
   // action for portal viewers, who'd otherwise get a 403.
-  const canRecordPayment = user?.role === 'owner' || user?.role === 'office_manager';
+  const canRecordPayment = isManagerRole(user);
 
   // Mirrors stripe.routes.js's requireCheckoutAccess exactly: internal
   // Owner/Office Manager, or a dentist_client with can_view_invoices=true.

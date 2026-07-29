@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { InvoiceStatusPill } from '../components/InvoiceStatusPill';
 import { NewInvoiceModal } from '../components/NewInvoiceModal';
 import { parseFlexibleDate } from '../lib/dateUtils';
+import { isManagerRole } from '../lib/permissions';
 
 // Role-aware by design, not by branching here: GET /api/billing/invoices
 // itself branches server-side on req.user.role (internal Owner/Office
@@ -25,7 +26,7 @@ export function InvoicesPage() {
   // Creation is Owner/Office Manager only server-side (requireBillingAccess)
   // — this hides the button for everyone else, including portal users who'd
   // get a 403 either way. UI convenience only, not the real enforcement.
-  const canCreate = user?.role === 'owner' || user?.role === 'office_manager';
+  const canCreate = isManagerRole(user);
 
   const load = useCallback(() => {
     setLoading(true);

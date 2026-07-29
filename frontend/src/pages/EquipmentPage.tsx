@@ -5,6 +5,7 @@ import type { Equipment, EquipmentStatus } from '../lib/equipmentTypes';
 import { useAuth } from '../context/AuthContext';
 import { EquipmentStatusPill } from '../components/EquipmentStatusPill';
 import { NewEquipmentModal } from '../components/NewEquipmentModal';
+import { isManagerRole } from '../lib/permissions';
 
 const STATUS_FILTERS: EquipmentStatus[] = ['Active', 'Under Maintenance', 'Retired'];
 
@@ -15,7 +16,7 @@ const STATUS_FILTERS: EquipmentStatus[] = ['Active', 'Under Maintenance', 'Retir
 export function EquipmentPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const canCreate = user?.role === 'owner' || user?.role === 'office_manager';
+  const canCreate = isManagerRole(user);
 
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [statusFilter, setStatusFilter] = useState<EquipmentStatus | null>(null);

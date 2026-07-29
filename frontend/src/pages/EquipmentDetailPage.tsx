@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { EquipmentStatusPill } from '../components/EquipmentStatusPill';
 import { MaintenanceLogModal } from '../components/MaintenanceLogModal';
+import { isManagerRole } from '../lib/permissions';
 
 const STATUS_OPTIONS: EquipmentStatus[] = ['Active', 'Under Maintenance', 'Retired'];
 
@@ -18,7 +19,7 @@ export function EquipmentDetailPage() {
   // Status change is requireManagerRole server-side (equipment.routes.js);
   // maintenance logging is open to any internal staff — same split as
   // Materials' Adjust-vs-Consume gating.
-  const canChangeStatus = user?.role === 'owner' || user?.role === 'office_manager';
+  const canChangeStatus = isManagerRole(user);
 
   const [equipment, setEquipment] = useState<Equipment | null>(null);
   const [logs, setLogs] = useState<MaintenanceLog[]>([]);

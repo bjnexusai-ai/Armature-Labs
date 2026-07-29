@@ -3,6 +3,7 @@ import { ApiError, createSavedReport } from '../lib/api';
 import { REPORT_TYPES, type ReportType } from '../lib/reportTypes';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { isManagerRole } from '../lib/permissions';
 
 interface SavedReportModalProps {
   open: boolean;
@@ -20,7 +21,7 @@ interface SavedReportModalProps {
 export function SavedReportModal({ open, onClose, onCreated }: SavedReportModalProps) {
   const { user } = useAuth();
   const { showToast } = useToast();
-  const canUseRevenue = user?.role === 'owner' || user?.role === 'office_manager';
+  const canUseRevenue = isManagerRole(user);
   const availableTypes = REPORT_TYPES.filter((t) => t !== 'Revenue' || canUseRevenue);
 
   const [name, setName] = useState('');

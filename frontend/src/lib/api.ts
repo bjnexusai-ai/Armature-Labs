@@ -16,15 +16,88 @@ function getAccessToken(): string | null {
   return sessionStorage.getItem('accessToken');
 }
 
+function getRefreshToken(): string | null {
+  return sessionStorage.getItem('refreshToken');
+}
+
+function clearAuthStorage(): void {
+  sessionStorage.removeItem('accessToken');
+  sessionStorage.removeItem('refreshToken');
+  sessionStorage.removeItem('currentUser');
+}
+
+// Frontend Session 9 §1 — confirmed directly against
+// backend/src/controllers/auth.controller.js and auth.routes.js before
+// writing this: POST /api/auth/refresh takes { refreshToken } in the body
+// (no auth header), rotates on every call (revokes the presented token,
+// mints a new jti/row), and returns a NEW refreshToken as well as a new
+// accessToken — both must be re-stored, not just the access token, or the
+// very next refresh attempt would present an already-rotated (and thus
+// rejected) token. Calls the raw endpoint directly rather than going
+// through apiFetch, since apiFetch's own 401 handling below calls this
+// function — routing through apiFetch here would recurse.
+async function refreshAccessToken(): Promise<string> {
+  const storedRefreshToken = getRefreshToken();
+  if (!storedRefreshToken) {
+    throw new ApiError(401, 'No active session.');
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/api/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken: storedRefreshToken }),
+    });
+  } catch {
+    throw new ApiError(0, 'Could not reach the server.');
+  }
+
+  if (!res.ok) {
+    throw new ApiError(res.status, 'Session expired.');
+  }
+
+  const data = (await res.json()) as { accessToken: string; refreshToken: string };
+  sessionStorage.setItem('accessToken', data.accessToken);
+  sessionStorage.setItem('refreshToken', data.refreshToken);
+  return data.accessToken;
+}
+
+// Paths that must never trigger a refresh-and-retry on a 401 of their own —
+// refresh 401ing means the session is actually dead (retrying would loop),
+// and login 401ing is just "wrong password", nothing to refresh.
+const NO_REFRESH_PATHS = ['/api/auth/login', '/api/auth/refresh', '/api/auth/logout'];
+
+// Dedupe concurrent 401s: if three requests fail at once on an expired
+// token, they should share one /refresh call and one token rotation, not
+// each independently rotate the token out from under each other (the
+// backend's reuse-detection in refresh() would treat the 2nd/3rd caller's
+// now-stale refreshToken as theft and revoke the whole session).
+let refreshPromise: Promise<string> | null = null;
+
+function redirectToLogin(): void {
+  clearAuthStorage();
+  if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+    window.location.href = '/login';
+  }
+}
+
 /**
  * Thin fetch wrapper: attaches the bearer token when present, parses JSON,
  * and throws ApiError on non-2xx so callers can branch on `.status` (401 vs
  * 403 vs other) the way the Frontend Wiring Prompt's error-handling spec
  * requires, instead of every call site re-implementing res.ok checks.
+ *
+ * Frontend Session 9 §1: on a 401 from anything other than the auth
+ * endpoints themselves, attempts one silent refresh + one retry before
+ * giving up — access tokens expire in 15m (confirmed against
+ * backend/.env.example's JWT_ACCESS_EXPIRES_IN) and nothing previously
+ * refreshed them, so every session used to hard-fail mid-use.
  */
 export async function apiFetch<T = unknown>(
   path: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  _isRetry = false
 ): Promise<T> {
   const token = getAccessToken();
   const headers: Record<string, string> = {
@@ -40,6 +113,36 @@ export async function apiFetch<T = unknown>(
     throw new ApiError(0, 'Could not reach the server. Is the backend running?');
   }
 
+  if (res.status === 401 && !_isRetry && !NO_REFRESH_PATHS.includes(path)) {
+    // If another concurrent call already refreshed while this request was
+    // in flight, storage will already hold a different access token than
+    // the one this request sent — just retry with it instead of triggering
+    // a second, redundant /refresh call. Confirmed with a mock-server test
+    // that without this check, near-simultaneous 401s (arriving just
+    // outside each other's shared refreshPromise window) each fired their
+    // own refresh call — functionally harmless in that test since
+    // getRefreshToken() always reads the live value, but wasteful, and a
+    // needless extra rotation is exactly the kind of thing the backend's
+    // reuse-detection is watching for. This check removes the redundant
+    // call in the common case rather than just tolerating it.
+    const currentToken = getAccessToken();
+    if (currentToken && currentToken !== token) {
+      return apiFetch<T>(path, options, true);
+    }
+    try {
+      if (!refreshPromise) {
+        refreshPromise = refreshAccessToken().finally(() => {
+          refreshPromise = null;
+        });
+      }
+      await refreshPromise;
+      return apiFetch<T>(path, options, true);
+    } catch {
+      redirectToLogin();
+      throw new ApiError(401, 'Your session has expired. Please log in again.');
+    }
+  }
+
   const isJson = res.headers.get('content-type')?.includes('application/json');
   const body = isJson ? await res.json().catch(() => null) : null;
 
@@ -51,6 +154,29 @@ export async function apiFetch<T = unknown>(
   }
 
   return body as T;
+}
+
+// Confirmed against auth.controller.js's logout — takes { refreshToken } in
+// the body (not a header, not the access token), 204 on success. The
+// controller treats an already-invalid token as a no-op 204 too, so this
+// never needs its own try/catch for "already logged out" — AuthContext's
+// caller wraps the whole thing instead, for the "network down" case.
+export function logoutRequest(refreshToken: string): Promise<void> {
+  return apiFetch<void>('/api/auth/logout', {
+    method: 'POST',
+    body: JSON.stringify({ refreshToken }),
+  });
+}
+
+// Confirmed against auth.controller.js's logoutAll — requireAuth (access
+// token identifies the user), no body, revokes every refresh token row for
+// that user. Not wired to any UI in this session — no existing account/
+// settings screen to hang a "log out everywhere" entry point off of, and
+// Master Frontend Plan §2's instruction is not to invent one just to use
+// this; flagged as a named follow-up in FRONTEND_LOG.md instead. Exported
+// so that follow-up doesn't have to re-confirm the endpoint shape.
+export function logoutAllRequest(): Promise<void> {
+  return apiFetch<void>('/api/auth/logout-all', { method: 'POST' });
 }
 
 /**
