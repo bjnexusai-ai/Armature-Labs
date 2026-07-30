@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { ApiError, listCases, listPractices } from '../lib/api';
 import type { CaseRecord, CaseStatus, Pagination, Practice } from '../lib/caseTypes';
 import { ALL_STATUSES } from '../lib/caseTypes';

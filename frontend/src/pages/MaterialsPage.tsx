@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { ApiError, listMaterialCategories, listMaterials } from '../lib/api';
 import type { Material, MaterialCategory } from '../lib/caseTypes';
 import { useAuth } from '../context/AuthContext';

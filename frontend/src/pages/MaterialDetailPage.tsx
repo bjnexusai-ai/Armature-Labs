@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router';
 import { ApiError, getMaterial, listStockTransactions } from '../lib/api';
 import type { Material, MaterialStockTransaction } from '../lib/caseTypes';
 import { useAuth } from '../context/AuthContext';

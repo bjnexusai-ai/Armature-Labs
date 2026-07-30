@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import type { CaseRecord } from '../lib/caseTypes';
 import { stagePercent } from '../lib/dashboardMetrics';
 import { parseFlexibleDate } from '../lib/dateUtils';

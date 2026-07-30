@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { ApiError, listManufacturers } from '../lib/api';
 import type { Manufacturer } from '../lib/caseTypes';
 import { NewManufacturerModal } from '../components/NewManufacturerModal';

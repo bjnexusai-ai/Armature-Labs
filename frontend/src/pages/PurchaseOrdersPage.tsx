@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { ApiError, listPurchaseOrders, listVendors } from '../lib/api';
 import type { PurchaseOrder, Vendor } from '../lib/caseTypes';
 import { POStatusPill } from '../components/POStatusPill';

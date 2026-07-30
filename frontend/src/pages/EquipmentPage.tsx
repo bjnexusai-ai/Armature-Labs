@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { ApiError, listEquipment } from '../lib/api';
 import type { Equipment, EquipmentStatus } from '../lib/equipmentTypes';
 import { useAuth } from '../context/AuthContext';

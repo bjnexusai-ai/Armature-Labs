@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { ApiError, listApprovals } from '../lib/api';
 import type { ApprovalRecord, ApprovalStatus, Pagination } from '../lib/caseTypes';
 import { useAuth } from '../context/AuthContext';

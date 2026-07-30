@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router';
 import { ApiError, getCase, getPractice } from '../lib/api';
 import type { CaseRecord, StageHistoryEntry, StatusAuditEntry } from '../lib/caseTypes';
 import { StatusPill } from '../components/StatusPill';

@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useState } from 'react';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
+import { roleLabel } from '../lib/authTypes';
 import { visibleNavItems, NAV_ITEMS, type NavIconKey, type NavItem } from '../lib/navConfig';
 import { listApprovals } from '../lib/api';
 import type { ApprovalRecord } from '../lib/caseTypes';
@@ -123,10 +124,6 @@ function groupBySection(items: NavItem[]): { section: string; items: NavItem[] }
 function initials(fullName: string): string {
   return fullName.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
 }
-function roleLabel(role: string): string {
-  return role.split('_').map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
-}
-
 function timeAgo(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
   const mins = Math.max(1, Math.round(diffMs / 60000));
@@ -142,16 +139,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const [notifOpen, setNotifOpen] = useState(false);
   const [pendingApprovals, setPendingApprovals] = useState<ApprovalRecord[]>([]);
-  // Frontend Session 9 §4.4 — the sidebar below was a permanently fixed
-  // 240px column with no mobile handling at all (confirmed: no breakpoint
-  // classes on <aside> before this session), and it wraps every
-  // authenticated screen, so it was the actual highest-leverage responsive
-  // gap in the app — worth fixing once here rather than patching individual
-  // page grids that were mostly fine already (Dashboard's metric cards
-  // already had sm:/lg: breakpoints, confirmed by re-grepping before
-  // touching anything, not assumed).
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
+  // Close the mobile drawer whenever the route changes (link click, back
+  // button, etc.) so it doesn't stay open over the next page.
   useEffect(() => {
     setMobileNavOpen(false);
   }, [location.pathname]);
@@ -180,17 +171,20 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen">
+      {/* Scrim behind the mobile drawer — only rendered (and only ever
+          needed) below the md breakpoint, closes the drawer on tap. */}
       {mobileNavOpen && (
         <div
-          className="fixed inset-0 bg-black/40 z-30 md:hidden"
+          className="drawer-scrim md:hidden"
           onClick={() => setMobileNavOpen(false)}
           aria-hidden="true"
         />
       )}
+
       <aside
-        className={`w-60 shrink-0 relative mesh-gradient text-white flex flex-col py-6 isolate fixed md:static inset-y-0 left-0 z-40 transition-transform duration-200 ${
-          mobileNavOpen ? 'translate-x-0' : '-translate-x-full'
-        } md:translate-x-0`}
+        className={`w-60 shrink-0 relative mesh-gradient text-white flex-col py-6 isolate fixed md:static inset-y-0 left-0 z-[95] transition-transform duration-200 ease-out md:translate-x-0 ${
+          mobileNavOpen ? 'flex translate-x-0' : 'flex -translate-x-full md:flex'
+        }`}
       >
         <div className="sidebar-scrim absolute inset-0 pointer-events-none z-0" />
 
@@ -285,18 +279,18 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setMobileNavOpen((o) => !o)}
-              className="w-9 h-9 rounded-[10px] bg-white flex items-center justify-center shrink-0 md:hidden"
+              className="md:hidden w-9 h-9 rounded-[10px] bg-white flex items-center justify-center shrink-0"
               style={{ border: '1px solid var(--color-border)' }}
-              aria-label={mobileNavOpen ? 'Close navigation menu' : 'Open navigation menu'}
+              aria-label="Toggle navigation menu"
               aria-expanded={mobileNavOpen}
             >
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--color-ink)" strokeWidth="1.8">
-                {mobileNavOpen ? <path d="M6 6l12 12M18 6 6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-ink)" strokeWidth="2" strokeLinecap="round">
+                <path d="M3 6h18M3 12h18M3 18h18" />
               </svg>
             </button>
             <div>
-              <h1 className="font-display text-[19px] md:text-[23px] font-bold m-0 tracking-[-0.015em]">{pageTitle}</h1>
-              <p className="m-0 mt-0.5 text-body-sm text-ink-soft hidden sm:block">Welcome back, {user.fullName.split(' ')[0]}</p>
+              <h1 className="font-display text-title font-bold m-0 tracking-[-0.015em]">{pageTitle}</h1>
+              <p className="m-0 mt-0.5 text-body-sm text-ink-soft">Welcome back, {user.fullName.split(' ')[0]}</p>
             </div>
           </div>
 
@@ -311,9 +305,12 @@ export function AppShell({ children }: { children: ReactNode }) {
                 placeholder="Search cases…"
                 disabled
                 title="Search wires up once the Case Queue (Frontend Session 2) is live"
-                className="w-[220px] h-[38px] rounded-[10px] pl-9 pr-3.5 text-body-sm bg-white opacity-60 cursor-not-allowed"
+                className="w-[220px] h-[38px] rounded-[10px] pl-9 pr-14 text-body-sm bg-white opacity-60 cursor-not-allowed"
                 style={{ border: '1px solid var(--color-border)' }}
               />
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-semibold uppercase tracking-wide bg-badge-amber-bg text-badge-amber rounded-full px-2 py-0.5 pointer-events-none">
+                Soon
+              </span>
             </div>
 
             <div className="relative">
@@ -346,7 +343,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                         setNotifOpen(false);
                         navigate('/approvals');
                       }}
-                      className="flex gap-2.5 px-2.5 py-2.5 rounded-[9px] hover:bg-page-bg-top cursor-pointer"
+                      className="flex gap-2.5 px-2.5 py-2.5 rounded-[10px] hover:bg-page-bg-top cursor-pointer"
                     >
                       <div className="w-[30px] h-[30px] rounded-lg flex items-center justify-center text-body-sm bg-badge-teal-bg shrink-0">
                         🦷
@@ -384,7 +381,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 px-4 md:px-8 pb-10">{children}</main>
+        <main className="flex-1 px-8 pb-10">{children}</main>
       </div>
     </div>
   );

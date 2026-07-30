@@ -7,7 +7,6 @@ import type { CaseStatus } from './caseTypes';
  * inventing new colors:
  *
  *   - "In design"                -> --pill-purple    (demo used this verbatim)
- *   - "Pending design approval"  -> --pill-mustard    (demo used this verbatim)
  *   - "Pending bisque approval"  -> --pill-purple     (demo's action-queue row
  *                                    used this exact pairing)
  *   - "Processing"               -> --badge-teal      (demo used this verbatim)
@@ -16,18 +15,31 @@ import type { CaseStatus } from './caseTypes';
  *
  * Statuses with no demo precedent (documented decision, not a guess at new
  * colors — reuses only tokens already in the ported palette):
- *   - "Case Entered"   -> --badge-tan     (neutral start-of-lifecycle)
  *   - "Finalizing"     -> --badge-green   (deeper green than Shipped Out's
  *                          pill-green, signals "almost done")
  *   - "Delivered"      -> --pill-green + a checkmark dot (terminal, reuses
  *                          Shipped Out's family since both are "done" states)
  *   - "Case on Hold"   -> --badge-amber   (demo's amber token, unused
  *                          elsewhere for a pill, distinct from red/Delayed)
+ *
+ * FIX (health-check pass): "Case Entered" and "Pending Design Approval"
+ * previously used --badge-tan and --pill-mustard respectively — both are
+ * near-identical teals to --badge-teal (Processing) despite their
+ * misleading names (#3D949B / #0D6B72 / #1C8A93 — all teal hues). With a
+ * real dataset, Case Entered + Processing + Pending Design Approval are
+ * routinely all visible at once (case table, action queue, status chart),
+ * making 3 of 10 statuses indistinguishable. Reassigned to a genuine
+ * neutral gray (Case Entered — fits "not started yet" better anyway) and
+ * --badge-coral (Pending Design Approval, otherwise unused in this map).
+ * "In Design"/"Pending Bisque Approval" still deliberately share purple per
+ * the demo's own precedent above — left as-is since that pairing rarely
+ * co-occurs in the same view and changing it would depart from the
+ * reference rather than fix a bug.
  */
 export const STATUS_COLORS: Record<CaseStatus, { bg: string; text: string }> = {
-  'Case Entered': { bg: 'var(--color-badge-tan-bg)', text: 'var(--color-badge-tan)' },
+  'Case Entered': { bg: 'var(--color-border)', text: 'var(--color-ink-soft)' },
   'In Design': { bg: 'var(--color-pill-purple-bg)', text: 'var(--color-pill-purple-text)' },
-  'Pending Design Approval': { bg: 'var(--color-pill-mustard-bg)', text: 'var(--color-pill-mustard-text)' },
+  'Pending Design Approval': { bg: 'var(--color-badge-coral-bg)', text: 'var(--color-badge-coral)' },
   Processing: { bg: 'var(--color-badge-teal-bg)', text: 'var(--color-badge-teal)' },
   'Pending Bisque Approval': { bg: 'var(--color-pill-purple-bg)', text: 'var(--color-pill-purple-text)' },
   Finalizing: { bg: 'var(--color-badge-green-bg)', text: 'var(--color-badge-green)' },
@@ -56,20 +68,27 @@ export const APPROVAL_STATUS_COLORS: Record<
   rejected: { bg: 'var(--color-pill-red-bg)', text: 'var(--color-pill-red-text)' },
 };
 
-// Invoice status pill (Frontend Session 4) — reuses the same tokens rather
-// than inventing new ones: Draft/Sent are neutral/awaiting-action (tan and
-// mustard), Partially Paid reuses the amber "in progress" tone, Paid reuses
-// the green "done" tone, Void reuses a muted neutral (not red — voiding an
-// invoice isn't an error state the way Delayed/rejected are).
+// Invoice status pill (Frontend Session 4) — Draft is the neutral
+// tan/waiting tone, Partially Paid reuses the amber "in progress" tone,
+// Paid reuses the green "done" tone.
+// FIX: Sent and Void previously reused --pill-mustard and --badge-tan
+// respectively — both near-identical teals to Draft's own --badge-tan
+// (#3D949B vs #0D6B72), and Void was literally IDENTICAL to Draft (same
+// token). In a real invoice list showing several of these together, Draft/
+// Sent/Void were visually indistinguishable. Sent reassigned to purple
+// (otherwise unused here); Void reassigned to a genuine neutral gray using
+// --color-ink-soft/--color-border — appropriate for a voided/inert state
+// anyway, since it isn't an error state the way Cancelled/Denied are
+// elsewhere in this file.
 export const INVOICE_STATUS_COLORS: Record<
   'Draft' | 'Sent' | 'Partially Paid' | 'Paid' | 'Void',
   { bg: string; text: string }
 > = {
   Draft: { bg: 'var(--color-badge-tan-bg)', text: 'var(--color-badge-tan)' },
-  Sent: { bg: 'var(--color-pill-mustard-bg)', text: 'var(--color-pill-mustard-text)' },
+  Sent: { bg: 'var(--color-pill-purple-bg)', text: 'var(--color-pill-purple-text)' },
   'Partially Paid': { bg: 'var(--color-badge-amber-bg)', text: 'var(--color-badge-amber)' },
   Paid: { bg: 'var(--color-pill-green-bg)', text: 'var(--color-pill-green-text)' },
-  Void: { bg: 'var(--color-badge-tan-bg)', text: 'var(--color-badge-tan)' },
+  Void: { bg: 'var(--color-border)', text: 'var(--color-ink-soft)' },
 };
 
 // Shipment status pill (Frontend Session 5) — reuses the same tokens as
@@ -117,17 +136,20 @@ export const MATERIAL_STATUS_COLORS: Record<string, { bg: string; text: string }
 };
 
 // Purchase order status pill (Frontend Session 6) — Draft is the neutral
-// tan "not sent yet" tone (same as Invoice Draft), Ordered reuses mustard
-// "awaiting action" (same as pending approvals/invoices), Partially
-// Received reuses amber "in progress" (same as Partially Paid), Received
-// reuses green "done", Cancelled reuses red, matching this file's own
-// established reasoning for every prior status map.
+// tan "not sent yet" tone (same as Invoice Draft), Partially Received
+// reuses amber "in progress" (same as Partially Paid), Received reuses
+// green "done", Cancelled reuses red, matching this file's own established
+// reasoning for every prior status map.
+// FIX: Ordered previously reused --pill-mustard, which is a near-duplicate
+// teal to Draft's --badge-tan (#3D949B vs #0D6B72) — indistinguishable as
+// adjacent pills in a real PO list. Reassigned to purple (otherwise unused
+// in this map) so Draft/Ordered are actually distinguishable at a glance.
 export const PO_STATUS_COLORS: Record<
   'Draft' | 'Ordered' | 'Partially Received' | 'Received' | 'Cancelled',
   { bg: string; text: string }
 > = {
   Draft: { bg: 'var(--color-badge-tan-bg)', text: 'var(--color-badge-tan)' },
-  Ordered: { bg: 'var(--color-pill-mustard-bg)', text: 'var(--color-pill-mustard-text)' },
+  Ordered: { bg: 'var(--color-pill-purple-bg)', text: 'var(--color-pill-purple-text)' },
   'Partially Received': { bg: 'var(--color-badge-amber-bg)', text: 'var(--color-badge-amber)' },
   Received: { bg: 'var(--color-pill-green-bg)', text: 'var(--color-pill-green-text)' },
   Cancelled: { bg: 'var(--color-pill-red-bg)', text: 'var(--color-pill-red-text)' },

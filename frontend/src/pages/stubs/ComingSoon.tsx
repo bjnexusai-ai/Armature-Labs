@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 
 export function ComingSoon({ label, session }: { label: string; session: number }) {
   const navigate = useNavigate();

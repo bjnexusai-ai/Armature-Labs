@@ -6,6 +6,17 @@ import { MetricCard } from '../components/MetricCard';
 import { CaseSnapshotHero } from '../components/CaseSnapshotHero';
 import { TodaysWorkflowPanel } from '../components/TodaysWorkflowPanel';
 import { ActionRequiredQueue } from '../components/ActionRequiredQueue';
+import { DonutChart } from '../components/DonutChart';
+import { LineChart } from '../components/LineChart';
+import { BarChart } from '../components/BarChart';
+import { NewCaseModal } from '../components/NewCaseModal';
+import {
+  approvalResponseTimeSeries,
+  casesByStatus,
+  fetchApprovalsForRange,
+  topPracticesByVolume,
+  type RangeKey,
+} from '../lib/reportMetrics';
 import { listApprovals, listCaseTypes, listPractices } from '../lib/api';
 import {
   buildExceptionQueueItems,
@@ -17,7 +28,8 @@ import {
   type DashboardMetrics,
   type WorkflowStepData,
 } from '../lib/dashboardMetrics';
-import type { CaseRecord } from '../lib/caseTypes';
+import { STATUS_COLORS } from '../lib/statusColors';
+import type { CaseRecord, Practice } from '../lib/caseTypes';
 
 /**
  * Session 7 §0.2 retrofit — real Dashboard, replacing the Session 1
@@ -42,6 +54,19 @@ export function DashboardPage() {
     onHold: 0,
   });
   const [queueItems, setQueueItems] = useState<ActionQueueItem[]>([]);
+  const [queueTotalCount, setQueueTotalCount] = useState(0);
+  const [newCaseOpen, setNewCaseOpen] = useState(false);
+  const [reloadTick, setReloadTick] = useState(0);
+
+  // Backing data for the 3 dashboard charts (§0.1/§0.2 never wired these in
+  // — they were built in a separate Session 7 chunk for ReportsPage. Same
+  // helpers/colors reused here verbatim, no new aggregation logic invented.
+  const [cases, setCases] = useState<CaseRecord[]>([]);
+  const [practices, setPractices] = useState<Practice[]>([]);
+  const [range, setRange] = useState<RangeKey>('7D');
+  const [responseSeries, setResponseSeries] = useState<ReturnType<typeof approvalResponseTimeSeries>>([]);
+  const [lineLoading, setLineLoading] = useState(true);
+  const [isolatedStatus, setIsolatedStatus] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,6 +81,9 @@ export function DashboardPage() {
           listCaseTypes(),
         ]);
         if (cancelled) return;
+
+        setCases(allCases);
+        setPractices(practicesRes.practices);
 
         const practiceNames: Record<number, string> = {};
         for (const p of practicesRes.practices) practiceNames[p.id] = p.practice_name;
@@ -86,7 +114,17 @@ export function DashboardPage() {
           status: a.case_current_status,
         }));
         const exceptionItems = buildExceptionQueueItems(allCases, practiceNames);
-        setQueueItems([...approvalItems, ...exceptionItems]);
+        // The dashboard panel is a short "at a glance" preview (matches the
+        // reference file's 3-row example), not the full queue — the full,
+        // filterable list already exists on the Approvals/Case Queue pages.
+        // Previously this rendered every fetched approval with no cap (up
+        // to the 100-row fetch limit), which is why the panel could scroll
+        // through dozens of rows. Exceptions (Delayed/On Hold) surface
+        // first since they're the more time-sensitive of the two.
+        const DASHBOARD_QUEUE_PREVIEW_SIZE = 6;
+        const combined = [...exceptionItems, ...approvalItems];
+        setQueueItems(combined.slice(0, DASHBOARD_QUEUE_PREVIEW_SIZE));
+        setQueueTotalCount(combined.length);
       } catch {
         if (!cancelled) showToast('Could not load dashboard data. Is the backend running?');
       } finally {
@@ -99,7 +137,35 @@ export function DashboardPage() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [reloadTick]);
+
+  // Line chart re-fetches independently of the range toggle, same pattern
+  // ReportsPage already uses for the identical chart.
+  useEffect(() => {
+    let cancelled = false;
+    setLineLoading(true);
+    fetchApprovalsForRange(range)
+      .then((approvals) => {
+        if (!cancelled) setResponseSeries(approvalResponseTimeSeries(approvals, range));
+      })
+      .catch(() => {
+        if (!cancelled) setResponseSeries([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLineLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [range]);
+
+  const statusSlices = casesByStatus(cases).map((s) => ({
+    key: s.status,
+    label: s.status,
+    value: s.count,
+    color: STATUS_COLORS[s.status].text,
+  }));
+  const practiceVolume = topPracticesByVolume(cases, practices, 30).slice(0, 5);
 
   return (
     <div>
@@ -111,11 +177,11 @@ export function DashboardPage() {
           </p>
         </div>
         <button
-          onClick={() => showToast('This is what a real action confirmation will look like')}
-          className="btn-primary shrink-0 rounded-lg text-white font-semibold text-sm px-4.5 py-2.5 transition-transform hover:-translate-y-0.5"
+          onClick={() => setNewCaseOpen(true)}
+          className="shrink-0 rounded-lg text-white font-semibold text-sm px-4.5 py-2.5 transition-transform hover:-translate-y-0.5"
           style={{ background: 'linear-gradient(135deg,#1C8A93,#16A37A)' }}
         >
-          Preview a toast
+          + New Case
         </button>
       </div>
 
@@ -172,7 +238,73 @@ export function DashboardPage() {
         />
       </div>
 
-      <ActionRequiredQueue items={queueItems} loading={loading} />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
+        <div className="surface-card rounded-[18px] p-5">
+          <h3 className="font-display text-body-lg font-bold text-ink mb-1">Cases by status</h3>
+          <p className="text-xs text-ink-soft mb-4">All active cases, last 30 days · click a segment to isolate it.</p>
+          {loading ? (
+            <div className="skeleton h-[180px] rounded-lg" />
+          ) : (
+            <DonutChart
+              slices={statusSlices}
+              isolatedKey={isolatedStatus}
+              onToggleIsolate={setIsolatedStatus}
+              centerLabel="Cases"
+            />
+          )}
+        </div>
+
+        <div className="surface-card rounded-[18px] p-5">
+          <div className="flex items-center justify-between flex-wrap gap-3 mb-1">
+            <h3 className="font-display text-body-lg font-bold text-ink">Approval response time</h3>
+            <div className="range-toggle">
+              {(['7D', '6W', '90D'] as RangeKey[]).map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  className={`range-btn ${range === r ? 'active' : ''}`}
+                  onClick={() => setRange(r)}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+          </div>
+          <p className="text-xs text-ink-soft mb-4">Average hours between an approval being requested and responded to.</p>
+          {lineLoading ? (
+            <div className="skeleton h-[220px] rounded-lg" />
+          ) : (
+            <LineChart
+              points={responseSeries.map((p) => ({ label: p.label, value: p.avgHours, sampleSize: p.sampleSize }))}
+              valueSuffix="h"
+            />
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <ActionRequiredQueue items={queueItems} loading={loading} totalCount={queueTotalCount} />
+
+        <div className="surface-card rounded-[18px] p-5">
+          <h3 className="font-display text-body-lg font-bold text-ink mb-1">Top practices by volume</h3>
+          <p className="text-xs text-ink-soft mb-4">Cases submitted, last 30 days.</p>
+          {loading ? (
+            <div className="skeleton h-[200px] rounded-lg" />
+          ) : (
+            <BarChart
+              data={practiceVolume.map((p) => ({ key: String(p.practiceId), label: p.practiceName, value: p.count }))}
+              emptyTitle="No submissions in the last 30 days"
+              emptyBody="Cases created in this window will show up here by practice."
+            />
+          )}
+        </div>
+      </div>
+
+      <NewCaseModal
+        open={newCaseOpen}
+        onClose={() => setNewCaseOpen(false)}
+        onCreated={() => setReloadTick((t) => t + 1)}
+      />
     </div>
   );
 }

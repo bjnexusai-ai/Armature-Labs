@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { ApiError, listInvoices } from '../lib/api';
 import type { InvoiceListRow } from '../lib/caseTypes';
 import { useAuth } from '../context/AuthContext';

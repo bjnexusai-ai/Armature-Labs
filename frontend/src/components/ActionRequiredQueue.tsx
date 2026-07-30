@@ -1,11 +1,14 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import type { ActionQueueItem } from '../lib/dashboardMetrics';
 import { StatusPill } from './StatusPill';
 
 interface ActionRequiredQueueProps {
   items: ActionQueueItem[];
   loading?: boolean;
+  /** True count before any dashboard-side truncation, so a "View all" link
+   * can show when this panel is a capped preview rather than the full list. */
+  totalCount?: number;
 }
 
 /**
@@ -22,7 +25,7 @@ interface ActionRequiredQueueProps {
  * it already fetches for the other dashboard cards — no new backend
  * endpoint invented for this, per the prompt's explicit instruction.
  */
-export function ActionRequiredQueue({ items, loading }: ActionRequiredQueueProps) {
+export function ActionRequiredQueue({ items, loading, totalCount }: ActionRequiredQueueProps) {
   const [filter, setFilter] = useState('');
   const navigate = useNavigate();
 
@@ -40,7 +43,17 @@ export function ActionRequiredQueue({ items, loading }: ActionRequiredQueueProps
 
   return (
     <div className="surface-card fade-in rounded-[18px] p-5">
-      <h3 className="font-display text-body-lg font-bold m-0 text-ink tracking-[-0.01em]">Action required queue</h3>
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="font-display text-body-lg font-bold m-0 text-ink tracking-[-0.01em]">Action required queue</h3>
+        {typeof totalCount === 'number' && totalCount > items.length && (
+          <button
+            onClick={() => navigate('/approvals')}
+            className="text-caption font-semibold text-badge-teal hover:underline shrink-0"
+          >
+            View all {totalCount} →
+          </button>
+        )}
+      </div>
       <p className="text-xs text-ink-soft mt-0.5 mb-2.5">Cases needing staff attention</p>
       <input
         type="text"

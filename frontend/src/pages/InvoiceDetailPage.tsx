@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { ApiError, createCheckoutSession, getInvoice } from '../lib/api';
 import type { InvoiceDetail } from '../lib/caseTypes';
 import { useAuth } from '../context/AuthContext';
