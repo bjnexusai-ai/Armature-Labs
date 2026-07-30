@@ -140,7 +140,7 @@ function ShiftTable({ title, rows, muted }: { title: string; rows: TechnicianShi
           <thead>
           <tr>
           {['Technician ID', 'Starts', 'Ends', 'Notes'].map((h) => (
-          <th key={h} className="text-left text-caption uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border">
+          <th key={h} className="text-left text-caption uppercase tracking-wider text-ink pb-2.5 border-b border-border">
           {h}
           </th>
           ))}
@@ -188,7 +188,7 @@ function BookingTable({
           <thead>
           <tr>
           {['Equipment', 'Case', 'Starts', 'Ends', 'Notes'].map((h) => (
-          <th key={h} className="text-left text-caption uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border">
+          <th key={h} className="text-left text-caption uppercase tracking-wider text-ink pb-2.5 border-b border-border">
           {h}
           </th>
           ))}

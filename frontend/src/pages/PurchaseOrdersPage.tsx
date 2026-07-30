@@ -93,7 +93,7 @@ export function PurchaseOrdersPage() {
               {['PO #', 'Vendor', 'Status', 'Created', ''].map((h) => (
               <th
               key={h}
-              className="text-left text-caption uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border"
+              className="text-left text-caption uppercase tracking-wider text-ink pb-2.5 border-b border-border"
               >
               {h}
               </th>
@@ -142,7 +142,7 @@ export function PurchaseOrdersPage() {
             {['Name', 'Contact', 'Email', 'Phone'].map((h) => (
             <th
             key={h}
-            className="text-left text-caption uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border"
+            className="text-left text-caption uppercase tracking-wider text-ink pb-2.5 border-b border-border"
             >
             {h}
             </th>

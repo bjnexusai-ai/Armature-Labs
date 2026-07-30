@@ -115,7 +115,7 @@ export function MaterialDetailPage() {
             {['Type', 'Quantity', 'Lot #', 'Notes', 'Date'].map((h) => (
             <th
             key={h}
-            className="text-left text-caption uppercase tracking-wider text-ink-soft pb-2.5 border-b border-border"
+            className="text-left text-caption uppercase tracking-wider text-ink pb-2.5 border-b border-border"
             >
             {h}
             </th>

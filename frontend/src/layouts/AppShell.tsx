@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { roleLabel } from '../lib/authTypes';
@@ -140,6 +140,42 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [notifOpen, setNotifOpen] = useState(false);
   const [pendingApprovals, setPendingApprovals] = useState<ApprovalRecord[]>([]);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  // Topbar search — real now (was permanently `disabled` with a "Soon"
+  // badge). No backend text-search param exists (confirmed against
+  // cases.controller.js), so this drives the same ?q= that CaseQueuePage
+  // already reads into its own client-side filter. Debounced so every
+  // keystroke doesn't push a history entry.
+  const [searchTerm, setSearchTerm] = useState(() =>
+    location.pathname === '/cases' ? new URLSearchParams(location.search).get('q') ?? '' : '',
+  );
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // If the case queue's own search box changes ?q= (or the user navigates
+  // there directly), keep the topbar box showing the same term instead of
+  // going stale/out of sync.
+  useEffect(() => {
+    if (location.pathname === '/cases') {
+      setSearchTerm(new URLSearchParams(location.search).get('q') ?? '');
+    } else {
+      setSearchTerm('');
+    }
+  }, [location.pathname, location.search]);
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      const qs = value ? `?q=${encodeURIComponent(value)}` : '';
+      navigate(`/cases${qs}`, { replace: location.pathname === '/cases' });
+    }, 300);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    };
+  }, []);
 
   // Close the mobile drawer whenever the route changes (link click, back
   // button, etc.) so it doesn't stay open over the next page.
@@ -303,14 +339,18 @@ export function AppShell({ children }: { children: ReactNode }) {
               <input
                 type="text"
                 placeholder="Search cases…"
-                disabled
-                title="Search wires up once the Case Queue (Frontend Session 2) is live"
-                className="w-[220px] h-[38px] rounded-[10px] pl-9 pr-14 text-body-sm bg-white opacity-60 cursor-not-allowed"
+                value={searchTerm}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key !== 'Enter') return;
+                  if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+                  const qs = searchTerm ? `?q=${encodeURIComponent(searchTerm)}` : '';
+                  navigate(`/cases${qs}`, { replace: location.pathname === '/cases' });
+                }}
+                title="Search by case ID, patient, or practice"
+                className="w-[220px] h-[38px] rounded-[10px] pl-9 pr-3 text-body-sm bg-white"
                 style={{ border: '1px solid var(--color-border)' }}
               />
-              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-semibold uppercase tracking-wide bg-badge-amber-bg text-badge-amber rounded-full px-2 py-0.5 pointer-events-none">
-                Soon
-              </span>
             </div>
 
             <div className="relative">
