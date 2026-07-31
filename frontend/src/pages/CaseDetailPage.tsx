@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { ApiError, getCase, getPractice } from '../lib/api';
 import type { CaseRecord, StageHistoryEntry, StatusAuditEntry } from '../lib/caseTypes';
 import { StatusPill } from '../components/StatusPill';
 import { CaseActivityPanel } from '../components/CaseActivityPanel';
+import { CaseStatusControl } from '../components/CaseStatusControl';
 import { PRIORITY_COLORS } from '../lib/statusColors';
+import { parseFlexibleDate } from '../lib/dateUtils';
 
 export function CaseDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -17,7 +19,10 @@ export function CaseDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  // Extracted so the status control can re-run this after a transition
+  // (status, current stage, AND the status-audit trail all change together)
+  // instead of only patching caseRecord in place.
+  const loadCase = useCallback(() => {
     if (!id) return;
     setLoading(true);
     setError(null);
@@ -45,6 +50,10 @@ export function CaseDetailPage() {
       })
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    loadCase();
+  }, [loadCase]);
 
   if (loading) {
     return (
@@ -93,6 +102,11 @@ export function CaseDetailPage() {
         </div>
       </div>
 
+      <div className="surface-card rounded-[18px] p-5 mb-5">
+        <h3 className="font-display text-body-lg font-bold text-ink mb-3.5">Status</h3>
+        <CaseStatusControl caseRecord={caseRecord} onUpdated={loadCase} />
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
         <div className="surface-card rounded-[18px] p-5">
           <h3 className="font-display text-body-lg font-bold text-ink mb-3.5">Case details</h3>
@@ -109,7 +123,10 @@ export function CaseDetailPage() {
                 </span>
               }
             />
-            <DetailCell label="Due date" value={caseRecord.due_date} />
+            <DetailCell
+              label="Due date"
+              value={parseFlexibleDate(caseRecord.due_date)?.toLocaleDateString() ?? caseRecord.due_date}
+            />
             <DetailCell label="Dentist ID" value={`#${caseRecord.dentist_id}`} />
             <DetailCell label="Patient ref. ID" value={caseRecord.patient_reference_id || '—'} />
             <DetailCell

@@ -116,7 +116,7 @@ export function MaterialsPage() {
             {['Name', 'Category', 'Unit', 'Unit cost', 'Current stock', 'Status', ''].map((h) => (
             <th
             key={h}
-            className="text-left text-caption uppercase tracking-wider text-ink pb-2.5 border-b border-border"
+            className="text-left text-caption uppercase tracking-wider text-th-label pb-2.5 border-b border-border"
             >
             {h}
             </th>

@@ -341,6 +341,21 @@ export function createCase(payload: CreateCasePayload): Promise<CreateCaseRespon
   });
 }
 
+// Backend endpoint (PATCH /api/cases/:id/status) has existed since Session 2
+// — this was never wired up on the frontend, leaving no way to advance a
+// case out of "Case Entered" through the UI. remarks is required by the
+// backend only when entering/clearing Case on Hold / Delayed; optional
+// otherwise, matching updateStatusSchema.
+export function updateCaseStatus(
+  id: string | number,
+  payload: { newStatus: string; remarks?: string }
+): Promise<GetCaseResponse> {
+  return apiFetch<GetCaseResponse>(`/api/cases/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
 export function listPractices(): Promise<ListPracticesResponse> {
   return apiFetch<ListPracticesResponse>('/api/practices');
 }

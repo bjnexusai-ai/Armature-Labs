@@ -144,7 +144,7 @@ export function EquipmentDetailPage() {
             <thead>
             <tr>
             {['Type', 'Notes', 'Next due', 'Logged'].map((h) => (
-            <th key={h} className="text-left text-caption uppercase tracking-wider text-ink pb-2.5 border-b border-border">
+            <th key={h} className="text-left text-caption uppercase tracking-wider text-th-label pb-2.5 border-b border-border">
             {h}
             </th>
             ))}

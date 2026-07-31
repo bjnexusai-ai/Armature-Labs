@@ -15,6 +15,13 @@
   --color-card-bg: #FFFFFF;
   --color-ink: #0F2A2C;
   --color-ink-soft: #5B7472;
+  /* FIX (bug log #2): table headers used --color-ink-soft, same muted tone
+     as regular secondary body text (#5B7472 on white ≈ 4.9:1 contrast —
+     technically AA-passing but reads as too light for an all-caps 11px
+     label). Dedicated darker token (≈7.9:1 contrast) so header labels are
+     legible without touching --color-ink-soft's other uses (empty states,
+     helper text) where the lighter tone is intentional. */
+  --color-th-label: #3C5452;
   --color-border: #DCEAE8;
   --color-btn-green: #19868B;
   --color-btn-green-hover: #146E72;

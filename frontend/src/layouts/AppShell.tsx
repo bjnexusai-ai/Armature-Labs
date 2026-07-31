@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { roleLabel } from '../lib/authTypes';
@@ -140,42 +140,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [notifOpen, setNotifOpen] = useState(false);
   const [pendingApprovals, setPendingApprovals] = useState<ApprovalRecord[]>([]);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-
-  // Topbar search — real now (was permanently `disabled` with a "Soon"
-  // badge). No backend text-search param exists (confirmed against
-  // cases.controller.js), so this drives the same ?q= that CaseQueuePage
-  // already reads into its own client-side filter. Debounced so every
-  // keystroke doesn't push a history entry.
-  const [searchTerm, setSearchTerm] = useState(() =>
-    location.pathname === '/cases' ? new URLSearchParams(location.search).get('q') ?? '' : '',
-  );
-  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // If the case queue's own search box changes ?q= (or the user navigates
-  // there directly), keep the topbar box showing the same term instead of
-  // going stale/out of sync.
-  useEffect(() => {
-    if (location.pathname === '/cases') {
-      setSearchTerm(new URLSearchParams(location.search).get('q') ?? '');
-    } else {
-      setSearchTerm('');
-    }
-  }, [location.pathname, location.search]);
-
-  const handleSearchChange = (value: string) => {
-    setSearchTerm(value);
-    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-    searchDebounceRef.current = setTimeout(() => {
-      const qs = value ? `?q=${encodeURIComponent(value)}` : '';
-      navigate(`/cases${qs}`, { replace: location.pathname === '/cases' });
-    }, 300);
-  };
-
-  useEffect(() => {
-    return () => {
-      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-    };
-  }, []);
+  const [topbarSearch, setTopbarSearch] = useState('');
 
   // Close the mobile drawer whenever the route changes (link click, back
   // button, etc.) so it doesn't stay open over the next page.
@@ -331,7 +296,15 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
 
           <div className="flex items-center gap-3.5">
-            <div className="relative hidden sm:block">
+            <form
+              className="relative hidden sm:block"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const term = topbarSearch.trim();
+                navigate(term ? `/cases?q=${encodeURIComponent(term)}` : '/cases');
+                setTopbarSearch('');
+              }}
+            >
               <svg className="absolute left-[11px] top-1/2 -translate-y-1/2 w-[15px] h-[15px] text-ink-soft pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="11" cy="11" r="8" />
                 <path d="m21 21-4.3-4.3" />
@@ -339,19 +312,12 @@ export function AppShell({ children }: { children: ReactNode }) {
               <input
                 type="text"
                 placeholder="Search cases…"
-                value={searchTerm}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key !== 'Enter') return;
-                  if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-                  const qs = searchTerm ? `?q=${encodeURIComponent(searchTerm)}` : '';
-                  navigate(`/cases${qs}`, { replace: location.pathname === '/cases' });
-                }}
-                title="Search by case ID, patient, or practice"
+                value={topbarSearch}
+                onChange={(e) => setTopbarSearch(e.target.value)}
                 className="w-[220px] h-[38px] rounded-[10px] pl-9 pr-3 text-body-sm bg-white"
                 style={{ border: '1px solid var(--color-border)' }}
               />
-            </div>
+            </form>
 
             <div className="relative">
               <button

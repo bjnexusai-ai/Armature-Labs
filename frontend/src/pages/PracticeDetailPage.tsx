@@ -210,7 +210,7 @@ export function PracticeDetailPage() {
               {['Payment terms', 'Credit limit', 'Start', 'End', 'Created'].map((h) => (
               <th
               key={h}
-              className="text-left text-caption uppercase tracking-wider text-ink pb-2.5 border-b border-border"
+              className="text-left text-caption uppercase tracking-wider text-th-label pb-2.5 border-b border-border"
               >
               {h}
               </th>
@@ -322,7 +322,7 @@ export function PracticeDetailPage() {
                 {['First name', 'Last name', 'Added', ''].map((h) => (
                 <th
                 key={h}
-                className="text-left text-caption uppercase tracking-wider text-ink pb-2.5 border-b border-border"
+                className="text-left text-caption uppercase tracking-wider text-th-label pb-2.5 border-b border-border"
                 >
                 {h}
                 </th>

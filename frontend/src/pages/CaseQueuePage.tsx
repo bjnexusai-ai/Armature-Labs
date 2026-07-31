@@ -9,7 +9,7 @@ import { parseFlexibleDate } from '../lib/dateUtils';
 
 export function CaseQueuePage() {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
 
   const [cases, setCases] = useState<CaseRecord[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
@@ -19,31 +19,8 @@ export function CaseQueuePage() {
 
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<CaseStatus | ''>('');
-  // Seeded from ?q= so a search from the topbar (AppShell) lands here with
-  // the term already applied, not just on an empty queue page.
-  const [search, setSearch] = useState(() => searchParams.get('q') ?? '');
+  const [search, setSearch] = useState(searchParams.get('q') ?? '');
   const [newCaseOpen, setNewCaseOpen] = useState(false);
-
-  // Keep local state in sync with ?q= so a repeat topbar search while
-  // already on this page (URL changes, component stays mounted) still
-  // takes effect.
-  useEffect(() => {
-    const urlQ = searchParams.get('q') ?? '';
-    setSearch((current) => (current === urlQ ? current : urlQ));
-  }, [searchParams]);
-
-  const updateSearch = (value: string) => {
-    setSearch(value);
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        if (value) next.set('q', value);
-        else next.delete('q');
-        return next;
-      },
-      { replace: true },
-    );
-  };
 
   const load = useCallback(() => {
     setLoading(true);
@@ -111,7 +88,7 @@ export function CaseQueuePage() {
             type="text"
             placeholder="Search by case ID, patient, or practice…"
             value={search}
-            onChange={(e) => updateSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
           />
           <select
             className="form-input h-10 w-auto"
@@ -152,7 +129,7 @@ export function CaseQueuePage() {
             <p>Try a different search term or status.</p>
             <button
               onClick={() => {
-                updateSearch('');
+                setSearch('');
                 setStatusFilter('');
               }}
             >
@@ -192,7 +169,7 @@ export function CaseQueuePage() {
                     {['Case', 'Patient', 'Practice', 'Priority', 'Status', 'Due'].map((h) => (
                       <th
                         key={h}
-                        className="text-left text-caption uppercase tracking-wider text-ink pb-2.5 border-b border-border"
+                        className="text-left text-caption uppercase tracking-wider text-th-label pb-2.5 border-b border-border"
                       >
                         {h}
                       </th>
